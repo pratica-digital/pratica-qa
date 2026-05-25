@@ -1,0 +1,227 @@
+import { Injectable } from '@nestjs/common';
+import { Prisma, TestCaseStatus, TestPriority, TestSeverity } from '@prisma/client';
+import { PrismaService } from '../../../prisma/prisma.service';
+import { BulkUpdateTestCasesDto } from '../dto/bulk-update-test-cases.dto';
+import { CloneTestCaseDto } from '../dto/clone-test-case.dto';
+import { CreateTestCaseDto } from '../dto/create-test-case.dto';
+import { CreateTestStepDto } from '../dto/create-test-step.dto';
+import { ReplaceTestStepsDto } from '../dto/replace-test-steps.dto';
+import { UpdateTestCaseDto } from '../dto/update-test-case.dto';
+
+const TEST_CASE_INCLUDE = {
+  suite: {
+    select: {
+      id: true,
+      name: true,
+      projectId: true,
+    },
+  },
+  steps: {
+    orderBy: {
+      position: 'asc',
+    },
+  },
+} satisfies Prisma.TestCaseInclude;
+
+type FindTestCasesParams = {
+  suiteId?: string;
+  projectId?: string;
+  search?: string;
+  tag?: string;
+  status?: TestCaseStatus;
+  priority?: TestPriority;
+  severity?: TestSeverity;
+  skip: number;
+  take: number;
+};
+
+@Injectable()
+export class TestCasesRepository {
+  constructor(private readonly prisma: PrismaService) {}
+
+  create(dto: CreateTestCaseDto) {
+    return this.prisma.testCase.create({
+      data: {
+        suiteId: dto.suiteId,
+        title: dto.title,
+        description: dto.description ?? '',
+        preconditions: dto.preconditions ?? '',
+        expectedResult: dto.expectedResult ?? '',
+        status: dto.status,
+        priority: dto.priority,
+        severity: dto.severity,
+        tags: dto.tags ?? [],
+        steps: this.toNestedSteps(dto.steps),
+      },
+      include: TEST_CASE_INCLUDE,
+    });
+  }
+
+  findMany(params: FindTestCasesParams) {
+    return this.prisma.testCase.findMany({
+      where: this.buildWhere(params),
+      skip: params.skip,
+      take: params.take,
+      orderBy: { updatedAt: 'desc' },
+      include: TEST_CASE_INCLUDE,
+    });
+  }
+
+  count(params: Omit<FindTestCasesParams, 'skip' | 'take'>) {
+    return this.prisma.testCase.count({
+      where: this.buildWhere(params),
+    });
+  }
+
+  findById(id: string) {
+    return this.prisma.testCase.findUnique({
+      where: { id },
+      include: TEST_CASE_INCLUDE,
+    });
+  }
+
+  update(id: string, dto: UpdateTestCaseDto) {
+    const shouldIncrementVersion = Object.keys(dto).length > 0;
+
+    return this.prisma.testCase.update({
+      where: { id },
+      data: {
+        title: dto.title,
+        description: dto.description,
+        preconditions: dto.preconditions,
+        expectedResult: dto.expectedResult,
+        status: dto.status,
+        priority: dto.priority,
+        severity: dto.severity,
+        tags: dto.tags,
+        version: shouldIncrementVersion ? { increment: 1 } : undefined,
+      },
+      include: TEST_CASE_INCLUDE,
+    });
+  }
+
+  async replaceSteps(id: string, dto: ReplaceTestStepsDto) {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.testStep.deleteMany({
+        where: { testCaseId: id },
+      });
+
+      if (dto.steps.length > 0) {
+        await tx.testStep.createMany({
+          data: this.toStepRows(id, dto.steps),
+        });
+      }
+
+      await tx.testCase.update({
+        where: { id },
+        data: { version: { increment: 1 } },
+      });
+
+      return tx.testCase.findUnique({
+        where: { id },
+        include: TEST_CASE_INCLUDE,
+      });
+    });
+  }
+
+  async clone(id: string, dto: CloneTestCaseDto) {
+    const source = await this.findById(id);
+
+    if (!source) {
+      return null;
+    }
+
+    return this.prisma.testCase.create({
+      data: {
+        suiteId: dto.suiteId ?? source.suiteId,
+        clonedFromId: source.id,
+        title: dto.title ?? `${source.title} (copy)`,
+        description: source.description,
+        preconditions: source.preconditions,
+        expectedResult: source.expectedResult,
+        status: source.status,
+        priority: source.priority,
+        severity: source.severity,
+        tags: source.tags,
+        steps: {
+          create: source.steps.map((step) => ({
+            position: step.position,
+            action: step.action,
+            expectedResult: step.expectedResult,
+          })),
+        },
+      },
+      include: TEST_CASE_INCLUDE,
+    });
+  }
+
+  async bulkUpdateStatus(dto: BulkUpdateTestCasesDto) {
+    await this.prisma.testCase.updateMany({
+      where: {
+        id: { in: dto.ids },
+      },
+      data: {
+        status: dto.status,
+        version: { increment: 1 },
+      },
+    });
+
+    return this.prisma.testCase.findMany({
+      where: {
+        id: { in: dto.ids },
+      },
+      include: TEST_CASE_INCLUDE,
+      orderBy: { updatedAt: 'desc' },
+    });
+  }
+
+  delete(id: string) {
+    return this.prisma.testCase.delete({
+      where: { id },
+    });
+  }
+
+  private buildWhere(
+    params: Omit<FindTestCasesParams, 'skip' | 'take'>,
+  ): Prisma.TestCaseWhereInput {
+    return {
+      suiteId: params.suiteId,
+      suite: params.projectId ? { projectId: params.projectId } : undefined,
+      status: params.status,
+      priority: params.priority,
+      severity: params.severity,
+      tags: params.tag ? { has: params.tag } : undefined,
+      OR: params.search
+        ? [
+            { title: { contains: params.search, mode: 'insensitive' } },
+            { description: { contains: params.search, mode: 'insensitive' } },
+          ]
+        : undefined,
+    };
+  }
+
+  private toNestedSteps(
+    steps?: CreateTestStepDto[],
+  ): Prisma.TestStepCreateNestedManyWithoutTestCaseInput | undefined {
+    if (!steps || steps.length === 0) {
+      return undefined;
+    }
+
+    return {
+      create: steps.map((step, index) => ({
+        position: step.position ?? index + 1,
+        action: step.action,
+        expectedResult: step.expectedResult ?? '',
+      })),
+    };
+  }
+
+  private toStepRows(testCaseId: string, steps: CreateTestStepDto[]) {
+    return steps.map((step, index) => ({
+      testCaseId,
+      position: step.position ?? index + 1,
+      action: step.action,
+      expectedResult: step.expectedResult ?? '',
+    }));
+  }
+}
