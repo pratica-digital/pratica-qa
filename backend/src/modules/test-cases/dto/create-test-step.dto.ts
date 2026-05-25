@@ -6,12 +6,12 @@ export class CreateTestStepDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  position?: number;
+  order?: number;
 
   @IsString()
   @IsNotEmpty()
   @MaxLength(2000)
-  action: string;
+  description: string;
 
   @IsOptional()
   @IsString()

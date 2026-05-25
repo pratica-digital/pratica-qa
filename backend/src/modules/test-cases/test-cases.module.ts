@@ -8,5 +8,6 @@ import { TestCasesService } from './test-cases.service';
   imports: [TestSuitesModule],
   controllers: [TestCasesController],
   providers: [TestCasesService, TestCasesRepository],
+  exports: [TestCasesService, TestCasesRepository],
 })
 export class TestCasesModule {}
