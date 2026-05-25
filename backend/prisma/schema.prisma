@@ -64,11 +64,13 @@ model Project {
   status      ProjectStatus @default(ACTIVE)
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
+  deletedAt   DateTime?
 
   suites       TestSuite[]
   testRuns     TestRun[]
   requirements Requirement[]
 
+  @@index([deletedAt])
   @@map("projects")
 }
 
@@ -81,6 +83,7 @@ model TestSuite {
   position    Int             @default(0)
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
+  deletedAt   DateTime?
 
   project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
   testCases TestCase[]
@@ -88,6 +91,7 @@ model TestSuite {
 
   @@unique([projectId, name])
   @@index([projectId])
+  @@index([deletedAt])
   @@map("test_suites")
 }
 
@@ -106,6 +110,7 @@ model TestCase {
   tags           String[]       @default([])
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
+  deletedAt      DateTime?
 
   suite        TestSuite     @relation(fields: [suiteId], references: [id], onDelete: Cascade)
   clonedFrom   TestCase?     @relation("ClonedTestCases", fields: [clonedFromId], references: [id], onDelete: SetNull)
@@ -117,37 +122,40 @@ model TestCase {
   @@index([suiteId])
   @@index([status])
   @@index([priority])
+  @@index([deletedAt])
   @@map("test_cases")
 }
 
 model TestStep {
-  id             String   @id @default(uuid()) @db.Uuid
-  testCaseId     String   @db.Uuid
+  id             String    @id @default(uuid()) @db.Uuid
+  testCaseId     String    @db.Uuid
   position       Int
   action         String
-  expectedResult String   @default("")
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  expectedResult String    @default("")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
 
   testCase TestCase @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
 
   @@unique([testCaseId, position])
   @@index([testCaseId])
+  @@index([deletedAt])
   @@map("test_steps")
 }
 
 model TestRun {
-  id            String        @id @default(uuid()) @db.Uuid
-  projectId     String        @db.Uuid
-  suiteId       String?       @db.Uuid
-  createdById   String?       @db.Uuid
-  name          String
-  description   String        @default("")
-  status        TestRunStatus @default(PLANNED)
-  startedAt     DateTime?
-  completedAt   DateTime?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  id          String        @id @default(uuid()) @db.Uuid
+  projectId   String        @db.Uuid
+  suiteId     String?       @db.Uuid
+  createdById String?       @db.Uuid
+  name        String
+  description String        @default("")
+  status      TestRunStatus @default(PLANNED)
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 
   project   Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
   suite     TestSuite?   @relation(fields: [suiteId], references: [id], onDelete: SetNull)
@@ -190,10 +198,12 @@ model User {
   status    UserStatus @default(ACTIVE)
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
+  deletedAt DateTime?
 
-  createdTestRuns TestRun[]     @relation("CreatedTestRuns")
-  executedResults TestResult[]  @relation("ExecutedResults")
+  createdTestRuns TestRun[]    @relation("CreatedTestRuns")
+  executedResults TestResult[] @relation("ExecutedResults")
 
+  @@index([deletedAt])
   @@map("users")
 }
 
