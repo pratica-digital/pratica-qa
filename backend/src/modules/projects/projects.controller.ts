@@ -9,6 +9,8 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
+import { UserRole } from '@prisma/client';
+import { Roles } from '../../auth/decorators/roles.decorator';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { QueryProjectsDto } from './dto/query-projects.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
@@ -18,6 +20,7 @@ import { ProjectsService } from './projects.service';
 export class ProjectsController {
   constructor(private readonly projectsService: ProjectsService) {}
 
+  @Roles(UserRole.ADMIN)
   @Post()
   create(@Body() dto: CreateProjectDto) {
     return this.projectsService.create(dto);
@@ -33,11 +36,13 @@ export class ProjectsController {
     return this.projectsService.findOne(id);
   }
 
+  @Roles(UserRole.ADMIN)
   @Patch(':id')
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateProjectDto) {
     return this.projectsService.update(id, dto);
   }
 
+  @Roles(UserRole.ADMIN)
   @Delete(':id')
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.projectsService.remove(id);

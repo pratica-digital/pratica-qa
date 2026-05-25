@@ -18,7 +18,7 @@ const TEST_CASE_INCLUDE = {
   },
   steps: {
     orderBy: {
-      position: 'asc',
+      order: 'asc',
     },
   },
 } satisfies Prisma.TestCaseInclude;
@@ -145,8 +145,8 @@ export class TestCasesRepository {
         tags: source.tags,
         steps: {
           create: source.steps.map((step) => ({
-            position: step.position,
-            action: step.action,
+            order: step.order,
+            description: step.description,
             expectedResult: step.expectedResult,
           })),
         },
@@ -209,9 +209,9 @@ export class TestCasesRepository {
 
     return {
       create: steps.map((step, index) => ({
-        position: step.position ?? index + 1,
-        action: step.action,
-        expectedResult: step.expectedResult ?? '',
+        order: step.order ?? index + 1,
+        description: step.description,
+        expectedResult: step.expectedResult,
       })),
     };
   }
@@ -219,9 +219,9 @@ export class TestCasesRepository {
   private toStepRows(testCaseId: string, steps: CreateTestStepDto[]) {
     return steps.map((step, index) => ({
       testCaseId,
-      position: step.position ?? index + 1,
-      action: step.action,
-      expectedResult: step.expectedResult ?? '',
+      order: step.order ?? index + 1,
+      description: step.description,
+      expectedResult: step.expectedResult,
     }));
   }
 }

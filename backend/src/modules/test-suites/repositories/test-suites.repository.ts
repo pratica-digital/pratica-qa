@@ -92,6 +92,16 @@ export class TestSuitesRepository {
     });
   }
 
+  countByIdsInProject(ids: string[], projectId: string) {
+    return this.prisma.testSuite.count({
+      where: {
+        id: { in: ids },
+        projectId,
+        deletedAt: null,
+      },
+    });
+  }
+
   update(id: string, dto: UpdateTestSuiteDto) {
     return this.prisma.testSuite.update({
       where: { id },

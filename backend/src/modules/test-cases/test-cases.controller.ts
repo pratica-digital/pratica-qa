@@ -10,6 +10,8 @@ import {
   Put,
   Query,
 } from '@nestjs/common';
+import { UserRole } from '@prisma/client';
+import { Roles } from '../../auth/decorators/roles.decorator';
 import { BulkUpdateTestCasesDto } from './dto/bulk-update-test-cases.dto';
 import { CloneTestCaseDto } from './dto/clone-test-case.dto';
 import { CreateTestCaseDto } from './dto/create-test-case.dto';
@@ -22,11 +24,13 @@ import { TestCasesService } from './test-cases.service';
 export class TestCasesController {
   constructor(private readonly testCasesService: TestCasesService) {}
 
+  @Roles(UserRole.ADMIN, UserRole.QA)
   @Post()
   create(@Body() dto: CreateTestCaseDto) {
     return this.testCasesService.create(dto);
   }
 
+  @Roles(UserRole.ADMIN, UserRole.QA)
   @Post('bulk/status')
   bulkUpdateStatus(@Body() dto: BulkUpdateTestCasesDto) {
     return this.testCasesService.bulkUpdateStatus(dto);
@@ -42,21 +46,25 @@ export class TestCasesController {
     return this.testCasesService.findOne(id);
   }
 
+  @Roles(UserRole.ADMIN, UserRole.QA)
   @Patch(':id')
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateTestCaseDto) {
     return this.testCasesService.update(id, dto);
   }
 
+  @Roles(UserRole.ADMIN, UserRole.QA)
   @Put(':id/steps')
   replaceSteps(@Param('id', ParseUUIDPipe) id: string, @Body() dto: ReplaceTestStepsDto) {
     return this.testCasesService.replaceSteps(id, dto);
   }
 
+  @Roles(UserRole.ADMIN, UserRole.QA)
   @Post(':id/clone')
   clone(@Param('id', ParseUUIDPipe) id: string, @Body() dto: CloneTestCaseDto) {
     return this.testCasesService.clone(id, dto);
   }
 
+  @Roles(UserRole.ADMIN)
   @Delete(':id')
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.testCasesService.remove(id);

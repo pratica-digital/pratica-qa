@@ -45,6 +45,7 @@ export class ProjectsRepository {
         _count: {
           select: {
             suites: true,
+            testPlans: true,
             testRuns: true,
           },
         },
@@ -73,6 +74,7 @@ export class ProjectsRepository {
         _count: {
           select: {
             suites: true,
+            testPlans: true,
             testRuns: true,
           },
         },

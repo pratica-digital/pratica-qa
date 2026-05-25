@@ -33,7 +33,7 @@ The platform is a modern manual QA management system inspired by TestLodge, with
 - `suiteId`: FK to `TestSuite`
 - `clonedFromId`: optional FK to another `TestCase`
 - `title`, `description`, `preconditions`, `expectedResult`
-- `status`: `DRAFT`, `ACTIVE`, `DEPRECATED`, or `ARCHIVED`
+- `status`: `ACTIVE` or `ARCHIVED`
 - `priority`: `LOW`, `MEDIUM`, or `HIGH`
 - `severity`: `LOW`, `MEDIUM`, `HIGH`, or `CRITICAL`
 - `version`: increments when important case content/status changes
@@ -58,7 +58,7 @@ The platform is a modern manual QA management system inspired by TestLodge, with
 - `suiteId`: optional FK to `TestSuite`
 - `createdById`: optional FK to `User`
 - `name`, `description`
-- `status`: `PLANNED`, `IN_PROGRESS`, `COMPLETED`, or `ABORTED`
+- `status`: `PENDING`, `IN_PROGRESS`, or `COMPLETED`
 - `startedAt`, `completedAt`
 - `createdAt`, `updatedAt`
 - Relations: belongs to `Project`; optionally belongs to `TestSuite`; has many `TestResult`
@@ -69,8 +69,8 @@ The platform is a modern manual QA management system inspired by TestLodge, with
 - `testRunId`: FK to `TestRun`
 - `testCaseId`: FK to `TestCase`
 - `executedById`: optional FK to `User`
-- `status`: `NOT_RUN`, `PASSED`, `FAILED`, `BLOCKED`, or `SKIPPED`
-- `notes`, `actualResult`, `defectReference`
+- `status`: `PENDING`, `PASSED`, `FAILED`, or `SKIPPED`
+- `comment`, `attachments`
 - `executedAt`
 - `createdAt`, `updatedAt`
 - Relations: belongs to `TestRun`, `TestCase`, and optionally `User`
@@ -79,9 +79,11 @@ The platform is a modern manual QA management system inspired by TestLodge, with
 
 - `id`: UUID
 - `name`, `email`
+- `password`: bcrypt hash, never returned by the API
+- `role`: `ADMIN`, `QA`, or `VIEWER`
 - `status`: `ACTIVE` or `INACTIVE`
 - `createdAt`, `updatedAt`
-- Relations: creates `TestRun` records and executes `TestResult` records
+- Relations: creates, is assigned to, and executes `TestRun`/`TestResult` records
 
 ### Requirement
 
@@ -97,7 +99,7 @@ The platform is a modern manual QA management system inspired by TestLodge, with
 2. Suite creation: user creates suites inside a project, ordered by feature, release area, or product module.
 3. Test case creation: user writes title, preconditions, expected result, tags, priority, severity, and ordered steps.
 4. Test run execution: user creates a run from a project or suite; the system snapshots eligible cases into executable results.
-5. Result registration: runner records `PASSED`, `FAILED`, `BLOCKED`, or `SKIPPED`, plus notes, actual result, and defect reference.
+5. Result registration: runner records `PASSED`, `FAILED`, or `SKIPPED`, plus comments and attachments.
 6. Failed test re-run: user filters failed results, creates a focused re-run, and tracks whether failures were fixed.
 7. Report generation: reports summarize pass rate, failure clusters, blocked areas, execution history, and release readiness.
 

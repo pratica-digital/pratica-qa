@@ -9,6 +9,8 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
+import { UserRole } from '@prisma/client';
+import { Roles } from '../../auth/decorators/roles.decorator';
 import { CreateTestSuiteDto } from './dto/create-test-suite.dto';
 import { QueryTestSuitesDto } from './dto/query-test-suites.dto';
 import { UpdateTestSuiteDto } from './dto/update-test-suite.dto';
@@ -18,6 +20,7 @@ import { TestSuitesService } from './test-suites.service';
 export class TestSuitesController {
   constructor(private readonly testSuitesService: TestSuitesService) {}
 
+  @Roles(UserRole.ADMIN)
   @Post()
   create(@Body() dto: CreateTestSuiteDto) {
     return this.testSuitesService.create(dto);
@@ -33,11 +36,13 @@ export class TestSuitesController {
     return this.testSuitesService.findOne(id);
   }
 
+  @Roles(UserRole.ADMIN)
   @Patch(':id')
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateTestSuiteDto) {
     return this.testSuitesService.update(id, dto);
   }
 
+  @Roles(UserRole.ADMIN)
   @Delete(':id')
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.testSuitesService.remove(id);

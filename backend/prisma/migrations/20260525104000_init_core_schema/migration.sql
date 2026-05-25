@@ -8,7 +8,7 @@ CREATE TYPE "ProjectStatus" AS ENUM ('ACTIVE', 'ARCHIVED');
 CREATE TYPE "TestSuiteStatus" AS ENUM ('ACTIVE', 'ARCHIVED');
 
 -- CreateEnum
-CREATE TYPE "TestCaseStatus" AS ENUM ('DRAFT', 'ACTIVE', 'DEPRECATED', 'ARCHIVED');
+CREATE TYPE "TestCaseStatus" AS ENUM ('ACTIVE', 'ARCHIVED');
 
 -- CreateEnum
 CREATE TYPE "TestPriority" AS ENUM ('LOW', 'MEDIUM', 'HIGH');
@@ -17,13 +17,16 @@ CREATE TYPE "TestPriority" AS ENUM ('LOW', 'MEDIUM', 'HIGH');
 CREATE TYPE "TestSeverity" AS ENUM ('LOW', 'MEDIUM', 'HIGH', 'CRITICAL');
 
 -- CreateEnum
-CREATE TYPE "TestRunStatus" AS ENUM ('PLANNED', 'IN_PROGRESS', 'COMPLETED', 'ABORTED');
+CREATE TYPE "TestRunStatus" AS ENUM ('PENDING', 'IN_PROGRESS', 'COMPLETED');
 
 -- CreateEnum
-CREATE TYPE "TestResultStatus" AS ENUM ('NOT_RUN', 'PASSED', 'FAILED', 'BLOCKED', 'SKIPPED');
+CREATE TYPE "TestResultStatus" AS ENUM ('PENDING', 'PASSED', 'FAILED', 'SKIPPED');
 
 -- CreateEnum
 CREATE TYPE "UserStatus" AS ENUM ('ACTIVE', 'INACTIVE');
+
+-- CreateEnum
+CREATE TYPE "UserRole" AS ENUM ('ADMIN', 'QA', 'VIEWER');
 
 -- CreateTable
 CREATE TABLE "projects" (
@@ -63,7 +66,7 @@ CREATE TABLE "test_cases" (
     "description" TEXT NOT NULL DEFAULT '',
     "preconditions" TEXT NOT NULL DEFAULT '',
     "expectedResult" TEXT NOT NULL DEFAULT '',
-    "status" "TestCaseStatus" NOT NULL DEFAULT 'DRAFT',
+    "status" "TestCaseStatus" NOT NULL DEFAULT 'ACTIVE',
     "priority" "TestPriority" NOT NULL DEFAULT 'MEDIUM',
     "severity" "TestSeverity" NOT NULL DEFAULT 'MEDIUM',
     "version" INTEGER NOT NULL DEFAULT 1,
@@ -79,9 +82,9 @@ CREATE TABLE "test_cases" (
 CREATE TABLE "test_steps" (
     "id" UUID NOT NULL,
     "testCaseId" UUID NOT NULL,
-    "position" INTEGER NOT NULL,
-    "action" TEXT NOT NULL,
-    "expectedResult" TEXT NOT NULL DEFAULT '',
+    "order" INTEGER NOT NULL,
+    "description" TEXT NOT NULL,
+    "expectedResult" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "deletedAt" TIMESTAMP(3),
@@ -90,20 +93,49 @@ CREATE TABLE "test_steps" (
 );
 
 -- CreateTable
+CREATE TABLE "test_plans" (
+    "id" UUID NOT NULL,
+    "projectId" UUID NOT NULL,
+    "name" TEXT NOT NULL,
+    "version" TEXT NOT NULL,
+    "description" TEXT NOT NULL DEFAULT '',
+    "sections" JSONB NOT NULL DEFAULT '[]',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "deletedAt" TIMESTAMP(3),
+
+    CONSTRAINT "test_plans_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "test_runs" (
     "id" UUID NOT NULL,
     "projectId" UUID NOT NULL,
-    "suiteId" UUID,
+    "testPlanId" UUID NOT NULL,
     "createdById" UUID,
+    "assignedToId" UUID NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT NOT NULL DEFAULT '',
-    "status" "TestRunStatus" NOT NULL DEFAULT 'PLANNED',
+    "status" "TestRunStatus" NOT NULL DEFAULT 'PENDING',
     "startedAt" TIMESTAMP(3),
     "completedAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    "deletedAt" TIMESTAMP(3),
 
     CONSTRAINT "test_runs_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "test_run_suites" (
+    "id" UUID NOT NULL,
+    "testRunId" UUID NOT NULL,
+    "testSuiteId" UUID NOT NULL,
+    "position" INTEGER NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "test_run_suites_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -112,10 +144,9 @@ CREATE TABLE "test_results" (
     "testRunId" UUID NOT NULL,
     "testCaseId" UUID NOT NULL,
     "executedById" UUID,
-    "status" "TestResultStatus" NOT NULL DEFAULT 'NOT_RUN',
-    "notes" TEXT NOT NULL DEFAULT '',
-    "actualResult" TEXT NOT NULL DEFAULT '',
-    "defectReference" TEXT NOT NULL DEFAULT '',
+    "status" "TestResultStatus" NOT NULL DEFAULT 'PENDING',
+    "comment" TEXT NOT NULL DEFAULT '',
+    "attachments" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "executedAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -128,6 +159,8 @@ CREATE TABLE "users" (
     "id" UUID NOT NULL,
     "name" TEXT NOT NULL,
     "email" TEXT NOT NULL,
+    "password" TEXT NOT NULL,
+    "role" "UserRole" NOT NULL DEFAULT 'QA',
     "status" "UserStatus" NOT NULL DEFAULT 'ACTIVE',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -192,16 +225,37 @@ CREATE INDEX "test_steps_testCaseId_idx" ON "test_steps"("testCaseId");
 CREATE INDEX "test_steps_deletedAt_idx" ON "test_steps"("deletedAt");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "test_steps_testCaseId_position_key" ON "test_steps"("testCaseId", "position");
+CREATE UNIQUE INDEX "test_steps_testCaseId_order_key" ON "test_steps"("testCaseId", "order");
+
+-- CreateIndex
+CREATE INDEX "test_plans_projectId_idx" ON "test_plans"("projectId");
+
+-- CreateIndex
+CREATE INDEX "test_plans_deletedAt_idx" ON "test_plans"("deletedAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "test_plans_projectId_name_version_key" ON "test_plans"("projectId", "name", "version");
 
 -- CreateIndex
 CREATE INDEX "test_runs_projectId_idx" ON "test_runs"("projectId");
 
 -- CreateIndex
-CREATE INDEX "test_runs_suiteId_idx" ON "test_runs"("suiteId");
+CREATE INDEX "test_runs_testPlanId_idx" ON "test_runs"("testPlanId");
+
+-- CreateIndex
+CREATE INDEX "test_runs_assignedToId_idx" ON "test_runs"("assignedToId");
 
 -- CreateIndex
 CREATE INDEX "test_runs_status_idx" ON "test_runs"("status");
+
+-- CreateIndex
+CREATE INDEX "test_runs_deletedAt_idx" ON "test_runs"("deletedAt");
+
+-- CreateIndex
+CREATE INDEX "test_run_suites_testSuiteId_idx" ON "test_run_suites"("testSuiteId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "test_run_suites_testRunId_testSuiteId_key" ON "test_run_suites"("testRunId", "testSuiteId");
 
 -- CreateIndex
 CREATE INDEX "test_results_testCaseId_idx" ON "test_results"("testCaseId");
@@ -214,6 +268,9 @@ CREATE UNIQUE INDEX "test_results_testRunId_testCaseId_key" ON "test_results"("t
 
 -- CreateIndex
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
+
+-- CreateIndex
+CREATE INDEX "users_role_idx" ON "users"("role");
 
 -- CreateIndex
 CREATE INDEX "users_deletedAt_idx" ON "users"("deletedAt");
@@ -240,13 +297,25 @@ ALTER TABLE "test_cases" ADD CONSTRAINT "test_cases_clonedFromId_fkey" FOREIGN K
 ALTER TABLE "test_steps" ADD CONSTRAINT "test_steps_testCaseId_fkey" FOREIGN KEY ("testCaseId") REFERENCES "test_cases"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "test_plans" ADD CONSTRAINT "test_plans_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "projects"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "test_runs" ADD CONSTRAINT "test_runs_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "projects"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "test_runs" ADD CONSTRAINT "test_runs_suiteId_fkey" FOREIGN KEY ("suiteId") REFERENCES "test_suites"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "test_runs" ADD CONSTRAINT "test_runs_testPlanId_fkey" FOREIGN KEY ("testPlanId") REFERENCES "test_plans"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "test_runs" ADD CONSTRAINT "test_runs_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "test_runs" ADD CONSTRAINT "test_runs_assignedToId_fkey" FOREIGN KEY ("assignedToId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "test_run_suites" ADD CONSTRAINT "test_run_suites_testRunId_fkey" FOREIGN KEY ("testRunId") REFERENCES "test_runs"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "test_run_suites" ADD CONSTRAINT "test_run_suites_testSuiteId_fkey" FOREIGN KEY ("testSuiteId") REFERENCES "test_suites"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "test_results" ADD CONSTRAINT "test_results_testRunId_fkey" FOREIGN KEY ("testRunId") REFERENCES "test_runs"("id") ON DELETE CASCADE ON UPDATE CASCADE;
