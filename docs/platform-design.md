@@ -79,9 +79,11 @@ The platform is a modern manual QA management system inspired by TestLodge, with
 
 - `id`: UUID
 - `name`, `email`
+- `password`: bcrypt hash, never returned by the API
+- `role`: `ADMIN`, `QA`, or `VIEWER`
 - `status`: `ACTIVE` or `INACTIVE`
 - `createdAt`, `updatedAt`
-- Relations: creates `TestRun` records and executes `TestResult` records
+- Relations: creates, is assigned to, and executes `TestRun`/`TestResult` records
 
 ### Requirement
 

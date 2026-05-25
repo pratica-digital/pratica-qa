@@ -1,8 +1,18 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { TestResultStatus, UserRole, UserStatus } from '@prisma/client';
+import { AuthenticatedUser } from '../../auth/types/authenticated-user';
 import { getPagination } from '../../common/dto/pagination-query.dto';
 import { TestPlansRepository } from '../test-plans/repositories/test-plans.repository';
 import { TestSuitesRepository } from '../test-suites/repositories/test-suites.repository';
+import { UsersRepository } from '../users/repositories/users.repository';
+import { AssignTestRunDto } from './dto/assign-test-run.dto';
 import { CreateTestRunDto } from './dto/create-test-run.dto';
+import { ExecuteTestRunDto } from './dto/execute-test-run.dto';
 import { QueryTestRunsDto } from './dto/query-test-runs.dto';
 import { RerunFailedTestsDto } from './dto/rerun-failed-tests.dto';
 import { UpdateTestRunDto } from './dto/update-test-run.dto';
@@ -14,6 +24,7 @@ export class TestRunsService {
     private readonly testRunsRepository: TestRunsRepository,
     private readonly testPlansRepository: TestPlansRepository,
     private readonly testSuitesRepository: TestSuitesRepository,
+    private readonly usersRepository: UsersRepository,
   ) {}
 
   async create(dto: CreateTestRunDto) {
@@ -33,6 +44,8 @@ export class TestRunsService {
     if (suiteCount !== suiteIds.length) {
       throw new BadRequestException('All test suites must belong to the project');
     }
+
+    await this.ensureAssignableUser(dto.assignedToId);
 
     return this.testRunsRepository.create(dto, suiteIds);
   }
@@ -79,18 +92,48 @@ export class TestRunsService {
     return this.testRunsRepository.update(id, dto);
   }
 
-  async start(id: string) {
+  async assign(id: string, dto: AssignTestRunDto) {
     await this.findOne(id);
+    await this.ensureAssignableUser(dto.assignedToId);
+    return this.testRunsRepository.assign(id, dto.assignedToId);
+  }
+
+  async start(id: string, user: AuthenticatedUser) {
+    const testRun = await this.findOne(id);
+    this.ensureCanExecute(testRun.assignedToId, user);
     return this.testRunsRepository.start(id);
   }
 
-  async complete(id: string) {
-    await this.findOne(id);
+  async complete(id: string, user: AuthenticatedUser) {
+    const testRun = await this.findOne(id);
+    this.ensureCanExecute(testRun.assignedToId, user);
     return this.testRunsRepository.complete(id);
   }
 
-  async rerunFailed(id: string, dto: RerunFailedTestsDto) {
-    await this.findOne(id);
+  async execute(id: string, dto: ExecuteTestRunDto, user: AuthenticatedUser) {
+    if (!dto.testResultId && !dto.testCaseId) {
+      throw new BadRequestException('testResultId or testCaseId is required');
+    }
+
+    if (dto.status === TestResultStatus.PENDING) {
+      throw new BadRequestException('Execution status must be PASSED, FAILED, or SKIPPED');
+    }
+
+    const testRun = await this.findOne(id);
+    this.ensureCanExecute(testRun.assignedToId, user);
+
+    const result = await this.testRunsRepository.executeResult(id, dto, user.id);
+
+    if (!result) {
+      throw new NotFoundException('Test result not found in this test run');
+    }
+
+    return result;
+  }
+
+  async rerunFailed(id: string, dto: RerunFailedTestsDto, user: AuthenticatedUser) {
+    const testRun = await this.findOne(id);
+    this.ensureCanExecute(testRun.assignedToId, user);
     const result = await this.testRunsRepository.rerunFailed(id, dto);
 
     if (!result) {
@@ -107,5 +150,21 @@ export class TestRunsService {
   async remove(id: string) {
     await this.findOne(id);
     return this.testRunsRepository.delete(id);
+  }
+
+  private async ensureAssignableUser(assignedToId: string) {
+    const user = await this.usersRepository.findById(assignedToId);
+
+    if (!user || user.deletedAt || user.status !== UserStatus.ACTIVE) {
+      throw new NotFoundException('Assigned user not found');
+    }
+  }
+
+  private ensureCanExecute(assignedToId: string, user: AuthenticatedUser) {
+    if (user.role === UserRole.ADMIN || assignedToId === user.id) {
+      return;
+    }
+
+    throw new ForbiddenException('Only the assigned user or an admin can execute this test run');
   }
 }

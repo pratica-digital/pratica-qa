@@ -25,6 +25,9 @@ CREATE TYPE "TestResultStatus" AS ENUM ('PENDING', 'PASSED', 'FAILED', 'SKIPPED'
 -- CreateEnum
 CREATE TYPE "UserStatus" AS ENUM ('ACTIVE', 'INACTIVE');
 
+-- CreateEnum
+CREATE TYPE "UserRole" AS ENUM ('ADMIN', 'QA', 'VIEWER');
+
 -- CreateTable
 CREATE TABLE "projects" (
     "id" UUID NOT NULL,
@@ -110,6 +113,7 @@ CREATE TABLE "test_runs" (
     "projectId" UUID NOT NULL,
     "testPlanId" UUID NOT NULL,
     "createdById" UUID,
+    "assignedToId" UUID NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT NOT NULL DEFAULT '',
     "status" "TestRunStatus" NOT NULL DEFAULT 'PENDING',
@@ -155,6 +159,8 @@ CREATE TABLE "users" (
     "id" UUID NOT NULL,
     "name" TEXT NOT NULL,
     "email" TEXT NOT NULL,
+    "password" TEXT NOT NULL,
+    "role" "UserRole" NOT NULL DEFAULT 'QA',
     "status" "UserStatus" NOT NULL DEFAULT 'ACTIVE',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -237,6 +243,9 @@ CREATE INDEX "test_runs_projectId_idx" ON "test_runs"("projectId");
 CREATE INDEX "test_runs_testPlanId_idx" ON "test_runs"("testPlanId");
 
 -- CreateIndex
+CREATE INDEX "test_runs_assignedToId_idx" ON "test_runs"("assignedToId");
+
+-- CreateIndex
 CREATE INDEX "test_runs_status_idx" ON "test_runs"("status");
 
 -- CreateIndex
@@ -259,6 +268,9 @@ CREATE UNIQUE INDEX "test_results_testRunId_testCaseId_key" ON "test_results"("t
 
 -- CreateIndex
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
+
+-- CreateIndex
+CREATE INDEX "users_role_idx" ON "users"("role");
 
 -- CreateIndex
 CREATE INDEX "users_deletedAt_idx" ON "users"("deletedAt");
@@ -295,6 +307,9 @@ ALTER TABLE "test_runs" ADD CONSTRAINT "test_runs_testPlanId_fkey" FOREIGN KEY (
 
 -- AddForeignKey
 ALTER TABLE "test_runs" ADD CONSTRAINT "test_runs_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "test_runs" ADD CONSTRAINT "test_runs_assignedToId_fkey" FOREIGN KEY ("assignedToId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "test_run_suites" ADD CONSTRAINT "test_run_suites_testRunId_fkey" FOREIGN KEY ("testRunId") REFERENCES "test_runs"("id") ON DELETE CASCADE ON UPDATE CASCADE;

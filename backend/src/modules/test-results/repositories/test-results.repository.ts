@@ -11,6 +11,8 @@ const TEST_RESULT_INCLUDE = {
       name: true,
       status: true,
       testPlanId: true,
+      assignedToId: true,
+      deletedAt: true,
     },
   },
   testCase: {
@@ -19,6 +21,14 @@ const TEST_RESULT_INCLUDE = {
       title: true,
       suiteId: true,
       priority: true,
+    },
+  },
+  executedBy: {
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
     },
   },
 } satisfies Prisma.TestResultInclude;

@@ -1,4 +1,11 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { TestResultStatus, UserRole } from '@prisma/client';
+import { AuthenticatedUser } from '../../auth/types/authenticated-user';
 import { getPagination } from '../../common/dto/pagination-query.dto';
 import { TestCasesRepository } from '../test-cases/repositories/test-cases.repository';
 import { TestRunsRepository } from '../test-runs/repositories/test-runs.repository';
@@ -17,6 +24,10 @@ export class TestResultsService {
   ) {}
 
   async create(dto: CreateTestResultDto) {
+    if (dto.status && dto.status !== TestResultStatus.PENDING && !dto.executedById) {
+      throw new BadRequestException('executedById is required for executed results');
+    }
+
     await this.ensureRunCanContainCase(dto.testRunId, dto.testCaseId);
     return this.testResultsRepository.create(dto);
   }
@@ -57,13 +68,23 @@ export class TestResultsService {
     return testResult;
   }
 
-  async update(id: string, dto: UpdateTestResultDto) {
-    await this.findOne(id);
-    return this.testResultsRepository.update(id, dto);
+  async update(id: string, dto: UpdateTestResultDto, user: AuthenticatedUser) {
+    const testResult = await this.findOne(id);
+    this.ensureCanExecuteResult(testResult.testRun.assignedToId, user);
+
+    if (dto.status === TestResultStatus.PENDING) {
+      throw new BadRequestException('Execution status must be PASSED, FAILED, or SKIPPED');
+    }
+
+    return this.testResultsRepository.update(id, {
+      ...dto,
+      executedById: user.id,
+    });
   }
 
-  async addAttachments(id: string, dto: AddTestResultAttachmentsDto) {
-    await this.findOne(id);
+  async addAttachments(id: string, dto: AddTestResultAttachmentsDto, user: AuthenticatedUser) {
+    const testResult = await this.findOne(id);
+    this.ensureCanExecuteResult(testResult.testRun.assignedToId, user);
     return this.testResultsRepository.addAttachments(id, dto.attachments);
   }
 
@@ -91,5 +112,13 @@ export class TestResultsService {
     if (!runSuiteIds.includes(testCase.suiteId)) {
       throw new BadRequestException('Test case does not belong to any suite in this test run');
     }
+  }
+
+  private ensureCanExecuteResult(assignedToId: string, user: AuthenticatedUser) {
+    if (user.role === UserRole.ADMIN || assignedToId === user.id) {
+      return;
+    }
+
+    throw new ForbiddenException('Only the assigned user or an admin can update this test result');
   }
 }

@@ -20,6 +20,9 @@ export class CreateTestRunDto {
   @IsUUID()
   createdById?: string;
 
+  @IsUUID()
+  assignedToId: string;
+
   @IsString()
   @IsNotEmpty()
   @MaxLength(160)

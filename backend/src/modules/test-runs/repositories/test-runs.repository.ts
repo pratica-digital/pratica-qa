@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma, TestCaseStatus, TestResultStatus, TestRunStatus } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { CreateTestRunDto } from '../dto/create-test-run.dto';
+import { ExecuteTestRunDto } from '../dto/execute-test-run.dto';
 import { RerunFailedTestsDto } from '../dto/rerun-failed-tests.dto';
 import { UpdateTestRunDto } from '../dto/update-test-run.dto';
 
@@ -18,6 +19,14 @@ const TEST_RUN_INCLUDE = {
       id: true,
       name: true,
       version: true,
+    },
+  },
+  assignedTo: {
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
     },
   },
   suites: {
@@ -90,6 +99,7 @@ export class TestRunsRepository {
           projectId: dto.projectId,
           testPlanId: dto.testPlanId,
           createdById: dto.createdById,
+          assignedToId: dto.assignedToId,
           name: dto.name,
           description: dto.description ?? '',
           suites: {
@@ -115,6 +125,14 @@ export class TestRunsRepository {
         where: { id: testRun.id },
         include: TEST_RUN_INCLUDE,
       });
+    });
+  }
+
+  assign(id: string, assignedToId: string) {
+    return this.prisma.testRun.update({
+      where: { id },
+      data: { assignedToId },
+      include: TEST_RUN_INCLUDE,
     });
   }
 
@@ -206,6 +224,7 @@ export class TestRunsRepository {
           projectId: sourceRun.projectId,
           testPlanId: sourceRun.testPlanId,
           createdById: sourceRun.createdById,
+          assignedToId: sourceRun.assignedToId,
           name: dto.name ?? `${sourceRun.name} - failed re-run`,
           description: dto.description ?? `Re-run of failed cases from ${sourceRun.name}`,
           suites: {
@@ -232,6 +251,57 @@ export class TestRunsRepository {
         }),
         failedCount: failedCaseIds.length,
       };
+    });
+  }
+
+  async executeResult(testRunId: string, dto: ExecuteTestRunDto, executedById: string) {
+    const testResult = await this.prisma.testResult.findFirst({
+      where: {
+        id: dto.testResultId,
+        testRunId,
+        testCaseId: dto.testCaseId,
+      },
+    });
+
+    if (!testResult) {
+      return null;
+    }
+
+    return this.prisma.testResult.update({
+      where: { id: testResult.id },
+      data: {
+        status: dto.status,
+        comment: dto.comment,
+        attachments: dto.attachments,
+        executedById,
+        executedAt: new Date(),
+      },
+      include: {
+        testRun: {
+          select: {
+            id: true,
+            name: true,
+            status: true,
+            assignedToId: true,
+          },
+        },
+        testCase: {
+          select: {
+            id: true,
+            title: true,
+            suiteId: true,
+            priority: true,
+          },
+        },
+        executedBy: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+          },
+        },
+      },
     });
   }
 
