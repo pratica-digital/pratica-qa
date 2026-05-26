@@ -1,11 +1,13 @@
-import { ChangeEvent, useMemo, useState } from 'react';
+import { ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, Paperclip, SkipForward, XCircle } from 'lucide-react';
 import type { ExecuteTestResultPayload, TestResultStatus } from '../../types/testRun';
 
 type TestResultFormProps = {
   comment?: string;
   attachments?: string[];
+  currentStatus: TestResultStatus;
   disabled: boolean;
+  isActive: boolean;
   isSubmitting: boolean;
   onSubmit: (payload: ExecuteTestResultPayload) => Promise<void>;
 };
@@ -58,7 +60,9 @@ function formatFileSize(bytes: number) {
 export function TestResultForm({
   comment = '',
   attachments = [],
+  currentStatus,
   disabled,
+  isActive,
   isSubmitting,
   onSubmit,
 }: TestResultFormProps) {
@@ -74,14 +78,48 @@ export function TestResultForm({
     setSelectedFiles(Array.from(event.target.files ?? []));
   };
 
-  const submitStatus = async (status: Exclude<TestResultStatus, 'PENDING'>) => {
+  const submitStatus = useCallback(async (status: Exclude<TestResultStatus, 'PENDING'>) => {
     await onSubmit({
       status,
       comment: draftComment.trim(),
       attachments: [...attachments, ...selectedAttachmentLabels],
     });
     setSelectedFiles([]);
-  };
+  }, [attachments, draftComment, onSubmit, selectedAttachmentLabels]);
+
+  useEffect(() => {
+    if (!isActive || disabled || isSubmitting) {
+      return undefined;
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      const target = event.target;
+      const isTypingTarget =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        (target instanceof HTMLElement && target.isContentEditable);
+
+      if (isTypingTarget) {
+        return;
+      }
+
+      const key = event.key.toLowerCase();
+      const status =
+        key === 'p' ? 'PASSED' : key === 'f' ? 'FAILED' : key === 's' ? 'SKIPPED' : undefined;
+
+      if (!status) {
+        return;
+      }
+
+      event.preventDefault();
+      void submitStatus(status);
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [disabled, isActive, isSubmitting, submitStatus]);
 
   return (
     <div className="space-y-3">
@@ -131,7 +169,11 @@ export function TestResultForm({
 
           return (
             <button
-              className={`inline-flex h-9 items-center justify-center gap-2 rounded-lg border bg-white px-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 dark:bg-zinc-950 ${action.className}`}
+              className={`inline-flex h-9 items-center justify-center gap-2 rounded-lg border px-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 ${
+                currentStatus === action.status
+                  ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950'
+                  : `bg-white dark:bg-zinc-950 ${action.className}`
+              }`}
               disabled={disabled || isSubmitting}
               key={action.status}
               onClick={() => void submitStatus(action.status)}

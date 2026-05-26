@@ -16,6 +16,14 @@ export type TestRunStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
 
 export type TestResultStatus = 'PENDING' | 'PASSED' | 'FAILED' | 'SKIPPED';
 
+export type TestPriority = 'LOW' | 'MEDIUM' | 'HIGH';
+
+export type TestSeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+
+export type TestCaseStatus = 'ACTIVE' | 'ARCHIVED';
+
+export type TestSuiteStatus = 'ACTIVE' | 'ARCHIVED';
+
 export type TestStep = {
   id: string;
   order: number;
@@ -32,6 +40,62 @@ export type RunnerTestCase = {
   priority?: 'LOW' | 'MEDIUM' | 'HIGH';
   status?: string;
   steps?: TestStep[];
+};
+
+export type ProjectSummary = {
+  id: string;
+  key?: string;
+  name: string;
+  description?: string;
+  status?: 'ACTIVE' | 'ARCHIVED';
+  createdAt?: string;
+  updatedAt?: string;
+  _count?: {
+    suites?: number;
+    testPlans?: number;
+    testRuns?: number;
+  };
+};
+
+export type ManagedTestSuite = {
+  id: string;
+  projectId: string;
+  name: string;
+  description: string;
+  status: TestSuiteStatus;
+  position: number;
+  createdAt?: string;
+  updatedAt?: string;
+  project?: {
+    id: string;
+    key: string;
+    name: string;
+  };
+  _count?: {
+    testCases: number;
+  };
+};
+
+export type ManagedTestCase = {
+  id: string;
+  suiteId: string;
+  title: string;
+  description: string;
+  preconditions?: string;
+  expectedResult: string;
+  status: TestCaseStatus;
+  priority: TestPriority;
+  severity?: TestSeverity;
+  version?: number;
+  tags: string[];
+  createdAt?: string;
+  updatedAt?: string;
+  suite?: {
+    id: string;
+    name: string;
+    projectId: string;
+  };
+  steps: TestStep[];
 };
 
 export type TestResult = {
@@ -99,4 +163,66 @@ export type ExecuteTestResultPayload = {
   status: Exclude<TestResultStatus, 'PENDING'>;
   comment?: string;
   attachments?: string[];
+};
+
+export type UpdateTestResultPayload = {
+  status: Exclude<TestResultStatus, 'PENDING'>;
+  comment?: string;
+  attachments?: string[];
+};
+
+export type CreateTestResultPayload = UpdateTestResultPayload & {
+  testRunId: string;
+  testCaseId: string;
+  executedById?: string;
+};
+
+export type UpdateTestCasePayload = Partial<{
+  title: string;
+  description: string;
+  expectedResult: string;
+  status: TestCaseStatus;
+  priority: TestPriority;
+  severity: TestSeverity;
+  tags: string[];
+}>;
+
+export type ReplaceTestStepsPayload = {
+  steps: Array<{
+    order: number;
+    description: string;
+    expectedResult?: string;
+  }>;
+};
+
+export type CreateTestCasePayload = {
+  suiteId: string;
+  title: string;
+  description?: string;
+  expectedResult?: string;
+  status?: TestCaseStatus;
+  priority?: TestPriority;
+  severity?: TestSeverity;
+  tags?: string[];
+  steps?: ReplaceTestStepsPayload['steps'];
+};
+
+export type UpdateTestSuitePayload = Partial<{
+  name: string;
+  description: string;
+  status: TestSuiteStatus;
+  position: number;
+}>;
+
+export type CreateTestSuitePayload = {
+  projectId: string;
+  name: string;
+  description?: string;
+  position?: number;
+};
+
+export type CreateProjectPayload = {
+  name: string;
+  key: string;
+  description?: string;
 };

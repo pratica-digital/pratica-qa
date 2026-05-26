@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useState,
   type InputHTMLAttributes,
   type ReactNode,
@@ -13,30 +14,10 @@ import {
   UserRound,
   X,
 } from 'lucide-react';
-import type { AuthUser, TestResult, TestRun, TestRunSuite } from '../types/testRun';
+import type { AuthUser, ManagedTestSuite, TestRun } from '../types/testRun';
+import { useAuth } from '../auth/useAuth';
 
-const TEST_PLANS: Array<NonNullable<TestRun['testPlan']>> = [
-  { id: 'plan-1', name: 'Release v2.4 - Sprint 12', version: '2.4' },
-  { id: 'plan-2', name: 'Hotfix v2.3.1 - Auth Fix', version: '2.3.1' },
-  { id: 'plan-3', name: 'Regression - Q3 2025', version: '2025.3' },
-];
-
-const SUITES = [
-  { id: 'suite-1', name: 'Authentication', cases: 6 },
-  { id: 'suite-2', name: 'Checkout', cases: 5 },
-  { id: 'suite-3', name: 'Reporting', cases: 4 },
-  { id: 'suite-4', name: 'Rate limits', cases: 3 },
-  { id: 'suite-5', name: 'Mobile Checkout', cases: 4 },
-] as const;
-
-const QA_USERS: AuthUser[] = [
-  { id: 'u1', name: 'Alice Chen', email: 'alice@qa.com', role: 'QA', status: 'ACTIVE' },
-  { id: 'u2', name: 'Bob Lima', email: 'bob@qa.com', role: 'QA', status: 'ACTIVE' },
-  { id: 'u3', name: 'Carlos Souza', email: 'carlos@qa.com', role: 'QA', status: 'ACTIVE' },
-  { id: 'u4', name: 'Diana Park', email: 'diana@qa.com', role: 'QA', status: 'ACTIVE' },
-];
-
-type SuiteOption = (typeof SUITES)[number];
+type SuiteOption = ManagedTestSuite;
 type TabId = 'info' | 'suites';
 
 type TestRunForm = {
@@ -67,6 +48,7 @@ type NewTestRunModalProps = {
   onClose: () => void;
   onCreate?: (testRun: TestRun) => void;
   qaUsers?: AuthUser[];
+  projectId?: string;
 };
 
 const initialForm: TestRunForm = {
@@ -100,6 +82,8 @@ function Input(props: InputHTMLAttributes<HTMLInputElement>) {
 }
 
 function SuiteCheckbox({ suite, checked, onToggle }: SuiteCheckboxProps) {
+  const caseCount = suite._count?.testCases || 0;
+
   return (
     <label
       className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition ${
@@ -126,64 +110,67 @@ function SuiteCheckbox({ suite, checked, onToggle }: SuiteCheckboxProps) {
         >
           {suite.name}
         </p>
-        <p className="text-xs text-zinc-400">{suite.cases} cases</p>
+        <p className="text-xs text-zinc-400">{caseCount} cases</p>
       </div>
     </label>
   );
 }
 
-function buildSuites(selectedSuites: SuiteOption[]): TestRunSuite[] {
-  return selectedSuites.map((suite, index) => ({
-    id: `run-suite-${suite.id}`,
-    testSuiteId: suite.id,
-    position: index + 1,
-    testSuite: {
-      id: suite.id,
-      name: suite.name,
-      projectId: 'project-local',
-    },
-  }));
-}
-
-function buildResults(runId: string, selectedSuites: SuiteOption[]): TestResult[] {
-  return selectedSuites.flatMap((suite) =>
-    Array.from({ length: suite.cases }, (_, index) => {
-      const caseNumber = index + 1;
-      const testCaseId = `${suite.id}-case-${caseNumber}`;
-
-      return {
-        id: `${runId}-result-${suite.id}-${caseNumber}`,
-        testRunId: runId,
-        testCaseId,
-        status: 'PENDING',
-        attachments: [],
-        testCase: {
-          id: testCaseId,
-          title: `${suite.name} case ${caseNumber}`,
-          suiteId: suite.id,
-          priority: 'MEDIUM',
-          status: 'ACTIVE',
-          steps: [
-            {
-              id: `${testCaseId}-step-1`,
-              order: 1,
-              description: `Execute ${suite.name.toLowerCase()} validation`,
-              expectedResult: 'The expected behavior is verified',
-            },
-          ],
-        },
-      };
-    }),
-  );
-}
-
-export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [] }: NewTestRunModalProps) {
+export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], projectId }: NewTestRunModalProps) {
+  const { token } = useAuth();
   const [form, setForm] = useState<TestRunForm>(initialForm);
   const [selectedSuites, setSelectedSuites] = useState<string[]>([]);
   const [errors, setErrors] = useState<TestRunFormErrors>({});
   const [submitting, setSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>('info');
-  const assigneeOptions = qaUsers.length > 0 ? qaUsers : QA_USERS;
+  const [testPlans, setTestPlans] = useState<any[]>([]);
+  const [suites, setSuites] = useState<SuiteOption[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(false);
+  const [loadError, setLoadError] = useState('');
+
+  const assigneeOptions = qaUsers;
+
+  useEffect(() => {
+    if (!open || !token) {
+      return;
+    }
+
+    const loadData = async () => {
+      setIsLoadingData(true);
+      setLoadError('');
+
+      try {
+        const [plansResponse, suitesResponse] = await Promise.all([
+          fetch(`http://localhost:3000/api/test-plans?limit=100`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch(`http://localhost:3000/api/test-suites?limit=100${projectId ? `&projectId=${projectId}` : ''}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
+
+        if (!plansResponse.ok || !suitesResponse.ok) {
+          setLoadError('Failed to load data');
+          return;
+        }
+
+        const plansData = (await plansResponse.json()) as any;
+        const suitesData = (await suitesResponse.json()) as any;
+
+        const plansList = Array.isArray(plansData) ? plansData : plansData.data || [];
+        const suitesList = Array.isArray(suitesData) ? suitesData : suitesData.data || [];
+
+        setTestPlans(plansList);
+        setSuites(suitesList);
+      } catch (error) {
+        setLoadError('Unable to load data');
+      } finally {
+        setIsLoadingData(false);
+      }
+    };
+
+    loadData();
+  }, [open, token, projectId]);
 
   if (!open) {
     return null;
@@ -202,7 +189,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [] }: NewTe
   }
 
   function selectAll() {
-    setSelectedSuites(SUITES.map((suite) => suite.id));
+    setSelectedSuites(suites.map((suite) => suite.id));
   }
 
   function clearAll() {
@@ -240,48 +227,59 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [] }: NewTe
       return;
     }
 
-    setSubmitting(true);
-    await new Promise((resolve) => window.setTimeout(resolve, 300));
-
-    const runId = `RUN-${Date.now()}`;
-    const plan = TEST_PLANS.find((item) => item.id === form.planId);
-    const assignee = assigneeOptions.find((item) => item.id === form.assignedToId);
-    const suites = SUITES.filter((suite) => selectedSuites.includes(suite.id));
-
-    if (!plan || !assignee) {
-      setSubmitting(false);
+    if (!token) {
+      setLoadError('Authentication required');
       return;
     }
 
-    onCreate?.({
-      id: runId,
-      assignedToId: assignee.id,
-      name: form.name.trim(),
-      description: form.description.trim(),
-      status: 'PENDING',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      project: {
-        id: 'project-local',
-        key: 'QA',
-        name: 'Local QA workspace',
-      },
-      testPlan: plan,
-      assignedTo: assignee,
-      suites: buildSuites(suites),
-      results: buildResults(runId, suites),
-    });
+    setSubmitting(true);
+    setLoadError('');
 
-    setSubmitting(false);
-    onClose();
-    setForm(initialForm);
-    setSelectedSuites([]);
-    setErrors({});
-    setActiveTab('info');
+    try {
+      const response = await fetch('http://localhost:3000/api/test-runs', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          projectId: projectId || suites[0]?.projectId,
+          testPlanId: form.planId,
+          assignedToId: form.assignedToId,
+          name: form.name.trim(),
+          description: form.description.trim(),
+          suiteIds: selectedSuites,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = (await response.json()) as any;
+        setLoadError(errorData.message || 'Failed to create test run');
+        setSubmitting(false);
+        return;
+      }
+
+      const createdRun = (await response.json()) as TestRun;
+      onCreate?.(createdRun);
+
+      onClose();
+      setForm(initialForm);
+      setSelectedSuites([]);
+      setErrors({});
+      setActiveTab('info');
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : 'Unable to create test run');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
-  const selectedSuiteOptions = SUITES.filter((suite) => selectedSuites.includes(suite.id));
-  const totalCasesSelected = selectedSuiteOptions.reduce((sum, suite) => sum + suite.cases, 0);
+  const selectedSuiteOptions = suites.filter((suite) => selectedSuites.includes(suite.id));
+  const totalCasesSelected = selectedSuiteOptions.reduce(
+    (sum, suite) => sum + (suite._count?.testCases || 0),
+    0,
+  );
+
   const tabs: Array<{ id: TabId; label: string }> = [
     { id: 'info', label: 'Setup' },
     { id: 'suites', label: `Suites (${selectedSuites.length})` },
@@ -293,6 +291,8 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [] }: NewTe
       onClick={(event) => event.target === event.currentTarget && onClose()}
     >
       <div className="relative flex w-full max-w-xl flex-col rounded-t-lg border border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-950 sm:rounded-lg">
+
+        {/* Header */}
         <div className="flex items-center gap-3 border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400">
             <Play className="h-4 w-4" aria-hidden="true" />
@@ -311,6 +311,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [] }: NewTe
           </button>
         </div>
 
+        {/* Tabs */}
         <div className="flex border-b border-zinc-200 px-5 dark:border-zinc-800">
           {tabs.map((tab) => (
             <button
@@ -333,8 +334,22 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [] }: NewTe
           ))}
         </div>
 
+        {/* Body */}
         <div className="max-h-[60vh] overflow-y-auto px-5 py-5">
-          {activeTab === 'info' ? (
+          {loadError ? (
+            <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-400">
+              {loadError}
+            </div>
+          ) : null}
+
+          {isLoadingData ? (
+            <div className="flex items-center justify-center py-8 text-sm text-zinc-500">
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-600 dark:border-zinc-600 dark:border-t-white" />
+            </div>
+          ) : null}
+
+          {/* Tab: Info */}
+          {!isLoadingData && activeTab === 'info' ? (
             <div className="space-y-4">
               <Field label="Run name" required>
                 <Input
@@ -354,13 +369,14 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [] }: NewTe
                   <ClipboardList className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
                   <select
                     className="h-10 w-full appearance-none rounded-lg border border-zinc-200 bg-white pl-9 pr-9 text-sm text-zinc-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
+                    disabled={isLoadingData}
                     onChange={(event) => setField('planId', event.target.value)}
                     value={form.planId}
                   >
                     <option value="">Select plan...</option>
-                    {TEST_PLANS.map((plan) => (
+                    {testPlans.map((plan) => (
                       <option key={plan.id} value={plan.id}>
-                        {plan.name}
+                        {plan.name} (v{plan.version})
                       </option>
                     ))}
                   </select>
@@ -421,13 +437,15 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [] }: NewTe
             </div>
           ) : null}
 
-          {activeTab === 'suites' ? (
+          {/* Tab: Suites */}
+          {!isLoadingData && activeTab === 'suites' ? (
             <div className="space-y-3">
               <div className="flex items-center justify-between gap-3">
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">Select suites for this run.</p>
                 <div className="flex gap-2">
                   <button
                     className="text-xs font-medium text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300"
+                    disabled={suites.length === 0}
                     onClick={selectAll}
                     type="button"
                   >
@@ -450,16 +468,22 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [] }: NewTe
                 </p>
               ) : null}
 
-              <div className="grid gap-2">
-                {SUITES.map((suite) => (
-                  <SuiteCheckbox
-                    checked={selectedSuites.includes(suite.id)}
-                    key={suite.id}
-                    onToggle={toggleSuite}
-                    suite={suite}
-                  />
-                ))}
-              </div>
+              {suites.length === 0 ? (
+                <p className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
+                  No suites available
+                </p>
+              ) : (
+                <div className="grid gap-2">
+                  {suites.map((suite) => (
+                    <SuiteCheckbox
+                      checked={selectedSuites.includes(suite.id)}
+                      key={suite.id}
+                      onToggle={toggleSuite}
+                      suite={suite}
+                    />
+                  ))}
+                </div>
+              )}
 
               {selectedSuites.length > 0 ? (
                 <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-900">
@@ -479,6 +503,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [] }: NewTe
           ) : null}
         </div>
 
+        {/* Footer */}
         <div className="flex items-center justify-between gap-2 border-t border-zinc-200 px-5 py-4 dark:border-zinc-800">
           <p className="text-xs text-zinc-400">
             {selectedSuites.length > 0 ? `${totalCasesSelected} cases will be queued` : 'No suites selected'}
@@ -511,6 +536,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [] }: NewTe
             </button>
           </div>
         </div>
+
       </div>
     </div>
   );

@@ -7,7 +7,9 @@ type TestCaseRunnerProps = {
   result: TestResult;
   disabled: boolean;
   disabledReason?: string;
+  isActive: boolean;
   isSubmitting: boolean;
+  onActivate: () => void;
   onSubmit: (result: TestResult, payload: ExecuteTestResultPayload) => Promise<void>;
 };
 
@@ -26,14 +28,25 @@ export function TestCaseRunner({
   result,
   disabled,
   disabledReason,
+  isActive,
   isSubmitting,
+  onActivate,
   onSubmit,
 }: TestCaseRunnerProps) {
   const { testCase } = result;
   const steps = testCase.steps ?? [];
 
   return (
-    <article className="rounded-lg border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+    <article
+      className={`rounded-lg border bg-white shadow-sm outline-none transition dark:bg-zinc-950 ${
+        isActive
+          ? 'border-zinc-950 ring-2 ring-zinc-200 dark:border-white dark:ring-zinc-800'
+          : 'border-zinc-200 dark:border-zinc-800'
+      }`}
+      onClick={onActivate}
+      onFocus={onActivate}
+      tabIndex={0}
+    >
       <div className="border-b border-zinc-200 p-4 dark:border-zinc-800">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
@@ -143,7 +156,9 @@ export function TestCaseRunner({
           <TestResultForm
             attachments={result.attachments}
             comment={result.comment}
+            currentStatus={result.status}
             disabled={disabled}
+            isActive={isActive}
             isSubmitting={isSubmitting}
             onSubmit={(payload) => onSubmit(result, payload)}
           />
