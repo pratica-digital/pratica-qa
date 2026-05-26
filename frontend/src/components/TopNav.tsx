@@ -30,7 +30,10 @@ export function TopNav({
 }: TopNavProps) {
   const { logout, user } = useAuth();
   const isReadOnly = user?.role === 'VIEWER';
-  const isCreateDisabled = isReadOnly || !onCreateAction;
+  const adminCreatePages: PageId[] = ['projects', 'test-suites', 'test-runs'];
+  const requiresAdminCreate = adminCreatePages.includes(activePage);
+  const isCreateDisabled =
+    isReadOnly || !onCreateAction || (requiresAdminCreate && user?.role !== 'ADMIN');
 
   return (
     <header className="sticky top-0 z-30 border-b border-zinc-200 bg-white/90 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/90">
@@ -67,7 +70,13 @@ export function TopNav({
             className="hidden h-9 items-center gap-2 rounded-lg bg-zinc-950 px-3 text-sm font-medium text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 sm:flex"
             disabled={isCreateDisabled}
             onClick={onCreateAction}
-            title={isReadOnly ? 'Viewer mode is read-only' : `New ${createActionLabel.toLowerCase()}`}
+            title={
+              requiresAdminCreate && user?.role !== 'ADMIN'
+                ? 'Only admins can create this item'
+                : isReadOnly
+                  ? 'Viewer mode is read-only'
+                  : `New ${createActionLabel.toLowerCase()}`
+            }
             type="button"
           >
             <Plus className="h-4 w-4" aria-hidden="true" />

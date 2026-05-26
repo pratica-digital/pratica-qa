@@ -1,9 +1,20 @@
 import type {
   AuthUser,
+  CreateProjectPayload,
+  CreateTestCasePayload,
+  CreateTestResultPayload,
+  CreateTestSuitePayload,
   ExecuteTestResultPayload,
+  ManagedTestCase,
+  ManagedTestSuite,
   PaginatedResponse,
+  ProjectSummary,
+  ReplaceTestStepsPayload,
   TestResult,
   TestRun,
+  UpdateTestCasePayload,
+  UpdateTestResultPayload,
+  UpdateTestSuitePayload,
 } from '../types/testRun';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api';
@@ -105,6 +116,81 @@ export const usersApi = {
   },
 };
 
+export const projectsApi = {
+  list: async (token: string) => {
+    const response = await apiRequest<ProjectSummary[] | PaginatedResponse<ProjectSummary>>(
+      '/projects?limit=100',
+      {
+        token,
+      },
+    );
+
+    return unwrapList(response);
+  },
+  create: (token: string, payload: CreateProjectPayload) =>
+    apiRequest<ProjectSummary>('/projects', {
+      method: 'POST',
+      token,
+      body: payload,
+    }),
+};
+
+export const testSuitesApi = {
+  list: async (token: string) => {
+    const response = await apiRequest<ManagedTestSuite[] | PaginatedResponse<ManagedTestSuite>>(
+      '/test-suites?limit=100',
+      {
+        token,
+      },
+    );
+
+    return unwrapList(response);
+  },
+  create: (token: string, payload: CreateTestSuitePayload) =>
+    apiRequest<ManagedTestSuite>('/test-suites', {
+      method: 'POST',
+      token,
+      body: payload,
+    }),
+  update: (token: string, testSuiteId: string, payload: UpdateTestSuitePayload) =>
+    apiRequest<ManagedTestSuite>(`/test-suites/${testSuiteId}`, {
+      method: 'PATCH',
+      token,
+      body: payload,
+    }),
+};
+
+export const testCasesApi = {
+  list: async (token: string) => {
+    const response = await apiRequest<ManagedTestCase[] | PaginatedResponse<ManagedTestCase>>(
+      '/test-cases?limit=100',
+      {
+        token,
+      },
+    );
+
+    return unwrapList(response);
+  },
+  create: (token: string, payload: CreateTestCasePayload) =>
+    apiRequest<ManagedTestCase>('/test-cases', {
+      method: 'POST',
+      token,
+      body: payload,
+    }),
+  update: (token: string, testCaseId: string, payload: UpdateTestCasePayload) =>
+    apiRequest<ManagedTestCase>(`/test-cases/${testCaseId}`, {
+      method: 'PATCH',
+      token,
+      body: payload,
+    }),
+  replaceSteps: (token: string, testCaseId: string, payload: ReplaceTestStepsPayload) =>
+    apiRequest<ManagedTestCase>(`/test-cases/${testCaseId}/steps`, {
+      method: 'PUT',
+      token,
+      body: payload,
+    }),
+};
+
 export const testRunsApi = {
   list: async (token: string) => {
     const response = await apiRequest<TestRun[] | PaginatedResponse<TestRun>>('/test-runs?limit=100', {
@@ -125,20 +211,33 @@ export const testRunsApi = {
       token,
       body: payload,
     }),
+  rerunFailed: (token: string, testRunId: string, payload: { name?: string; description?: string }) =>
+    apiRequest<{ testRun: TestRun | null; failedCount: number }>(`/test-runs/${testRunId}/rerun-failed`, {
+      method: 'POST',
+      token,
+      body: payload,
+    }),
 };
 
 export const testResultsApi = {
-  create: (
-    token: string,
-    payload: ExecuteTestResultPayload & {
-      testRunId: string;
-      testCaseId: string;
-      executedById?: string;
-    },
-  ) =>
+  create: (token: string, payload: CreateTestResultPayload) =>
     apiRequest<TestResult>('/test-results', {
       method: 'POST',
       token,
       body: payload,
     }),
+  update: (token: string, resultId: string, payload: Partial<ExecuteTestResultPayload>) =>
+  apiRequest<TestResult>(`/test-results/${resultId}`, {
+    method: 'PATCH',
+    token,
+    body: payload,
+  }),
+
+  rerunFailed: (token: string, testRunId: string, payload: Record<string, never>) =>
+    apiRequest<{ testRun: TestRun; failedCount: number }>(`/test-runs/${testRunId}/rerun-failed`,{
+      method: 'POST',
+      token,
+      body: payload,
+    },
+  ),
 };
