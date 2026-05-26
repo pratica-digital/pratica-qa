@@ -1,8 +1,35 @@
+import { useEffect, useState } from 'react';
 import { Filter, Layers3, Plus, Search } from 'lucide-react';
+import { useAuth } from '../auth/useAuth';
 import { SuiteStatusBadge } from '../components/badges';
-import { testSuites } from '../data/workspace';
+import { testSuites as initialSuites, type TestSuite } from '../data/workspace';
+import { NewSuiteModal } from './NewSuiteModal';
 
-export function TestSuitesPage() {
+type TestSuitesPageProps = {
+  createActionEventId?: number;
+};
+
+export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps) {
+  const { user } = useAuth();
+  const isReadOnly = user?.role === 'VIEWER';
+
+  const [suites, setSuites] = useState<TestSuite[]>(initialSuites);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (createActionEventId > 0 && !isReadOnly) {
+      const timeoutId = window.setTimeout(() => setModalOpen(true), 0);
+
+      return () => window.clearTimeout(timeoutId);
+    }
+
+    return undefined;
+  }, [createActionEventId, isReadOnly]);
+
+  function handleCreate(newSuite: TestSuite) {
+    setSuites((prev) => [newSuite, ...prev]);
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
@@ -13,14 +40,18 @@ export function TestSuitesPage() {
           </h1>
         </div>
         <button
-          className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-zinc-950 px-3 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
+          className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-zinc-950 px-3 text-sm font-medium text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
+          disabled={isReadOnly}
+          title={isReadOnly ? 'Viewer mode is read-only' : 'Create suite'}
           type="button"
+          onClick={() => setModalOpen(true)}
         >
           <Plus className="h-4 w-4" aria-hidden="true" />
           Suite
         </button>
       </div>
 
+      {/* Search & Filter */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <label className="flex h-10 w-full items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400 sm:max-w-md">
           <Search className="h-4 w-4" aria-hidden="true" />
@@ -39,8 +70,9 @@ export function TestSuitesPage() {
         </button>
       </div>
 
+      {/* Cards */}
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        {testSuites.map((suite) => (
+        {suites.map((suite) => (
           <article
             className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950"
             key={suite.name}
@@ -85,6 +117,7 @@ export function TestSuitesPage() {
         ))}
       </section>
 
+      {/* Table */}
       <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
         <div className="border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
           <h2 className="text-sm font-semibold text-zinc-950 dark:text-white">Suite matrix</h2>
@@ -102,7 +135,7 @@ export function TestSuitesPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-              {testSuites.map((suite) => (
+              {suites.map((suite) => (
                 <tr className="hover:bg-zinc-50 dark:hover:bg-zinc-900/60" key={suite.name}>
                   <td className="px-4 py-3 font-medium text-zinc-950 dark:text-white">{suite.name}</td>
                   <td className="px-4 py-3 text-zinc-600 dark:text-zinc-300">{suite.project}</td>
@@ -118,6 +151,13 @@ export function TestSuitesPage() {
           </table>
         </div>
       </div>
+
+      {/* Modal */}
+      <NewSuiteModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onCreate={handleCreate}
+      />
     </div>
   );
 }
