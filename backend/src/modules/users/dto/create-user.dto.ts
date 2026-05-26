@@ -29,7 +29,6 @@ export class CreateUserDto {
   @IsOptional()
   @IsEnum(UserRole)
   role?: UserRole;
-
   @IsOptional()
   @IsEnum(UserStatus)
   status?: UserStatus;

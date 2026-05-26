@@ -1,11 +1,20 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { PageId } from '../data/workspace';
 import { DashboardPage } from '../pages/DashboardPage';
 import { ProjectsPage } from '../pages/ProjectsPage';
 import { TestCasesPage } from '../pages/TestCasesPage';
+import { TestRunExecutionPage } from '../pages/TestRunExecutionPage';
+import { TestRunsPage } from '../pages/TestRunsPage';
 import { TestSuitesPage } from '../pages/TestSuitesPage';
+import type { TestRun } from '../types/testRun';
 import { Sidebar } from './Sidebar';
 import { TopNav } from './TopNav';
+
+const createActionLabels: Partial<Record<PageId, string>> = {
+  'test-suites': 'Suite',
+  'test-cases': 'Test case',
+  'test-runs': 'Test run',
+};
 
 const getInitialTheme = () => {
   if (typeof window === 'undefined') {
@@ -23,6 +32,8 @@ const getInitialTheme = () => {
 
 export function AppShell() {
   const [activePage, setActivePage] = useState<PageId>('dashboard');
+  const [selectedTestRun, setSelectedTestRun] = useState<TestRun | null>(null);
+  const [createActionEventId, setCreateActionEventId] = useState(0);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isDark, setIsDark] = useState(getInitialTheme);
 
@@ -31,18 +42,43 @@ export function AppShell() {
     window.localStorage.setItem('qa-platform-theme', isDark ? 'dark' : 'light');
   }, [isDark]);
 
+  const handleNavigate = useCallback((pageId: PageId) => {
+    setActivePage(pageId);
+    setSelectedTestRun(null);
+  }, []);
+
   const page = useMemo(() => {
+    if (selectedTestRun) {
+      return (
+        <TestRunExecutionPage
+          key={selectedTestRun.id}
+          onBack={() => setSelectedTestRun(null)}
+          onRunUpdated={setSelectedTestRun}
+          testRun={selectedTestRun}
+        />
+      );
+    }
+
     switch (activePage) {
       case 'projects':
         return <ProjectsPage />;
       case 'test-suites':
-        return <TestSuitesPage />;
+        return <TestSuitesPage createActionEventId={createActionEventId} />;
       case 'test-cases':
-        return <TestCasesPage />;
+        return <TestCasesPage createActionEventId={createActionEventId} />;
+      case 'test-runs':
+        return (
+          <TestRunsPage
+            createActionEventId={createActionEventId}
+            onOpenRun={setSelectedTestRun}
+          />
+        );
       default:
-        return <DashboardPage onNavigate={setActivePage} />;
+        return <DashboardPage onNavigate={handleNavigate} />;
     }
-  }, [activePage]);
+  }, [activePage, createActionEventId, handleNavigate, selectedTestRun]);
+
+  const createActionLabel = selectedTestRun ? undefined : createActionLabels[activePage];
 
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-950 dark:bg-zinc-950 dark:text-zinc-50">
@@ -50,12 +86,18 @@ export function AppShell() {
         activePage={activePage}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
-        onNavigate={setActivePage}
+        onNavigate={handleNavigate}
       />
       <div className="lg:pl-72">
         <TopNav
           activePage={activePage}
+          createActionLabel={createActionLabel}
           isDark={isDark}
+          onCreateAction={
+            createActionLabel
+              ? () => setCreateActionEventId((current) => current + 1)
+              : undefined
+          }
           onOpenSidebar={() => setIsSidebarOpen(true)}
           onToggleTheme={() => setIsDark((value) => !value)}
         />

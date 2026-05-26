@@ -1,4 +1,5 @@
 import { X } from 'lucide-react';
+import { useAuth } from '../auth/useAuth';
 import type { PageId } from '../data/workspace';
 import { navigationItems } from '../data/workspace';
 
@@ -10,6 +11,13 @@ type SidebarProps = {
 };
 
 export function Sidebar({ activePage, isOpen, onClose, onNavigate }: SidebarProps) {
+  const { assignedTestRuns, user } = useAuth();
+  const activeAssignedRuns = assignedTestRuns.filter((run) => run.status !== 'COMPLETED');
+  const progress =
+    assignedTestRuns.length === 0
+      ? 0
+      : Math.round(((assignedTestRuns.length - activeAssignedRuns.length) / assignedTestRuns.length) * 100);
+
   return (
     <>
       <div
@@ -82,14 +90,19 @@ export function Sidebar({ activePage, isOpen, onClose, onNavigate }: SidebarProp
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-medium uppercase text-zinc-500 dark:text-zinc-400">
-                  Current run
+                  Signed in
                 </p>
-                <p className="mt-1 text-sm font-semibold text-zinc-950 dark:text-white">Regression 24.05</p>
+                <p className="mt-1 truncate text-sm font-semibold text-zinc-950 dark:text-white">
+                  {user?.name}
+                </p>
+                <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                  {activeAssignedRuns.length} active assigned
+                </p>
               </div>
               <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
             </div>
             <div className="mt-3 h-2 rounded-full bg-zinc-100 dark:bg-zinc-900">
-              <div className="h-2 w-3/4 rounded-full bg-emerald-500" />
+              <div className="h-2 rounded-full bg-emerald-500" style={{ width: `${progress}%` }} />
             </div>
           </div>
         </div>

@@ -1,4 +1,6 @@
-import { Bell, Menu, Moon, Plus, Search, Sun } from 'lucide-react';
+import { Bell, LogOut, Menu, Moon, Plus, Search, Sun, UserRound } from 'lucide-react';
+import { useAuth } from '../auth/useAuth';
+import { UserRoleBadge } from './badges';
 import type { PageId } from '../data/workspace';
 
 const pageTitles: Record<PageId, string> = {
@@ -6,16 +8,30 @@ const pageTitles: Record<PageId, string> = {
   projects: 'Projects',
   'test-suites': 'Test Suites',
   'test-cases': 'Test Cases',
+  'test-runs': 'Test Runs',
 };
 
 type TopNavProps = {
   activePage: PageId;
+  createActionLabel?: string;
   isDark: boolean;
+  onCreateAction?: () => void;
   onOpenSidebar: () => void;
   onToggleTheme: () => void;
 };
 
-export function TopNav({ activePage, isDark, onOpenSidebar, onToggleTheme }: TopNavProps) {
+export function TopNav({
+  activePage,
+  createActionLabel,
+  isDark,
+  onCreateAction,
+  onOpenSidebar,
+  onToggleTheme,
+}: TopNavProps) {
+  const { logout, user } = useAuth();
+  const isReadOnly = user?.role === 'VIEWER';
+  const isCreateDisabled = isReadOnly || !onCreateAction;
+
   return (
     <header className="sticky top-0 z-30 border-b border-zinc-200 bg-white/90 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/90">
       <div className="flex h-16 items-center gap-3 px-4 sm:px-6 lg:px-8">
@@ -46,13 +62,18 @@ export function TopNav({ activePage, isDark, onOpenSidebar, onToggleTheme }: Top
           />
         </label>
 
-        <button
-          className="hidden h-9 items-center gap-2 rounded-lg bg-zinc-950 px-3 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 sm:flex"
-          type="button"
-        >
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          New
-        </button>
+        {createActionLabel ? (
+          <button
+            className="hidden h-9 items-center gap-2 rounded-lg bg-zinc-950 px-3 text-sm font-medium text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 sm:flex"
+            disabled={isCreateDisabled}
+            onClick={onCreateAction}
+            title={isReadOnly ? 'Viewer mode is read-only' : `New ${createActionLabel.toLowerCase()}`}
+            type="button"
+          >
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            {createActionLabel}
+          </button>
+        ) : null}
 
         <button
           className="flex h-9 w-9 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-white"
@@ -72,6 +93,27 @@ export function TopNav({ activePage, isDark, onOpenSidebar, onToggleTheme }: Top
           ) : (
             <Moon className="h-4 w-4" aria-hidden="true" />
           )}
+        </button>
+
+        <div className="hidden min-w-0 items-center gap-2 border-l border-zinc-200 pl-3 dark:border-zinc-800 md:flex">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-600 dark:bg-zinc-900 dark:text-zinc-300">
+            <UserRound className="h-4 w-4" aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <p className="max-w-36 truncate text-sm font-medium text-zinc-950 dark:text-white">
+              {user?.name}
+            </p>
+            {user?.role ? <UserRoleBadge role={user.role} /> : null}
+          </div>
+        </div>
+
+        <button
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-white"
+          onClick={logout}
+          title="Log out"
+          type="button"
+        >
+          <LogOut className="h-4 w-4" aria-hidden="true" />
         </button>
       </div>
     </header>
