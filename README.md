@@ -1,6 +1,6 @@
 # QA Platform
 
-Modern QA Test Management Platform inspired by TestLodge.
+Modern QA Test Management Platform.
 
 ## Features
 
