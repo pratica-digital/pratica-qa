@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { TestCase, TestSuite, Project } from '../data/workspace';
+import type { TestResultStatus, TestRunStatus, UserRole } from '../types/testRun';
 
 type BadgeProps = {
   children: ReactNode;
@@ -44,4 +45,27 @@ export function CaseStatusBadge({ status }: { status: TestCase['status'] }) {
 export function PriorityBadge({ priority }: { priority: TestCase['priority'] }) {
   const tone = priority === 'High' ? 'red' : priority === 'Medium' ? 'amber' : 'zinc';
   return <Badge tone={tone}>{priority}</Badge>;
+}
+
+export function TestRunStatusBadge({ status }: { status: TestRunStatus }) {
+  const tone = status === 'COMPLETED' ? 'green' : status === 'IN_PROGRESS' ? 'blue' : 'zinc';
+  return <Badge tone={tone}>{status.replace('_', ' ')}</Badge>;
+}
+
+export function TestResultStatusBadge({ status }: { status: TestResultStatus }) {
+  const tone =
+    status === 'PASSED'
+      ? 'green'
+      : status === 'FAILED'
+        ? 'red'
+        : status === 'SKIPPED'
+          ? 'amber'
+          : 'zinc';
+
+  return <Badge tone={tone}>{status}</Badge>;
+}
+
+export function UserRoleBadge({ role }: { role: UserRole }) {
+  const tone = role === 'ADMIN' ? 'blue' : role === 'QA' ? 'green' : 'zinc';
+  return <Badge tone={tone}>{role}</Badge>;
 }

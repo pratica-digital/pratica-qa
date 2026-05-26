@@ -1,8 +1,12 @@
 import { Filter, FolderOpen, MoreHorizontal, Plus, Search } from 'lucide-react';
+import { useAuth } from '../auth/useAuth';
 import { ProjectStatusBadge } from '../components/badges';
 import { projects } from '../data/workspace';
 
 export function ProjectsPage() {
+  const { user } = useAuth();
+  const isReadOnly = user?.role === 'VIEWER';
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
@@ -13,7 +17,9 @@ export function ProjectsPage() {
           </h1>
         </div>
         <button
-          className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-zinc-950 px-3 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
+          className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-zinc-950 px-3 text-sm font-medium text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
+          disabled={isReadOnly}
+          title={isReadOnly ? 'Viewer mode is read-only' : 'Create project'}
           type="button"
         >
           <Plus className="h-4 w-4" aria-hidden="true" />
@@ -58,7 +64,8 @@ export function ProjectsPage() {
                 </div>
               </div>
               <button
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-950 dark:hover:bg-zinc-900 dark:hover:text-white"
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-950 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-zinc-900 dark:hover:text-white"
+                disabled={isReadOnly}
                 title="Project actions"
                 type="button"
               >

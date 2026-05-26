@@ -1,7 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
-import { FolderOpen, LayoutDashboard, Layers3, ListChecks } from 'lucide-react';
+import { FolderOpen, LayoutDashboard, Layers3, ListChecks, PlaySquare } from 'lucide-react';
 
-export type PageId = 'dashboard' | 'projects' | 'test-suites' | 'test-cases';
+export type PageId = 'dashboard' | 'projects' | 'test-suites' | 'test-cases' | 'test-runs';
 
 export type NavigationItem = {
   id: PageId;
@@ -37,7 +37,6 @@ export type TestCase = {
   priority: 'Low' | 'Medium' | 'High';
   status: 'Draft' | 'Ready' | 'Needs review';
   steps: number;
-  lastRun: 'Passed' | 'Failed' | 'Blocked' | 'Skipped';
   tags: string[];
 };
 
@@ -46,6 +45,7 @@ export const navigationItems: NavigationItem[] = [
   { id: 'projects', label: 'Projects', icon: FolderOpen },
   { id: 'test-suites', label: 'Test Suites', icon: Layers3 },
   { id: 'test-cases', label: 'Test Cases', icon: ListChecks },
+  { id: 'test-runs', label: 'Test Runs', icon: PlaySquare },
 ];
 
 export const projects: Project[] = [
@@ -128,7 +128,6 @@ export const testCases: TestCase[] = [
     priority: 'High',
     status: 'Ready',
     steps: 5,
-    lastRun: 'Passed',
     tags: ['smoke', 'login'],
   },
   {
@@ -138,7 +137,6 @@ export const testCases: TestCase[] = [
     priority: 'Medium',
     status: 'Needs review',
     steps: 6,
-    lastRun: 'Failed',
     tags: ['security'],
   },
   {
@@ -148,7 +146,6 @@ export const testCases: TestCase[] = [
     priority: 'High',
     status: 'Ready',
     steps: 8,
-    lastRun: 'Blocked',
     tags: ['payments', 'regression'],
   },
   {
@@ -158,7 +155,6 @@ export const testCases: TestCase[] = [
     priority: 'Low',
     status: 'Draft',
     steps: 4,
-    lastRun: 'Skipped',
     tags: ['api'],
   },
 ];
