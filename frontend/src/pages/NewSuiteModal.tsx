@@ -1,6 +1,7 @@
 import { useState, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react';
 import { AlertCircle, ChevronDown, Layers3, X } from 'lucide-react';
 import type { TestSuite } from '../data/workspace';
+import type { CreateTestSuitePayload, ProjectSummary } from '../types/testRun';
 
 const PROJECTS = ['Frontend', 'Backend', 'Mobile', 'API', 'Infrastructure'];
 const OWNERS = ['Alice Chen', 'Bob Lima', 'Carlos Souza', 'Diana Park', 'Eduardo Melo'];
@@ -30,6 +31,8 @@ type NewSuiteModalProps = {
   open: boolean;
   onClose: () => void;
   onCreate?: (suite: TestSuite) => void;
+  onCreateFromApi?: (payload: CreateTestSuitePayload) => Promise<void>;
+  projects?: ProjectSummary[];
 };
 
 const statusLabels: Record<SuiteFormStatus, TestSuite['status']> = {
@@ -83,14 +86,29 @@ function Select({ children, ...props }: SelectHTMLAttributes<HTMLSelectElement>)
   );
 }
 
-export function NewSuiteModal({ open, onClose, onCreate }: NewSuiteModalProps) {
+export function NewSuiteModal({
+  open,
+  onClose,
+  onCreate,
+  onCreateFromApi,
+  projects,
+}: NewSuiteModalProps) {
   const [form, setForm] = useState<SuiteForm>(initialForm);
   const [errors, setErrors] = useState<SuiteFormErrors>({});
+  const [submitError, setSubmitError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   if (!open) {
     return null;
   }
+
+  const apiMode = Boolean(onCreateFromApi);
+  const projectOptions =
+    apiMode
+      ? (projects ?? []).map((project) => ({ id: project.id, name: project.name }))
+      : PROJECTS.map((project) => ({ id: project, name: project }));
+
+  const hasProjectOptions = projectOptions.length > 0;
 
   function setField<Field extends keyof SuiteForm>(field: Field, value: SuiteForm[Field]) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -105,10 +123,11 @@ export function NewSuiteModal({ open, onClose, onCreate }: NewSuiteModalProps) {
     }
 
     if (!form.project) {
-      nextErrors.project = 'Select a project';
+      nextErrors.project =
+        apiMode && !hasProjectOptions ? 'Create a project before creating a suite' : 'Select a project';
     }
 
-    if (!form.owner) {
+    if (!apiMode && !form.owner) {
       nextErrors.owner = 'Select an owner';
     }
 
@@ -124,22 +143,37 @@ export function NewSuiteModal({ open, onClose, onCreate }: NewSuiteModalProps) {
     }
 
     setSubmitting(true);
-    await new Promise((resolve) => window.setTimeout(resolve, 300));
+    setSubmitError('');
 
-    onCreate?.({
-      name: form.name.trim(),
-      project: form.project,
-      owner: form.owner,
-      status: statusLabels[form.status],
-      coverage: 0,
-      cases: 0,
-      failures: 0,
-    });
+    try {
+      if (onCreateFromApi) {
+        await onCreateFromApi({
+          projectId: form.project,
+          name: form.name.trim(),
+          description: form.description.trim(),
+        });
+      } else {
+        await new Promise((resolve) => window.setTimeout(resolve, 300));
 
-    setSubmitting(false);
-    onClose();
-    setForm(initialForm);
-    setErrors({});
+        onCreate?.({
+          name: form.name.trim(),
+          project: form.project,
+          owner: form.owner,
+          status: statusLabels[form.status],
+          coverage: 0,
+          cases: 0,
+          failures: 0,
+        });
+      }
+
+      onClose();
+      setForm(initialForm);
+      setErrors({});
+    } catch (createError) {
+      setSubmitError(createError instanceof Error ? createError.message : 'Unable to create test suite.');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -183,10 +217,12 @@ export function NewSuiteModal({ open, onClose, onCreate }: NewSuiteModalProps) {
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Project" required>
               <Select value={form.project} onChange={(event) => setField('project', event.target.value)}>
-                <option value="">Select...</option>
-                {PROJECTS.map((project) => (
-                  <option key={project} value={project}>
-                    {project}
+                <option value="">
+                  {apiMode && !hasProjectOptions ? 'No projects available' : 'Select...'}
+                </option>
+                {projectOptions.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.name}
                   </option>
                 ))}
               </Select>
@@ -197,7 +233,7 @@ export function NewSuiteModal({ open, onClose, onCreate }: NewSuiteModalProps) {
               ) : null}
             </Field>
 
-            <Field label="Owner" required>
+            <Field label="Owner" required={!apiMode}>
               <Select value={form.owner} onChange={(event) => setField('owner', event.target.value)}>
                 <option value="">Select...</option>
                 {OWNERS.map((owner) => (
@@ -252,7 +288,9 @@ export function NewSuiteModal({ open, onClose, onCreate }: NewSuiteModalProps) {
           </Field>
         </div>
 
-        <div className="flex items-center justify-end gap-2 border-t border-zinc-200 px-5 py-4 dark:border-zinc-800">
+        <div className="flex items-center justify-between gap-2 border-t border-zinc-200 px-5 py-4 dark:border-zinc-800">
+          <p className="text-xs text-rose-500">{submitError}</p>
+          <div className="flex items-center justify-end gap-2">
           <button
             className="h-9 rounded-lg px-4 text-sm font-medium text-zinc-600 transition hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
             onClick={onClose}
@@ -262,7 +300,7 @@ export function NewSuiteModal({ open, onClose, onCreate }: NewSuiteModalProps) {
           </button>
           <button
             className="inline-flex h-9 items-center gap-2 rounded-lg bg-zinc-950 px-4 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
-            disabled={submitting}
+            disabled={submitting || (apiMode && !hasProjectOptions)}
             onClick={handleSubmit}
             type="button"
           >
@@ -278,6 +316,7 @@ export function NewSuiteModal({ open, onClose, onCreate }: NewSuiteModalProps) {
               </>
             )}
           </button>
+          </div>
         </div>
       </div>
     </div>

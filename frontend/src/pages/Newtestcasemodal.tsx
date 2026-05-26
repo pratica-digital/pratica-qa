@@ -7,6 +7,7 @@ import {
 } from 'react';
 import { AlertCircle, ChevronDown, GripVertical, ListChecks, Plus, Trash2, X } from 'lucide-react';
 import type { TestCase } from '../data/workspace';
+import type { CreateTestCasePayload, ManagedTestSuite } from '../types/testRun';
 
 const SUITES = ['Authentication', 'Checkout', 'Reporting', 'Rate limits', 'Mobile Checkout'];
 const PRIORITIES = ['low', 'medium', 'high'] as const;
@@ -47,6 +48,8 @@ type NewTestCaseModalProps = {
   open: boolean;
   onClose: () => void;
   onCreate?: (testCase: TestCase) => void;
+  onCreateFromApi?: (payload: CreateTestCasePayload) => Promise<void>;
+  suites?: ManagedTestSuite[];
 };
 
 const priorityStyles: Record<Priority, string> = {
@@ -156,16 +159,30 @@ function StepRow({ step, index, total, onChange, onRemove }: StepRowProps) {
   );
 }
 
-export function NewTestCaseModal({ open, onClose, onCreate }: NewTestCaseModalProps) {
+export function NewTestCaseModal({
+  open,
+  onClose,
+  onCreate,
+  onCreateFromApi,
+  suites,
+}: NewTestCaseModalProps) {
   const [form, setForm] = useState<TestCaseForm>(initialForm);
   const [steps, setSteps] = useState<StepDraft[]>([{ description: '' }]);
   const [errors, setErrors] = useState<TestCaseFormErrors>({});
+  const [submitError, setSubmitError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>('basic');
 
   if (!open) {
     return null;
   }
+
+  const apiMode = Boolean(onCreateFromApi);
+  const suiteOptions =
+    apiMode
+      ? (suites ?? []).map((suite) => ({ id: suite.id, name: suite.name }))
+      : SUITES.map((suite) => ({ id: suite, name: suite }));
+  const hasSuiteOptions = suiteOptions.length > 0;
 
   function setField<Field extends keyof TestCaseForm>(field: Field, value: TestCaseForm[Field]) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -196,7 +213,8 @@ export function NewTestCaseModal({ open, onClose, onCreate }: NewTestCaseModalPr
     }
 
     if (!form.suiteId) {
-      nextErrors.suiteId = 'Select a suite';
+      nextErrors.suiteId =
+        apiMode && !hasSuiteOptions ? 'Create a suite before creating a test case' : 'Select a suite';
     }
 
     if (!form.expectedResult.trim()) {
@@ -220,24 +238,46 @@ export function NewTestCaseModal({ open, onClose, onCreate }: NewTestCaseModalPr
     }
 
     setSubmitting(true);
-    await new Promise((resolve) => window.setTimeout(resolve, 300));
+    setSubmitError('');
 
-    onCreate?.({
-      id: `TC-${Date.now()}`,
-      title: form.title.trim(),
-      suite: form.suiteId,
-      priority: priorityLabels[form.priority],
-      status: 'Draft',
-      steps: steps.length,
-      tags: [],
-    });
+    try {
+      if (onCreateFromApi) {
+        await onCreateFromApi({
+          suiteId: form.suiteId,
+          title: form.title.trim(),
+          priority: form.priority.toUpperCase() as CreateTestCasePayload['priority'],
+          status: 'ACTIVE',
+          description: form.description.trim(),
+          expectedResult: form.expectedResult.trim(),
+          steps: steps.map((step, index) => ({
+            order: index + 1,
+            description: step.description.trim(),
+          })),
+        });
+      } else {
+        await new Promise((resolve) => window.setTimeout(resolve, 300));
 
-    setSubmitting(false);
-    onClose();
-    setForm(initialForm);
-    setSteps([{ description: '' }]);
-    setErrors({});
-    setActiveTab('basic');
+        onCreate?.({
+          id: `TC-${Date.now()}`,
+          title: form.title.trim(),
+          suite: form.suiteId,
+          priority: priorityLabels[form.priority],
+          status: 'Draft',
+          steps: steps.length,
+          tags: [],
+        });
+      }
+
+      onClose();
+      setForm(initialForm);
+      setSteps([{ description: '' }]);
+      setErrors({});
+      setActiveTab('basic');
+    } catch (createError) {
+      setSubmitError(createError instanceof Error ? createError.message : 'Unable to create test case.');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   const tabs: Array<{ id: TabId; label: string }> = [
@@ -312,10 +352,12 @@ export function NewTestCaseModal({ open, onClose, onCreate }: NewTestCaseModalPr
                   onChange={(event) => setField('suiteId', event.target.value)}
                   value={form.suiteId}
                 >
-                  <option value="">Select suite...</option>
-                  {SUITES.map((suite) => (
-                    <option key={suite} value={suite}>
-                      {suite}
+                  <option value="">
+                    {apiMode && !hasSuiteOptions ? 'No suites available' : 'Select suite...'}
+                  </option>
+                  {suiteOptions.map((suite) => (
+                    <option key={suite.id} value={suite.id}>
+                      {suite.name}
                     </option>
                   ))}
                 </SelectField>
@@ -399,7 +441,7 @@ export function NewTestCaseModal({ open, onClose, onCreate }: NewTestCaseModalPr
 
         <div className="flex items-center justify-between gap-2 border-t border-zinc-200 px-5 py-4 dark:border-zinc-800">
           <p className="text-xs text-zinc-400">
-            {steps.length} {steps.length === 1 ? 'step' : 'steps'} defined
+            {submitError || `${steps.length} ${steps.length === 1 ? 'step' : 'steps'} defined`}
           </p>
           <div className="flex gap-2">
             <button
@@ -411,7 +453,7 @@ export function NewTestCaseModal({ open, onClose, onCreate }: NewTestCaseModalPr
             </button>
             <button
               className="inline-flex h-9 items-center gap-2 rounded-lg bg-zinc-950 px-4 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
-              disabled={submitting}
+              disabled={submitting || (apiMode && !hasSuiteOptions)}
               onClick={handleSubmit}
               type="button"
             >

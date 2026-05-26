@@ -11,6 +11,7 @@ import { Sidebar } from './Sidebar';
 import { TopNav } from './TopNav';
 
 const createActionLabels: Partial<Record<PageId, string>> = {
+  projects: 'Project',
   'test-suites': 'Suite',
   'test-cases': 'Test case',
   'test-runs': 'Test run',
@@ -61,7 +62,7 @@ export function AppShell() {
 
     switch (activePage) {
       case 'projects':
-        return <ProjectsPage />;
+        return <ProjectsPage createActionEventId={createActionEventId} />;
       case 'test-suites':
         return <TestSuitesPage createActionEventId={createActionEventId} />;
       case 'test-cases':

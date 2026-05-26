@@ -1,6 +1,14 @@
 import type { ReactNode } from 'react';
 import type { TestCase, TestSuite, Project } from '../data/workspace';
-import type { TestResultStatus, TestRunStatus, UserRole } from '../types/testRun';
+import type {
+  ProjectSummary,
+  TestCaseStatus,
+  TestPriority,
+  TestResultStatus,
+  TestRunStatus,
+  TestSuiteStatus,
+  UserRole,
+} from '../types/testRun';
 
 type BadgeProps = {
   children: ReactNode;
@@ -27,23 +35,23 @@ function Badge({ children, tone }: BadgeProps) {
   );
 }
 
-export function ProjectStatusBadge({ status }: { status: Project['status'] }) {
-  const tone = status === 'Active' ? 'green' : status === 'At risk' ? 'amber' : 'zinc';
+export function ProjectStatusBadge({ status }: { status: Project['status'] | ProjectSummary['status'] }) {
+  const tone = status === 'Active' || status === 'ACTIVE' ? 'green' : status === 'At risk' ? 'amber' : 'zinc';
   return <Badge tone={tone}>{status}</Badge>;
 }
 
-export function SuiteStatusBadge({ status }: { status: TestSuite['status'] }) {
-  const tone = status === 'Active' ? 'green' : status === 'Draft' ? 'blue' : 'zinc';
+export function SuiteStatusBadge({ status }: { status: TestSuite['status'] | TestSuiteStatus }) {
+  const tone = status === 'Active' || status === 'ACTIVE' ? 'green' : status === 'Draft' ? 'blue' : 'zinc';
   return <Badge tone={tone}>{status}</Badge>;
 }
 
-export function CaseStatusBadge({ status }: { status: TestCase['status'] }) {
-  const tone = status === 'Ready' ? 'green' : status === 'Needs review' ? 'amber' : 'zinc';
+export function CaseStatusBadge({ status }: { status: TestCase['status'] | TestCaseStatus }) {
+  const tone = status === 'Ready' || status === 'ACTIVE' ? 'green' : status === 'Needs review' ? 'amber' : 'zinc';
   return <Badge tone={tone}>{status}</Badge>;
 }
 
-export function PriorityBadge({ priority }: { priority: TestCase['priority'] }) {
-  const tone = priority === 'High' ? 'red' : priority === 'Medium' ? 'amber' : 'zinc';
+export function PriorityBadge({ priority }: { priority: TestCase['priority'] | TestPriority }) {
+  const tone = priority === 'High' || priority === 'HIGH' ? 'red' : priority === 'Medium' || priority === 'MEDIUM' ? 'amber' : 'zinc';
   return <Badge tone={tone}>{priority}</Badge>;
 }
 
