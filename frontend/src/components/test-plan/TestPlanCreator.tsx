@@ -7,7 +7,7 @@ import type { ProjectSummary, TestPlan } from '../../types/testRun';
 type SectionDraft = {
   clientId: string;
   title: string;
-  description: string;
+  content: string;
 };
 
 type Props = {
@@ -18,7 +18,7 @@ function createBlankSection(): SectionDraft {
   return {
     clientId: `section-${Date.now()}-${Math.random().toString(16).slice(2)}`,
     title: '',
-    description: '',
+    content: '',
   };
 }
 
@@ -50,7 +50,7 @@ export function TestPlanCreator({ onCreated }: Props) {
     };
   }, [token]);
 
-  function updateSection(index: number, field: 'title' | 'description', value: string) {
+  function updateSection(index: number, field: 'title' | 'content', value: string) {
     setSections((current) =>
       current.map((section, currentIndex) =>
         currentIndex === index ? { ...section, [field]: value } : section,
@@ -93,10 +93,9 @@ export function TestPlanCreator({ onCreated }: Props) {
       return;
     }
 
-    const normalizedSections = sections.map((section, index) => ({
-      order: index + 1,
+    const normalizedSections = sections.map((section) => ({
       title: section.title.trim(),
-      description: section.description.trim(),
+      content: section.content.trim(),
     }));
 
     if (normalizedSections.length === 0) {
@@ -104,8 +103,28 @@ export function TestPlanCreator({ onCreated }: Props) {
       return;
     }
 
+    if (normalizedSections.length > 30) {
+      setError('Test plans can have up to 30 sections');
+      return;
+    }
+
     if (normalizedSections.some((section) => section.title.length === 0)) {
       setError('Section title is required');
+      return;
+    }
+
+    if (normalizedSections.some((section) => section.title.length > 160)) {
+      setError('Section title must be 160 characters or fewer');
+      return;
+    }
+
+    if (normalizedSections.some((section) => section.content.length === 0)) {
+      setError('Section content is required');
+      return;
+    }
+
+    if (normalizedSections.some((section) => section.content.length > 8000)) {
+      setError('Section content must be 8000 characters or fewer');
       return;
     }
 
@@ -207,9 +226,9 @@ export function TestPlanCreator({ onCreated }: Props) {
                 <textarea
                   className="min-h-24 w-full resize-y rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-950 outline-none transition focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200 disabled:cursor-not-allowed disabled:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-white dark:focus:border-zinc-600 dark:focus:ring-zinc-800"
                   disabled={isLoading}
-                  onChange={(event) => updateSection(index, 'description', event.target.value)}
+                  onChange={(event) => updateSection(index, 'content', event.target.value)}
                   placeholder="Section description"
-                  value={section.description}
+                  value={section.content}
                 />
               </div>
 

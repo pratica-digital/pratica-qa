@@ -14,7 +14,7 @@ import {
   UserRound,
   X,
 } from 'lucide-react';
-import type { AuthUser, ManagedTestSuite, TestRun } from '../types/testRun';
+import type { AuthUser, ManagedTestSuite, PaginatedResponse, TestPlan, TestRun } from '../types/testRun';
 import { useAuth } from '../auth/useAuth';
 
 type SuiteOption = ManagedTestSuite;
@@ -123,7 +123,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
   const [errors, setErrors] = useState<TestRunFormErrors>({});
   const [submitting, setSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>('info');
-  const [testPlans, setTestPlans] = useState<any[]>([]);
+  const [testPlans, setTestPlans] = useState<TestPlan[]>([]);
   const [suites, setSuites] = useState<SuiteOption[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [loadError, setLoadError] = useState('');
@@ -154,15 +154,17 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
           return;
         }
 
-        const plansData = (await plansResponse.json()) as any;
-        const suitesData = (await suitesResponse.json()) as any;
+        const plansData = (await plansResponse.json()) as TestPlan[] | PaginatedResponse<TestPlan>;
+        const suitesData = (await suitesResponse.json()) as
+          | ManagedTestSuite[]
+          | PaginatedResponse<ManagedTestSuite>;
 
         const plansList = Array.isArray(plansData) ? plansData : plansData.data || [];
         const suitesList = Array.isArray(suitesData) ? suitesData : suitesData.data || [];
 
         setTestPlans(plansList);
         setSuites(suitesList);
-      } catch (error) {
+      } catch {
         setLoadError('Unable to load data');
       } finally {
         setIsLoadingData(false);
@@ -253,8 +255,11 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
       });
 
       if (!response.ok) {
-        const errorData = (await response.json()) as any;
-        setLoadError(errorData.message || 'Failed to create test run');
+        const errorData = (await response.json()) as { message?: string | string[] };
+        const message = Array.isArray(errorData.message)
+          ? errorData.message.join(', ')
+          : errorData.message;
+        setLoadError(message || 'Failed to create test run');
         setSubmitting(false);
         return;
       }

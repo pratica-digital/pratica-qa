@@ -15,6 +15,7 @@ import type {
   TestResult,
   TestRun,
   UpdateTestCasePayload,
+  UpdateTestPlanPayload,
   UpdateTestSuitePayload,
 } from '../types/testRun';
 
@@ -172,6 +173,12 @@ export const testPlansApi = {
   create: (token: string, payload: CreateTestPlanPayload) =>
     apiRequest<TestPlan>('/test-plans', {
       method: 'POST',
+      token,
+      body: payload,
+    }),
+  update: (token: string, testPlanId: string, payload: UpdateTestPlanPayload) =>
+    apiRequest<TestPlan>(`/test-plans/${testPlanId}`, {
+      method: 'PATCH',
       token,
       body: payload,
     }),

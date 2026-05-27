@@ -149,13 +149,10 @@ export type TestRun = {
 };
 
 export type TestPlanSection = {
-  id?: string;
-  testPlanId?: string;
-  order: number;
+  type?: string;
   title: string;
-  description: string;
-  createdAt?: string;
-  updatedAt?: string;
+  content: string;
+  priority?: TestPriority;
 };
 
 export type TestPlan = {
@@ -163,6 +160,7 @@ export type TestPlan = {
   projectId: string;
   name: string;
   version: string;
+  description?: string;
   sections?: TestPlanSection[];
   createdAt?: string;
   updatedAt?: string;
@@ -250,8 +248,21 @@ export type CreateTestPlanPayload = {
   projectId: string;
   name: string;
   version: string;
-  sections: TestPlanSection[];
+  sections: Array<{
+    title: string;
+    content: string;
+  }>;
 };
+
+export type UpdateTestPlanPayload = Partial<{
+  name: string;
+  version: string;
+  description: string;
+  sections: Array<{
+    title: string;
+    content: string;
+  }>;
+}>;
 
 export type CreateProjectPayload = {
   name: string;
