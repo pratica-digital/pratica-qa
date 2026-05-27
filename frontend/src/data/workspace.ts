@@ -1,7 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
-import { FolderOpen, LayoutDashboard, Layers3, ListChecks, PlaySquare } from 'lucide-react';
+import { FolderOpen, LayoutDashboard, Layers3, ListChecks, PlaySquare, ClipboardList } from 'lucide-react';
 
-export type PageId = 'dashboard' | 'projects' | 'test-suites' | 'test-cases' | 'test-runs';
+export type PageId = 'dashboard' | 'projects' | 'test-plans' | 'test-suites' | 'test-cases' | 'test-runs';
 
 export type NavigationItem = {
   id: PageId;
@@ -43,6 +43,7 @@ export type TestCase = {
 export const navigationItems: NavigationItem[] = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'projects', label: 'Projects', icon: FolderOpen },
+  { id: 'test-plans', label: 'Test Plans', icon: ClipboardList },
   { id: 'test-suites', label: 'Test Suites', icon: Layers3 },
   { id: 'test-cases', label: 'Test Cases', icon: ListChecks },
   { id: 'test-runs', label: 'Test Runs', icon: PlaySquare },

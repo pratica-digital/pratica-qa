@@ -2,6 +2,7 @@ import type {
   AuthUser,
   CreateProjectPayload,
   CreateTestCasePayload,
+  CreateTestPlanPayload,
   CreateTestResultPayload,
   CreateTestSuitePayload,
   ExecuteTestResultPayload,
@@ -10,10 +11,10 @@ import type {
   PaginatedResponse,
   ProjectSummary,
   ReplaceTestStepsPayload,
+  TestPlan,
   TestResult,
   TestRun,
   UpdateTestCasePayload,
-  UpdateTestResultPayload,
   UpdateTestSuitePayload,
 } from '../types/testRun';
 
@@ -155,6 +156,22 @@ export const testSuitesApi = {
   update: (token: string, testSuiteId: string, payload: UpdateTestSuitePayload) =>
     apiRequest<ManagedTestSuite>(`/test-suites/${testSuiteId}`, {
       method: 'PATCH',
+      token,
+      body: payload,
+    }),
+};
+
+export const testPlansApi = {
+  list: async (token: string) => {
+    const response = await apiRequest<TestPlan[] | PaginatedResponse<TestPlan>>('/test-plans?limit=100', {
+      token,
+    });
+
+    return unwrapList(response);
+  },
+  create: (token: string, payload: CreateTestPlanPayload) =>
+    apiRequest<TestPlan>('/test-plans', {
+      method: 'POST',
       token,
       body: payload,
     }),

@@ -6,12 +6,14 @@ import { TestCasesPage } from '../pages/TestCasesPage';
 import { TestRunExecutionPage } from '../pages/TestRunExecutionPage';
 import { TestRunsPage } from '../pages/TestRunsPage';
 import { TestSuitesPage } from '../pages/TestSuitesPage';
+import { TestPlansPage } from '../pages/TestPlansPage';
 import type { TestRun } from '../types/testRun';
 import { Sidebar } from './Sidebar';
 import { TopNav } from './TopNav';
 
 const createActionLabels: Partial<Record<PageId, string>> = {
   projects: 'Project',
+  'test-plans': 'Test plan',
   'test-suites': 'Suite',
   'test-cases': 'Test case',
   'test-runs': 'Test run',
@@ -65,6 +67,8 @@ export function AppShell() {
         return <ProjectsPage createActionEventId={createActionEventId} />;
       case 'test-suites':
         return <TestSuitesPage createActionEventId={createActionEventId} />;
+      case 'test-plans':
+        return <TestPlansPage />;
       case 'test-cases':
         return <TestCasesPage createActionEventId={createActionEventId} />;
       case 'test-runs':

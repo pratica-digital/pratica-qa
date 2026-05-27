@@ -148,6 +148,31 @@ export type TestRun = {
   results?: TestResult[];
 };
 
+export type TestPlanSection = {
+  id?: string;
+  testPlanId?: string;
+  order: number;
+  title: string;
+  description: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type TestPlan = {
+  id: string;
+  projectId: string;
+  name: string;
+  version: string;
+  sections?: TestPlanSection[];
+  createdAt?: string;
+  updatedAt?: string;
+  project?: {
+    id: string;
+    key?: string;
+    name: string;
+  };
+};
+
 export type PaginatedResponse<T> = {
   data: T[];
   meta?: {
@@ -219,6 +244,13 @@ export type CreateTestSuitePayload = {
   name: string;
   description?: string;
   position?: number;
+};
+
+export type CreateTestPlanPayload = {
+  projectId: string;
+  name: string;
+  version: string;
+  sections: TestPlanSection[];
 };
 
 export type CreateProjectPayload = {

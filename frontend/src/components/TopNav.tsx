@@ -6,6 +6,7 @@ import type { PageId } from '../data/workspace';
 const pageTitles: Record<PageId, string> = {
   dashboard: 'Dashboard',
   projects: 'Projects',
+  'test-plans': 'Test Plans',
   'test-suites': 'Test Suites',
   'test-cases': 'Test Cases',
   'test-runs': 'Test Runs',
@@ -30,7 +31,7 @@ export function TopNav({
 }: TopNavProps) {
   const { logout, user } = useAuth();
   const isReadOnly = user?.role === 'VIEWER';
-  const adminCreatePages: PageId[] = ['projects', 'test-suites', 'test-runs'];
+  const adminCreatePages: PageId[] = ['projects', 'test-plans', 'test-suites', 'test-runs'];
   const requiresAdminCreate = adminCreatePages.includes(activePage);
   const isCreateDisabled =
     isReadOnly || !onCreateAction || (requiresAdminCreate && user?.role !== 'ADMIN');
