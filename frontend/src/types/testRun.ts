@@ -107,6 +107,14 @@ export type TestResult = {
   attachments?: string[];
   executedAt?: string | null;
   executedBy?: AuthUser | null;
+  testRun?: {
+    id: string;
+    name: string;
+    status: TestRunStatus;
+    testPlanId?: string | null;
+    assignedToId?: string | null;
+    deletedAt?: string | null;
+  };
   testCase: RunnerTestCase;
 };
 
@@ -168,6 +176,9 @@ export type TestPlan = {
     id: string;
     key?: string;
     name: string;
+  };
+  _count?: {
+    testRuns?: number;
   };
 };
 

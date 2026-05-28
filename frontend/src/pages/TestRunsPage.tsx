@@ -1,7 +1,8 @@
-import { Eye, Filter, Play, Plus, RefreshCw, Search, UserPlus } from 'lucide-react';
+import { Eye, Filter, Play, Plus, RefreshCw, Search, Trash2, UserPlus } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../auth/useAuth';
 import { TestRunStatusBadge, UserRoleBadge } from '../components/badges';
+import { DeleteConfirmationModal } from '../components/DeleteConfirmationModal';
 import { ApiError, testRunsApi, usersApi } from '../lib/api';
 import type { AuthUser, TestRun } from '../types/testRun';
 import { NewTestRunModal } from './Newtestrunmodal';
@@ -45,7 +46,10 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
   const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [assigningRunId, setAssigningRunId] = useState<string | null>(null);
+  const [openingRunId, setOpeningRunId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [runPendingDelete, setRunPendingDelete] = useState<TestRun | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const isAdmin = user?.role === 'ADMIN';
 
@@ -159,6 +163,59 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
     }
   };
 
+  const handleOpenRun = async (testRun: TestRun) => {
+    if (!token) {
+      onOpenRun(testRun);
+      return;
+    }
+
+    setOpeningRunId(testRun.id);
+    setError('');
+
+    try {
+      const freshRun = await testRunsApi.get(token, testRun.id);
+      onOpenRun(freshRun);
+    } catch (openError) {
+      setError(openError instanceof Error ? openError.message : 'Unable to load test run.');
+    } finally {
+      setOpeningRunId(null);
+    }
+  };
+
+  function requestRunDelete(testRun: TestRun) {
+    setError('');
+    setSuccess('');
+    setRunPendingDelete(testRun);
+  }
+
+  async function handleDeleteRun() {
+    if (!token || !runPendingDelete) {
+      return;
+    }
+
+    setIsDeleting(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      await testRunsApi.remove(token, runPendingDelete.id);
+      const nextRuns = testRuns.filter((testRun) => testRun.id !== runPendingDelete.id);
+
+      setTestRuns(nextRuns);
+      if (user) {
+        setAssignedTestRuns(nextRuns.filter((testRun) => testRun.assignedToId === user.id));
+      }
+
+      setRunPendingDelete(null);
+      setSuccess('Test run deleted.');
+    } catch (deleteError) {
+      setRunPendingDelete(null);
+      setError(deleteError instanceof Error ? deleteError.message : 'Unable to delete test run.');
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
@@ -262,8 +319,11 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
 
             return (
               <article
-                className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950"
+                className="cursor-pointer rounded-lg border border-zinc-200 bg-white p-4 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-900/60"
                 key={testRun.id}
+                onClick={() => void handleOpenRun(testRun)}
+                role="button"
+                tabIndex={0}
               >
                 <div className="grid gap-4 xl:grid-cols-[1fr_16rem_13rem] xl:items-center">
                   <div className="min-w-0">
@@ -314,12 +374,16 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
 
                   <div className="flex flex-col gap-2">
                     {isAdmin ? (
-                      <label className="flex h-9 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-2 text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300">
+                      <label
+                        className="flex h-9 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-2 text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300"
+                        onClick={(event) => event.stopPropagation()}
+                      >
                         <UserPlus className="h-4 w-4 shrink-0 text-zinc-400" aria-hidden="true" />
                         <select
                           className="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-zinc-900 outline-none disabled:cursor-wait dark:text-white"
                           disabled={assigningRunId === testRun.id || users.length === 0}
                           onChange={(event) => void handleAssign(testRun.id, event.target.value)}
+                          onClick={(event) => event.stopPropagation()}
                           value={testRun.assignedToId}
                         >
                           {users.length === 0 ? (
@@ -336,7 +400,11 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
 
                     <button
                       className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-zinc-950 px-3 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
-                      onClick={() => onOpenRun(testRun)}
+                      disabled={openingRunId === testRun.id}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void handleOpenRun(testRun);
+                      }}
                       type="button"
                     >
                       {canExecute ? (
@@ -344,8 +412,21 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
                       ) : (
                         <Eye className="h-4 w-4" aria-hidden="true" />
                       )}
-                      {canExecute ? 'Execute' : 'View'}
+                      {openingRunId === testRun.id ? 'Opening' : canExecute ? 'Execute' : 'View'}
                     </button>
+                    {isAdmin ? (
+                      <button
+                        className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-rose-200 bg-white px-3 text-sm font-medium text-rose-600 hover:bg-rose-50 dark:border-rose-900 dark:bg-zinc-950 dark:text-rose-300 dark:hover:bg-rose-950"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          requestRunDelete(testRun);
+                        }}
+                        type="button"
+                      >
+                        <Trash2 className="h-4 w-4" aria-hidden="true" />
+                        Delete
+                      </button>
+                    ) : null}
                   </div>
                 </div>
               </article>
@@ -367,6 +448,16 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
         open={modalOpen}
         qaUsers={users}
       />
+
+      {runPendingDelete ? (
+        <DeleteConfirmationModal
+          description="This will remove the test run and its execution results from the run list."
+          loading={isDeleting}
+          onCancel={() => setRunPendingDelete(null)}
+          onConfirm={() => void handleDeleteRun()}
+          title="Delete Test Run?"
+        />
+      ) : null}
     </div>
   );
 }

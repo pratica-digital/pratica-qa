@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Filter, Layers3, Pencil, Plus, RefreshCw, Search } from 'lucide-react';
+import { Filter, Layers3, Pencil, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
 import { useAuth } from '../auth/useAuth';
 import { SuiteStatusBadge } from '../components/badges';
+import { DeleteConfirmationModal } from '../components/DeleteConfirmationModal';
+import { TestCaseEditPanel } from '../components/test-cases/TestCaseEditPanel';
+import { TestSuiteDetailPanel } from '../components/test-suites/TestSuiteDetailPanel';
 import { TestSuiteEditPanel } from '../components/test-suites/TestSuiteEditPanel';
 import { ApiError, projectsApi, testCasesApi, testSuitesApi } from '../lib/api';
 import type {
@@ -9,6 +12,8 @@ import type {
   ManagedTestCase,
   ManagedTestSuite,
   ProjectSummary,
+  ReplaceTestStepsPayload,
+  UpdateTestCasePayload,
   UpdateTestSuitePayload,
 } from '../types/testRun';
 import { NewSuiteModal } from './NewSuiteModal';
@@ -84,8 +89,13 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
   const [caseOrder, setCaseOrder] = useState<CaseOrderBySuite>(() => readCaseOrder());
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
+  const [selectedSuite, setSelectedSuite] = useState<ManagedTestSuite | null>(null);
+  const [selectedCase, setSelectedCase] = useState<ManagedTestCase | null>(null);
   const [editingSuite, setEditingSuite] = useState<ManagedTestSuite | null>(null);
+  const [suitePendingDelete, setSuitePendingDelete] = useState<ManagedTestSuite | null>(null);
+  const [casePendingDelete, setCasePendingDelete] = useState<ManagedTestCase | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -193,6 +203,125 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
     setSuccess('Test suite updated.');
   }
 
+  async function handleOpenSuite(suite: ManagedTestSuite) {
+    if (!token) {
+      setSelectedSuite(suite);
+      return;
+    }
+
+    try {
+      const freshSuite = await testSuitesApi.get(token, suite.id);
+      setSelectedSuite(freshSuite);
+    } catch (openError) {
+      setError(openError instanceof Error ? openError.message : 'Unable to load test suite.');
+    }
+  }
+
+  async function handleSaveCase(
+    testCase: ManagedTestCase,
+    payload: UpdateTestCasePayload,
+    steps: ReplaceTestStepsPayload,
+  ) {
+    if (!token) {
+      throw new Error('Authentication is required.');
+    }
+
+    await testCasesApi.update(token, testCase.id, payload);
+    const updatedCase = await testCasesApi.replaceSteps(token, testCase.id, steps);
+
+    setCases((current) =>
+      current.map((item) => (item.id === testCase.id ? updatedCase : item)),
+    );
+    setSelectedCase(updatedCase);
+    setSuccess('Test case updated.');
+  }
+
+  function requestSuiteDelete(suite: ManagedTestSuite) {
+    setError('');
+    setSuccess('');
+    setSuitePendingDelete(suite);
+  }
+
+  function requestCaseDelete(testCase: ManagedTestCase) {
+    setError('');
+    setSuccess('');
+    setCasePendingDelete(testCase);
+  }
+
+  async function handleDeleteSuite() {
+    if (!token || !suitePendingDelete) {
+      return;
+    }
+
+    setIsDeleting(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      await testSuitesApi.remove(token, suitePendingDelete.id);
+      setSuites((current) => current.filter((suite) => suite.id !== suitePendingDelete.id));
+      setCases((current) => current.filter((testCase) => testCase.suiteId !== suitePendingDelete.id));
+
+      const nextOrder = { ...caseOrder };
+      delete nextOrder[suitePendingDelete.id];
+      setCaseOrder(nextOrder);
+      writeCaseOrder(nextOrder);
+
+      if (selectedSuite?.id === suitePendingDelete.id) {
+        setSelectedSuite(null);
+      }
+
+      if (editingSuite?.id === suitePendingDelete.id) {
+        setEditingSuite(null);
+      }
+
+      setSuitePendingDelete(null);
+      setSuccess('Test suite deleted.');
+    } catch (deleteError) {
+      setSuitePendingDelete(null);
+      setError(deleteError instanceof Error ? deleteError.message : 'Unable to delete test suite.');
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
+  async function handleDeleteCase() {
+    if (!token || !casePendingDelete) {
+      return;
+    }
+
+    setIsDeleting(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      await testCasesApi.remove(token, casePendingDelete.id);
+      setCases((current) => current.filter((testCase) => testCase.id !== casePendingDelete.id));
+
+      const nextOrder = Object.fromEntries(
+        Object.entries(caseOrder).map(([suiteId, caseIds]) => [
+          suiteId,
+          caseIds.filter((caseId) => caseId !== casePendingDelete.id),
+        ]),
+      );
+
+      setCaseOrder(nextOrder);
+      writeCaseOrder(nextOrder);
+
+      if (selectedCase?.id === casePendingDelete.id) {
+        setSelectedCase(null);
+      }
+
+      setCasePendingDelete(null);
+      setSuccess('Test case deleted.');
+    } catch (deleteError) {
+      setCasePendingDelete(null);
+      setError(deleteError instanceof Error ? deleteError.message : 'Unable to delete test case.');
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
@@ -266,8 +395,11 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
 
               return (
                 <article
-                  className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950"
+                  className="cursor-pointer rounded-lg border border-zinc-200 bg-white p-4 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-900/60"
                   key={suite.id}
+                  onClick={() => void handleOpenSuite(suite)}
+                  role="button"
+                  tabIndex={0}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex min-w-0 gap-3">
@@ -298,15 +430,32 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
                       <p className="text-xs text-zinc-500 dark:text-zinc-400">Position</p>
                     </div>
                   </div>
-                  <button
-                    className="mt-4 inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-zinc-900"
-                    disabled={!isAdmin}
-                    onClick={() => setEditingSuite(suite)}
-                    type="button"
-                  >
-                    <Pencil className="h-4 w-4" aria-hidden="true" />
-                    Edit
-                  </button>
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <button
+                      className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-zinc-900"
+                      disabled={!isAdmin}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setEditingSuite(suite);
+                      }}
+                      type="button"
+                    >
+                      <Pencil className="h-4 w-4" aria-hidden="true" />
+                      Edit
+                    </button>
+                    <button
+                      className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-rose-200 bg-white px-3 text-sm font-medium text-rose-600 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-900 dark:bg-zinc-950 dark:text-rose-300 dark:hover:bg-rose-950"
+                      disabled={!isAdmin}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        requestSuiteDelete(suite);
+                      }}
+                      type="button"
+                    >
+                      <Trash2 className="h-4 w-4" aria-hidden="true" />
+                      Delete
+                    </button>
+                  </div>
                 </article>
               );
             })}
@@ -331,7 +480,11 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
                 </thead>
                 <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
                   {visibleSuites.map((suite) => (
-                    <tr className="hover:bg-zinc-50 dark:hover:bg-zinc-900/60" key={suite.id}>
+                    <tr
+                      className="cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-900/60"
+                      key={suite.id}
+                      onClick={() => void handleOpenSuite(suite)}
+                    >
                       <td className="px-4 py-3">
                         <p className="font-medium text-zinc-950 dark:text-white">{suite.name}</p>
                         <p className="text-xs text-zinc-500 dark:text-zinc-400">{suite.id}</p>
@@ -353,11 +506,26 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
                         <button
                           className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"
                           disabled={!isAdmin}
-                          onClick={() => setEditingSuite(suite)}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setEditingSuite(suite);
+                          }}
                           title="Edit test suite"
                           type="button"
                         >
                           <Pencil className="h-4 w-4" aria-hidden="true" />
+                        </button>
+                        <button
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-rose-950 dark:hover:text-rose-300"
+                          disabled={!isAdmin}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            requestSuiteDelete(suite);
+                          }}
+                          title="Delete test suite"
+                          type="button"
+                        >
+                          <Trash2 className="h-4 w-4" aria-hidden="true" />
                         </button>
                       </td>
                     </tr>
@@ -391,6 +559,52 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
           onSave={handleSaveSuite}
           readOnly={!isAdmin}
           suite={editingSuite}
+        />
+      ) : null}
+
+      {selectedSuite ? (
+        <TestSuiteDetailPanel
+          cases={getSuiteCases(selectedSuite, cases, caseOrder)}
+          onClose={() => setSelectedSuite(null)}
+          onDelete={isAdmin ? () => requestSuiteDelete(selectedSuite) : undefined}
+          onEdit={() => {
+            setEditingSuite(selectedSuite);
+            setSelectedSuite(null);
+          }}
+          onOpenCase={setSelectedCase}
+          suite={selectedSuite}
+        />
+      ) : null}
+
+      {selectedCase ? (
+        <TestCaseEditPanel
+          key={selectedCase.id}
+          onClose={() => setSelectedCase(null)}
+          onDelete={isReadOnly ? undefined : requestCaseDelete}
+          onSave={handleSaveCase}
+          readOnly={isReadOnly}
+          suites={suites}
+          testCase={selectedCase}
+        />
+      ) : null}
+
+      {suitePendingDelete ? (
+        <DeleteConfirmationModal
+          description="This will remove the suite and all related test cases from the suite view."
+          loading={isDeleting}
+          onCancel={() => setSuitePendingDelete(null)}
+          onConfirm={() => void handleDeleteSuite()}
+          title="Delete Test Suite?"
+        />
+      ) : null}
+
+      {casePendingDelete ? (
+        <DeleteConfirmationModal
+          description="This will remove the test case from its suite and from future test design workflows."
+          loading={isDeleting}
+          onCancel={() => setCasePendingDelete(null)}
+          onConfirm={() => void handleDeleteCase()}
+          title="Delete Test Case?"
         />
       ) : null}
     </div>

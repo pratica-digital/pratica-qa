@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Pencil, Plus, RefreshCw } from 'lucide-react';
+import { Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { useAuth } from '../auth/useAuth';
+import { DeleteConfirmationModal } from '../components/DeleteConfirmationModal';
+import { TestPlanDetailPanel } from '../components/test-plan/TestPlanDetailPanel';
 import { TestPlanEditPanel } from '../components/test-plan/TestPlanEditPanel';
 import { ApiError, testPlansApi } from '../lib/api';
 import type { TestPlan, UpdateTestPlanPayload } from '../types/testRun';
@@ -13,7 +15,10 @@ export function TestPlansPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<TestPlan | null>(null);
   const [editingPlan, setEditingPlan] = useState<TestPlan | null>(null);
+  const [planPendingDelete, setPlanPendingDelete] = useState<TestPlan | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!token) return;
@@ -44,6 +49,20 @@ export function TestPlansPage() {
     setSuccess('Test plan created.');
   }
 
+  async function handleOpenPlan(plan: TestPlan) {
+    if (!token) {
+      setSelectedPlan(plan);
+      return;
+    }
+
+    try {
+      const freshPlan = await testPlansApi.get(token, plan.id);
+      setSelectedPlan(freshPlan);
+    } catch (openError) {
+      setError(openError instanceof Error ? openError.message : 'Unable to load test plan.');
+    }
+  }
+
   async function handleSavePlan(testPlan: TestPlan, payload: UpdateTestPlanPayload) {
     if (!token) {
       throw new Error('Authentication is required.');
@@ -56,6 +75,43 @@ export function TestPlansPage() {
     );
     setEditingPlan(updatedPlan);
     setSuccess('Test plan updated.');
+  }
+
+  function requestPlanDelete(testPlan: TestPlan) {
+    setError('');
+    setSuccess('');
+    setPlanPendingDelete(testPlan);
+  }
+
+  async function handleDeletePlan() {
+    if (!token || !planPendingDelete) {
+      return;
+    }
+
+    setIsDeleting(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      await testPlansApi.remove(token, planPendingDelete.id);
+      setPlans((current) => current.filter((plan) => plan.id !== planPendingDelete.id));
+
+      if (selectedPlan?.id === planPendingDelete.id) {
+        setSelectedPlan(null);
+      }
+
+      if (editingPlan?.id === planPendingDelete.id) {
+        setEditingPlan(null);
+      }
+
+      setPlanPendingDelete(null);
+      setSuccess('Test plan deleted.');
+    } catch (deleteError) {
+      setPlanPendingDelete(null);
+      setError(deleteError instanceof Error ? deleteError.message : 'Unable to delete test plan.');
+    } finally {
+      setIsDeleting(false);
+    }
   }
 
   const isAdmin = user?.role === 'ADMIN';
@@ -105,7 +161,13 @@ export function TestPlansPage() {
       ) : plans.length > 0 ? (
         <div className="grid gap-3">
           {plans.map((plan) => (
-            <article key={plan.id} className="rounded-lg border p-4 bg-white">
+            <article
+              key={plan.id}
+              className="cursor-pointer rounded-lg border bg-white p-4 transition hover:border-zinc-300 hover:bg-zinc-50"
+              onClick={() => void handleOpenPlan(plan)}
+              role="button"
+              tabIndex={0}
+            >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <h2 className="text-sm font-semibold">{plan.name}</h2>
@@ -120,11 +182,26 @@ export function TestPlansPage() {
                   <div className="hidden text-xs text-zinc-400 sm:block">{formatCreatedAt(plan.createdAt)}</div>
                   <button
                     className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
-                    onClick={() => setEditingPlan(plan)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setEditingPlan(plan);
+                    }}
                     title={isAdmin ? 'Edit test plan' : 'View test plan'}
                     type="button"
                   >
                     <Pencil className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                  <button
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-40"
+                    disabled={!isAdmin}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      requestPlanDelete(plan);
+                    }}
+                    title={isAdmin ? 'Delete test plan' : 'Only admins can delete test plans'}
+                    type="button"
+                  >
+                    <Trash2 className="h-4 w-4" aria-hidden="true" />
                   </button>
                 </div>
               </div>
@@ -137,6 +214,18 @@ export function TestPlansPage() {
 
       <NewTestPlanModal open={modalOpen} onClose={() => setModalOpen(false)} onCreated={handleCreated} />
 
+      {selectedPlan ? (
+        <TestPlanDetailPanel
+          onClose={() => setSelectedPlan(null)}
+          onDelete={isAdmin ? () => requestPlanDelete(selectedPlan) : undefined}
+          onEdit={() => {
+            setEditingPlan(selectedPlan);
+            setSelectedPlan(null);
+          }}
+          testPlan={selectedPlan}
+        />
+      ) : null}
+
       {editingPlan ? (
         <TestPlanEditPanel
           key={editingPlan.id}
@@ -144,6 +233,16 @@ export function TestPlansPage() {
           onSave={handleSavePlan}
           readOnly={!isAdmin}
           testPlan={editingPlan}
+        />
+      ) : null}
+
+      {planPendingDelete ? (
+        <DeleteConfirmationModal
+          description="This will remove the test plan and detach related planning information from future runs."
+          loading={isDeleting}
+          onCancel={() => setPlanPendingDelete(null)}
+          onConfirm={() => void handleDeletePlan()}
+          title="Delete Test Plan?"
         />
       ) : null}
     </div>

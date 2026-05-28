@@ -1,7 +1,8 @@
-import { Filter, ListChecks, Pencil, Plus, RefreshCw, Search, Tag } from 'lucide-react';
+import { Filter, ListChecks, Pencil, Plus, RefreshCw, Search, Tag, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../auth/useAuth';
 import { CaseStatusBadge, PriorityBadge } from '../components/badges';
+import { DeleteConfirmationModal } from '../components/DeleteConfirmationModal';
 import { TestCaseEditPanel } from '../components/test-cases/TestCaseEditPanel';
 import { ApiError, testCasesApi, testSuitesApi } from '../lib/api';
 import type {
@@ -39,7 +40,9 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingCase, setEditingCase] = useState<ManagedTestCase | null>(null);
+  const [casePendingDelete, setCasePendingDelete] = useState<ManagedTestCase | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -122,6 +125,20 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
     setSuccess('Test case created.');
   }
 
+  async function handleOpenCase(testCase: ManagedTestCase) {
+    if (!token) {
+      setEditingCase(testCase);
+      return;
+    }
+
+    try {
+      const freshCase = await testCasesApi.get(token, testCase.id);
+      setEditingCase(freshCase);
+    } catch (openError) {
+      setError(openError instanceof Error ? openError.message : 'Unable to load test case.');
+    }
+  }
+
   async function handleSaveCase(
     testCase: ManagedTestCase,
     payload: UpdateTestCasePayload,
@@ -139,6 +156,39 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
     );
     setEditingCase(updatedCase);
     setSuccess('Test case updated.');
+  }
+
+  function requestCaseDelete(testCase: ManagedTestCase) {
+    setError('');
+    setSuccess('');
+    setCasePendingDelete(testCase);
+  }
+
+  async function handleDeleteCase() {
+    if (!token || !casePendingDelete) {
+      return;
+    }
+
+    setIsDeleting(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      await testCasesApi.remove(token, casePendingDelete.id);
+      setCases((current) => current.filter((testCase) => testCase.id !== casePendingDelete.id));
+
+      if (editingCase?.id === casePendingDelete.id) {
+        setEditingCase(null);
+      }
+
+      setCasePendingDelete(null);
+      setSuccess('Test case deleted.');
+    } catch (deleteError) {
+      setCasePendingDelete(null);
+      setError(deleteError instanceof Error ? deleteError.message : 'Unable to delete test case.');
+    } finally {
+      setIsDeleting(false);
+    }
   }
 
   return (
@@ -211,8 +261,11 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
           <section className="grid gap-3 md:grid-cols-2">
             {visibleCases.slice(0, 2).map((testCase) => (
               <article
-                className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950"
+                className="cursor-pointer rounded-lg border border-zinc-200 bg-white p-4 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-900/60"
                 key={testCase.id}
+                onClick={() => void handleOpenCase(testCase)}
+                role="button"
+                tabIndex={0}
               >
                 <div className="flex items-start gap-3">
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300">
@@ -233,15 +286,32 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
                       {getSuiteName(testCase, suites)} - {getStepCount(testCase)} steps
                     </p>
                   </div>
-                  <button
-                    className="rounded-lg p-2 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"
-                    disabled={!canEdit}
-                    onClick={() => setEditingCase(testCase)}
-                    title="Edit test case"
-                    type="button"
-                  >
-                    <Pencil className="h-4 w-4" aria-hidden="true" />
-                  </button>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <button
+                      className="rounded-lg p-2 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"
+                      disabled={!canEdit}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void handleOpenCase(testCase);
+                      }}
+                      title="Edit test case"
+                      type="button"
+                    >
+                      <Pencil className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                    <button
+                      className="rounded-lg p-2 text-zinc-400 hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-rose-950 dark:hover:text-rose-300"
+                      disabled={!canEdit}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        requestCaseDelete(testCase);
+                      }}
+                      title="Delete test case"
+                      type="button"
+                    >
+                      <Trash2 className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                  </div>
                 </div>
               </article>
             ))}
@@ -266,7 +336,11 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
                 </thead>
                 <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
                   {visibleCases.map((testCase) => (
-                    <tr className="hover:bg-zinc-50 dark:hover:bg-zinc-900/60" key={testCase.id}>
+                    <tr
+                      className="cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-900/60"
+                      key={testCase.id}
+                      onClick={() => void handleOpenCase(testCase)}
+                    >
                       <td className="px-4 py-3">
                         <p className="font-medium text-zinc-950 dark:text-white">{testCase.title}</p>
                         <p className="text-xs text-zinc-500 dark:text-zinc-400">{testCase.id}</p>
@@ -301,11 +375,26 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
                         <button
                           className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"
                           disabled={!canEdit}
-                          onClick={() => setEditingCase(testCase)}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            void handleOpenCase(testCase);
+                          }}
                           title="Edit test case"
                           type="button"
                         >
                           <Pencil className="h-4 w-4" aria-hidden="true" />
+                        </button>
+                        <button
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-rose-950 dark:hover:text-rose-300"
+                          disabled={!canEdit}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            requestCaseDelete(testCase);
+                          }}
+                          title="Delete test case"
+                          type="button"
+                        >
+                          <Trash2 className="h-4 w-4" aria-hidden="true" />
                         </button>
                       </td>
                     </tr>
@@ -335,10 +424,21 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
         <TestCaseEditPanel
           key={editingCase.id}
           onClose={() => setEditingCase(null)}
+          onDelete={canEdit ? requestCaseDelete : undefined}
           onSave={handleSaveCase}
           readOnly={!canEdit}
           suites={suites}
           testCase={editingCase}
+        />
+      ) : null}
+
+      {casePendingDelete ? (
+        <DeleteConfirmationModal
+          description="This will remove the test case from the case library and from its suite."
+          loading={isDeleting}
+          onCancel={() => setCasePendingDelete(null)}
+          onConfirm={() => void handleDeleteCase()}
+          title="Delete Test Case?"
         />
       ) : null}
     </div>

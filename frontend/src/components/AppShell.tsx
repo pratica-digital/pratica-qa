@@ -79,7 +79,7 @@ export function AppShell() {
           />
         );
       default:
-        return <DashboardPage onNavigate={handleNavigate} />;
+        return <DashboardPage onNavigate={handleNavigate} onOpenRun={setSelectedTestRun} />;
     }
   }, [activePage, createActionEventId, handleNavigate, selectedTestRun]);
 
