@@ -113,6 +113,7 @@ export type TestResult = {
     status: TestRunStatus;
     testPlanId?: string | null;
     assignedToId?: string | null;
+    completedAt?: string | null;
     deletedAt?: string | null;
   };
   testCase: RunnerTestCase;

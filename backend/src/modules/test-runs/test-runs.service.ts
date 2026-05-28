@@ -144,7 +144,7 @@ export class TestRunsService {
       throw new BadRequestException('Test run has no failed results to re-run');
     }
 
-    return result.testRun;
+    return result;
   }
 
   async remove(id: string) {

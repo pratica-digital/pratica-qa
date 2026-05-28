@@ -10,6 +10,7 @@ const TEST_RESULT_INCLUDE = {
       id: true,
       name: true,
       status: true,
+      completedAt: true,
       testPlanId: true,
       assignedToId: true,
       deletedAt: true,
@@ -48,15 +49,30 @@ export class TestResultsRepository {
   create(dto: CreateTestResultDto) {
     const status = dto.status ?? TestResultStatus.PENDING;
 
-    return this.prisma.testResult.create({
-      data: {
+    const executedAt = status === TestResultStatus.PENDING ? null : new Date();
+
+    return this.prisma.testResult.upsert({
+      where: {
+        testRunId_testCaseId: {
+          testRunId: dto.testRunId,
+          testCaseId: dto.testCaseId,
+        },
+      },
+      create: {
         testRunId: dto.testRunId,
         testCaseId: dto.testCaseId,
         executedById: dto.executedById,
         status,
         comment: dto.comment ?? '',
         attachments: dto.attachments ?? [],
-        executedAt: status === TestResultStatus.PENDING ? undefined : new Date(),
+        executedAt,
+      },
+      update: {
+        executedById: dto.executedById,
+        status,
+        comment: dto.comment ?? '',
+        attachments: dto.attachments ?? [],
+        executedAt,
       },
       include: TEST_RESULT_INCLUDE,
     });
@@ -118,8 +134,16 @@ export class TestResultsRepository {
   }
 
   delete(id: string) {
-    return this.prisma.testResult.delete({
+    return this.prisma.testResult.update({
       where: { id },
+      data: {
+        executedById: null,
+        status: TestResultStatus.PENDING,
+        comment: '',
+        attachments: [],
+        executedAt: null,
+      },
+      include: TEST_RESULT_INCLUDE,
     });
   }
 
