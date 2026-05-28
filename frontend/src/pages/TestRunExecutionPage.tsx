@@ -46,7 +46,8 @@ function mergeUpdatedResult(current: TestRun, updatedResult: TestResult) {
 
   return {
     ...current,
-    status: current.status === 'PENDING' ? 'IN_PROGRESS' : current.status,
+    status: updatedResult.testRun?.status ?? current.status,
+    completedAt: updatedResult.testRun?.completedAt ?? current.completedAt,
     results,
   } satisfies TestRun;
 }

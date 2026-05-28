@@ -29,7 +29,10 @@ export class TestResultsService {
     }
 
     await this.ensureRunCanContainCase(dto.testRunId, dto.testCaseId);
-    return this.testResultsRepository.create(dto);
+    const testResult = await this.testResultsRepository.create(dto);
+    await this.testRunsRepository.refreshExecutionStatus(testResult.testRunId);
+
+    return this.testResultsRepository.findById(testResult.id);
   }
 
   async findAll(query: QueryTestResultsDto) {
@@ -76,10 +79,14 @@ export class TestResultsService {
       throw new BadRequestException('Execution status must be PASSED, FAILED, or SKIPPED');
     }
 
-    return this.testResultsRepository.update(id, {
+    const updatedResult = await this.testResultsRepository.update(id, {
       ...dto,
       executedById: user.id,
     });
+
+    await this.testRunsRepository.refreshExecutionStatus(updatedResult.testRunId);
+
+    return this.testResultsRepository.findById(updatedResult.id);
   }
 
   async addAttachments(id: string, dto: AddTestResultAttachmentsDto, user: AuthenticatedUser) {
@@ -89,8 +96,11 @@ export class TestResultsService {
   }
 
   async remove(id: string) {
-    await this.findOne(id);
-    return this.testResultsRepository.delete(id);
+    const testResult = await this.findOne(id);
+    const deletedResult = await this.testResultsRepository.delete(id);
+    await this.testRunsRepository.refreshExecutionStatus(testResult.testRunId);
+
+    return deletedResult;
   }
 
   private async ensureRunCanContainCase(testRunId: string, testCaseId: string) {

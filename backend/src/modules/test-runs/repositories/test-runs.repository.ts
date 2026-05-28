@@ -162,96 +162,71 @@ export class TestRunsRepository {
   update(id: string, dto: UpdateTestRunDto) {
     return this.prisma.testRun.update({
       where: { id },
-      data: dto,
+      data: {
+        name: dto.name,
+        description: dto.description,
+      },
       include: TEST_RUN_INCLUDE,
     });
   }
 
-  start(id: string) {
-    return this.prisma.testRun.update({
+  async start(id: string) {
+    await this.prisma.testRun.update({
       where: { id },
       data: {
-        status: TestRunStatus.IN_PROGRESS,
         startedAt: new Date(),
       },
-      include: TEST_RUN_INCLUDE,
     });
+
+    return this.refreshExecutionStatus(id);
   }
 
   complete(id: string) {
-    return this.prisma.testRun.update({
-      where: { id },
-      data: {
-        status: TestRunStatus.COMPLETED,
-        completedAt: new Date(),
-      },
-      include: TEST_RUN_INCLUDE,
-    });
+    return this.refreshExecutionStatus(id);
   }
 
   async rerunFailed(sourceRunId: string, dto: RerunFailedTestsDto) {
-    return this.prisma.$transaction(async (tx) => {
-      const sourceRun = await tx.testRun.findUnique({
-        where: { id: sourceRunId },
-        include: {
-          results: {
-            where: { status: TestResultStatus.FAILED },
-            select: {
-              testCaseId: true,
-              testCase: {
-                select: {
-                  suiteId: true,
-                },
-              },
-            },
-          },
-        },
-      });
-
-      if (!sourceRun) {
-        return null;
-      }
-
-      const failedCaseIds = sourceRun.results.map((result) => result.testCaseId);
-      const suiteIds = [...new Set(sourceRun.results.map((result) => result.testCase.suiteId))];
-
-      if (failedCaseIds.length === 0 || suiteIds.length === 0) {
-        return { testRun: null, failedCount: 0 };
-      }
-
-      const testRun = await tx.testRun.create({
-        data: {
-          projectId: sourceRun.projectId,
-          testPlanId: sourceRun.testPlanId,
-          createdById: sourceRun.createdById,
-          assignedToId: sourceRun.assignedToId,
-          name: dto.name ?? `${sourceRun.name} - failed re-run`,
-          description: dto.description ?? `Re-run of failed cases from ${sourceRun.name}`,
-          suites: {
-            create: suiteIds.map((suiteId, index) => ({
-              testSuiteId: suiteId,
-              position: index + 1,
-            })),
-          },
-        },
-      });
-
-      await tx.testResult.createMany({
-        data: failedCaseIds.map((testCaseId) => ({
-          testRunId: testRun.id,
-          testCaseId,
-          status: TestResultStatus.PENDING,
-        })),
-      });
-
-      return {
-        testRun: await tx.testRun.findUnique({
-          where: { id: testRun.id },
-          include: TEST_RUN_INCLUDE,
-        }),
-        failedCount: failedCaseIds.length,
-      };
+    const failedResults = await this.prisma.testResult.findMany({
+      where: {
+        testRunId: sourceRunId,
+        status: TestResultStatus.FAILED,
+      },
+      select: { id: true },
     });
+
+    if (failedResults.length === 0) {
+      return { testRun: null, failedCount: 0 };
+    }
+
+    const failedResultIds = failedResults.map((result) => result.id);
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.testResult.updateMany({
+        where: { id: { in: failedResultIds } },
+        data: {
+          status: TestResultStatus.PENDING,
+          executedById: null,
+          executedAt: null,
+          comment: '',
+          attachments: [],
+        },
+      });
+
+      if (dto.name !== undefined || dto.description !== undefined) {
+        await tx.testRun.update({
+          where: { id: sourceRunId },
+          data: {
+            name: dto.name,
+            description: dto.description,
+          },
+        });
+      }
+    });
+
+    return {
+      testRun: await this.refreshExecutionStatus(sourceRunId),
+      failedCount: failedResults.length,
+    };
   }
 
   async executeResult(testRunId: string, dto: ExecuteTestRunDto, executedById: string) {
@@ -267,7 +242,7 @@ export class TestRunsRepository {
       return null;
     }
 
-    return this.prisma.testResult.update({
+    const updatedResult = await this.prisma.testResult.update({
       where: { id: testResult.id },
       data: {
         status: dto.status,
@@ -276,12 +251,19 @@ export class TestRunsRepository {
         executedById,
         executedAt: new Date(),
       },
+    });
+
+    await this.refreshExecutionStatus(testRunId);
+
+    return this.prisma.testResult.findUnique({
+      where: { id: updatedResult.id },
       include: {
         testRun: {
           select: {
             id: true,
             name: true,
             status: true,
+            completedAt: true,
             assignedToId: true,
           },
         },
@@ -302,6 +284,56 @@ export class TestRunsRepository {
           },
         },
       },
+    });
+  }
+
+  async refreshExecutionStatus(testRunId: string) {
+    const [currentRun, totalCaseGroups, executedCaseGroups] = await Promise.all([
+      this.prisma.testRun.findUnique({
+        where: { id: testRunId },
+        select: {
+          status: true,
+          completedAt: true,
+        },
+      }),
+      this.prisma.testResult.groupBy({
+        by: ['testCaseId'],
+        where: { testRunId },
+      }),
+      this.prisma.testResult.groupBy({
+        by: ['testCaseId'],
+        where: {
+          testRunId,
+          status: { not: TestResultStatus.PENDING },
+        },
+      }),
+    ]);
+
+    if (!currentRun) {
+      return null;
+    }
+
+    const totalTestCases = totalCaseGroups.length;
+    const resultsCount = executedCaseGroups.length;
+    const status =
+      resultsCount === 0
+        ? TestRunStatus.PENDING
+        : resultsCount < totalTestCases
+          ? TestRunStatus.IN_PROGRESS
+          : TestRunStatus.COMPLETED;
+
+    return this.prisma.testRun.update({
+      where: { id: testRunId },
+      data: {
+        status,
+        completedAt:
+          status === TestRunStatus.COMPLETED
+            ? currentRun.status === TestRunStatus.COMPLETED && currentRun.completedAt
+              ? currentRun.completedAt
+              : new Date()
+            : null,
+      },
+      include: TEST_RUN_INCLUDE,
     });
   }
 
