@@ -1,6 +1,7 @@
 import { FormEvent, useState } from 'react';
 import { LogIn, ShieldCheck } from 'lucide-react';
 import { useAuth } from './useAuth';
+import praticaLogo from '../assets/pratica-logo.png';
 
 export function LoginPage() {
   const { login } = useAuth();
@@ -26,13 +27,18 @@ export function LoginPage() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-zinc-50 px-4 py-10 text-zinc-950 dark:bg-zinc-950 dark:text-white">
       <section className="w-full max-w-md rounded-lg border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+        <img
+          src={praticaLogo}
+          alt="Login illustration"
+          className="mx-auto mb-6 h-22 w-64 object-cover "
+        />
         <div className="flex items-center gap-3">
           <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-zinc-950 text-white dark:bg-white dark:text-zinc-950">
             <ShieldCheck className="h-5 w-5" aria-hidden="true" />
           </span>
           <div>
-            <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">QA workspace</p>
-            <h1 className="text-xl font-semibold tracking-normal">Sign in</h1>
+            <p className="mx-auto text-sm font-medium text-zinc-500 dark:text-zinc-400">QA workspace</p>
+            
           </div>
         </div>
 
