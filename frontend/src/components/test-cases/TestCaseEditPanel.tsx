@@ -20,6 +20,7 @@ type TestCaseEditPanelProps = {
   suites: ManagedTestSuite[];
   readOnly: boolean;
   onClose: () => void;
+  onDelete?: (testCase: ManagedTestCase) => void;
   onSave: (
     testCase: ManagedTestCase,
     payload: UpdateTestCasePayload,
@@ -53,6 +54,7 @@ export function TestCaseEditPanel({
   suites,
   readOnly,
   onClose,
+  onDelete,
   onSave,
 }: TestCaseEditPanelProps) {
   const [title, setTitle] = useState(testCase.title);
@@ -152,6 +154,18 @@ export function TestCaseEditPanel({
             </h2>
             <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">{suiteName}</p>
           </div>
+          {onDelete ? (
+            <button
+              className="inline-flex h-8 items-center gap-2 rounded-lg border border-rose-200 px-3 text-sm font-medium text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950"
+              disabled={readOnly || saving}
+              onClick={() => onDelete(testCase)}
+              title="Delete test case"
+              type="button"
+            >
+              <Trash2 className="h-4 w-4" aria-hidden="true" />
+              Delete
+            </button>
+          ) : null}
           <button
             className="rounded-lg p-1.5 text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
             onClick={onClose}

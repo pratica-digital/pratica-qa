@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ChevronRight, Filter, FolderOpen, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
+import { Filter, FolderOpen, MoreHorizontal, Plus, RefreshCw, Search } from 'lucide-react';
 import { useAuth } from '../auth/useAuth';
 import { ProjectStatusBadge } from '../components/badges';
-import { DeleteConfirmationModal } from '../components/DeleteConfirmationModal';
-import { ProjectDetailPanel } from '../components/projects/ProjectDetailPanel';
 import { ApiError, projectsApi } from '../lib/api';
 import type { CreateProjectPayload, ProjectSummary } from '../types/testRun';
 import { NewProjectModal } from './NewProjectModal';
@@ -29,10 +27,7 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
-  const [selectedProject, setSelectedProject] = useState<ProjectSummary | null>(null);
-  const [projectPendingDelete, setProjectPendingDelete] = useState<ProjectSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -101,39 +96,6 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
     const createdProject = await projectsApi.create(token, payload);
     setProjects((current) => [createdProject, ...current]);
     setSuccess('Project created.');
-  }
-
-  function requestProjectDelete(project: ProjectSummary) {
-    setError('');
-    setSuccess('');
-    setProjectPendingDelete(project);
-  }
-
-  async function handleDeleteProject() {
-    if (!token || !projectPendingDelete) {
-      return;
-    }
-
-    setIsDeleting(true);
-    setError('');
-    setSuccess('');
-
-    try {
-      await projectsApi.remove(token, projectPendingDelete.id);
-      setProjects((current) => current.filter((project) => project.id !== projectPendingDelete.id));
-
-      if (selectedProject?.id === projectPendingDelete.id) {
-        setSelectedProject(null);
-      }
-
-      setProjectPendingDelete(null);
-      setSuccess('Project deleted.');
-    } catch (deleteError) {
-      setProjectPendingDelete(null);
-      setError(deleteError instanceof Error ? deleteError.message : 'Unable to delete project.');
-    } finally {
-      setIsDeleting(false);
-    }
   }
 
   return (
@@ -206,11 +168,8 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
           <section className="grid gap-3 md:grid-cols-3">
             {visibleProjects.map((project) => (
               <article
-                className="cursor-pointer rounded-lg border border-zinc-200 bg-white p-4 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-900/60"
+                className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950"
                 key={project.id}
-                onClick={() => setSelectedProject(project)}
-                role="button"
-                tabIndex={0}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex min-w-0 items-center gap-3">
@@ -226,21 +185,14 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
                       </p>
                     </div>
                   </div>
-                  <div className="flex shrink-0 items-center gap-1">
-                    <button
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-rose-950 dark:hover:text-rose-300"
-                      disabled={!isAdmin}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        requestProjectDelete(project);
-                      }}
-                      title={isAdmin ? 'Delete project' : 'Only admins can delete projects'}
-                      type="button"
-                    >
-                      <Trash2 className="h-4 w-4" aria-hidden="true" />
-                    </button>
-                    <ChevronRight className="h-4 w-4 text-zinc-400" aria-hidden="true" />
-                  </div>
+                  <button
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-950 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-zinc-900 dark:hover:text-white"
+                    disabled={!isAdmin}
+                    title="Project actions"
+                    type="button"
+                  >
+                    <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+                  </button>
                 </div>
                 <div className="mt-4 flex items-center justify-between">
                   {project.status ? <ProjectStatusBadge status={project.status} /> : null}
@@ -285,16 +237,11 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
                     <th className="px-4 py-3">Runs</th>
                     <th className="px-4 py-3">Plans</th>
                     <th className="px-4 py-3">Updated</th>
-                    <th className="px-4 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
                   {visibleProjects.map((project) => (
-                    <tr
-                      className="cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-900/60"
-                      key={project.id}
-                      onClick={() => setSelectedProject(project)}
-                    >
+                    <tr className="hover:bg-zinc-50 dark:hover:bg-zinc-900/60" key={project.id}>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <FolderOpen className="h-4 w-4 text-zinc-400" aria-hidden="true" />
@@ -317,20 +264,6 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
                       <td className="px-4 py-3 text-zinc-600 dark:text-zinc-300">
                         {getUpdatedAt(project)}
                       </td>
-                      <td className="px-4 py-3 text-right">
-                        <button
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-rose-950 dark:hover:text-rose-300"
-                          disabled={!isAdmin}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            requestProjectDelete(project);
-                          }}
-                          title={isAdmin ? 'Delete project' : 'Only admins can delete projects'}
-                          type="button"
-                        >
-                          <Trash2 className="h-4 w-4" aria-hidden="true" />
-                        </button>
-                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -352,24 +285,6 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
         onCreate={handleCreate}
         open={modalOpen}
       />
-
-      {selectedProject ? (
-        <ProjectDetailPanel
-          onClose={() => setSelectedProject(null)}
-          onDelete={isAdmin ? requestProjectDelete : undefined}
-          project={selectedProject}
-        />
-      ) : null}
-
-      {projectPendingDelete ? (
-        <DeleteConfirmationModal
-          description="This will remove the project and all related suites, test cases, test plans, and test runs."
-          loading={isDeleting}
-          onCancel={() => setProjectPendingDelete(null)}
-          onConfirm={() => void handleDeleteProject()}
-          title="Delete Project?"
-        />
-      ) : null}
     </div>
   );
 }

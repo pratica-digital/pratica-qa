@@ -107,6 +107,14 @@ export type TestResult = {
   attachments?: string[];
   executedAt?: string | null;
   executedBy?: AuthUser | null;
+  testRun?: {
+    id: string;
+    name: string;
+    status: TestRunStatus;
+    testPlanId?: string | null;
+    assignedToId?: string | null;
+    deletedAt?: string | null;
+  };
   testCase: RunnerTestCase;
 };
 
@@ -146,6 +154,32 @@ export type TestRun = {
   assignedTo?: AuthUser;
   suites?: TestRunSuite[];
   results?: TestResult[];
+};
+
+export type TestPlanSection = {
+  type?: string;
+  title: string;
+  content: string;
+  priority?: TestPriority;
+};
+
+export type TestPlan = {
+  id: string;
+  projectId: string;
+  name: string;
+  version: string;
+  description?: string;
+  sections?: TestPlanSection[];
+  createdAt?: string;
+  updatedAt?: string;
+  project?: {
+    id: string;
+    key?: string;
+    name: string;
+  };
+  _count?: {
+    testRuns?: number;
+  };
 };
 
 export type PaginatedResponse<T> = {
@@ -220,6 +254,26 @@ export type CreateTestSuitePayload = {
   description?: string;
   position?: number;
 };
+
+export type CreateTestPlanPayload = {
+  projectId: string;
+  name: string;
+  version: string;
+  sections: Array<{
+    title: string;
+    content: string;
+  }>;
+};
+
+export type UpdateTestPlanPayload = Partial<{
+  name: string;
+  version: string;
+  description: string;
+  sections: Array<{
+    title: string;
+    content: string;
+  }>;
+}>;
 
 export type CreateProjectPayload = {
   name: string;
