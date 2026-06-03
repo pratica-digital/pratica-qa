@@ -13,7 +13,6 @@ import { TopNav } from './TopNav';
 
 const createActionLabels: Partial<Record<PageId, string>> = {
   projects: 'Project',
-  'test-plans': 'Test plan',
   'test-suites': 'Suite',
   'test-cases': 'Test case',
   'test-runs': 'Test run',

@@ -124,8 +124,8 @@ export function TestPlansPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium text-zinc-500">Test plans</p>
           <h1 className="mt-1 text-2xl font-semibold text-zinc-950">Test Plans</h1>
+          <p className="text-sm font-medium text-zinc-500">Definir a estratégia, escopo e abordagem dos testes</p>
         </div>
         <div className="flex items-center gap-2">
           <button

@@ -140,9 +140,8 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Portfolio</p>
           <h1 className="mt-1 text-2xl font-semibold tracking-normal text-zinc-950 dark:text-white">
-            Projects
+            Projetos
           </h1>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">

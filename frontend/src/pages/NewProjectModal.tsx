@@ -196,7 +196,7 @@ export function NewProjectModal({ open, onClose, onCreate }: NewProjectModalProp
               Cancel
             </button>
             <button
-              className="inline-flex h-9 items-center gap-2 rounded-lg bg-zinc-950 px-4 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
+              className="inline-flex h-9 items-center gap-2 rounded-lg bg-white px-4 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
               disabled={submitting}
               onClick={() => void handleSubmit()}
               type="button"

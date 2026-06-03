@@ -27,24 +27,24 @@ export function Sidebar({ activePage, isOpen, onClose, onNavigate }: SidebarProp
         onClick={onClose}
       />
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-72 transform flex-col border-r border-zinc-200 bg-white transition-transform duration-200 dark:border-zinc-800 dark:bg-zinc-950 lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-72 transform flex-col border-r border-blue-900 bg-blue-950 transition-transform duration-200 dark:border-blue-800 dark:bg-blue-950 lg:translate-x-0 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="flex h-16 items-center justify-between border-b border-zinc-200 px-4 dark:border-zinc-800">
+          <div className="flex h-16 items-center justify-between border-b border-blue-900 px-4 dark:border-blue-800">
           <button
             className="flex min-w-0 items-center gap-3 text-left"
             onClick={() => onNavigate('dashboard')}
             type="button"
           >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-950 text-sm font-semibold text-white dark:bg-white dark:text-zinc-950">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-800 text-sm font-semibold text-white dark:bg-blue-200 dark:text-blue-950">
               QA
             </span>
             <span className="min-w-0">
-              <span className="block truncate text-sm font-semibold text-zinc-950 dark:text-white">
+              <span className="block truncate text-sm font-semibold text-white">
                 qa-platform
               </span>
-              <span className="block truncate text-xs text-zinc-500 dark:text-zinc-400">
+              <span className="block truncate text-xs text-blue-200">
                 Release workspace
               </span>
             </span>
@@ -68,8 +68,8 @@ export function Sidebar({ activePage, isOpen, onClose, onNavigate }: SidebarProp
               <button
                 className={`flex h-10 w-full items-center gap-3 rounded-lg px-3 text-left text-sm font-medium transition-colors ${
                   isActive
-                    ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950'
-                    : 'text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-white'
+                    ? 'bg-blue-800 text-white dark:bg-blue-200 dark:text-blue-950'
+                    : 'text-blue-200 hover:bg-blue-900 hover:text-white dark:text-blue-300 dark:hover:bg-blue-800 dark:hover:text-white'
                 }`}
                 key={item.id}
                 onClick={() => {
@@ -85,23 +85,23 @@ export function Sidebar({ activePage, isOpen, onClose, onNavigate }: SidebarProp
           })}
         </nav>
 
-        <div className="border-t border-zinc-200 p-4 dark:border-zinc-800">
-          <div className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
+        <div className="border-t border-blue-900 p-4 dark:border-blue-800">
+          <div className="rounded-lg border border-blue-900 p-3 dark:border-blue-800">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-medium uppercase text-zinc-500 dark:text-zinc-400">
+                <p className="text-xs font-medium uppercase text-blue-200">
                   Signed in
                 </p>
-                <p className="mt-1 truncate text-sm font-semibold text-zinc-950 dark:text-white">
+                <p className="mt-1 truncate text-sm font-semibold text-white">
                   {user?.name}
                 </p>
-                <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                <p className="mt-0.5 text-xs text-blue-200">
                   {activeAssignedRuns.length} active assigned
                 </p>
               </div>
               <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
             </div>
-            <div className="mt-3 h-2 rounded-full bg-zinc-100 dark:bg-zinc-900">
+            <div className="mt-3 h-2 rounded-full bg-blue-900/10 dark:bg-blue-900">
               <div className="h-2 rounded-full bg-emerald-500" style={{ width: `${progress}%` }} />
             </div>
           </div>

@@ -278,7 +278,7 @@ function DetailButton({ children, onClick }: { children: string; onClick: () => 
 function DeleteActionButton({ onClick, title }: { onClick: () => void; title: string }) {
   return (
     <button
-      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-rose-200 bg-white text-rose-600 transition hover:bg-rose-50 dark:border-rose-900 dark:bg-zinc-950 dark:text-rose-300 dark:hover:bg-rose-950"
+      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-rose-200 bg-red text-rose-600 transition hover:bg-rose-50 dark:border-rose-900 dark:bg-zinc-950 dark:text-rose-300 dark:hover:bg-rose-950"
       onClick={(event) => {
         stopPropagation(event);
         onClick();
