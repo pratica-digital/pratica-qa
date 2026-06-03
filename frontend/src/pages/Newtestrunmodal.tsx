@@ -4,6 +4,7 @@ import {
   type InputHTMLAttributes,
   type ReactNode,
 } from 'react';
+import { createPortal } from 'react-dom';
 import {
   AlertCircle,
   CalendarDays,
@@ -174,6 +175,17 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
     loadData();
   }, [open, token, projectId]);
 
+  useEffect(() => {
+    if (!open) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open]);
+
   if (!open) {
     return null;
   }
@@ -290,12 +302,10 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
     { id: 'suites', label: `Suites (${selectedSuites.length})` },
   ];
 
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center"
-      onClick={(event) => event.target === event.currentTarget && onClose()}
-    >
-      <div className="relative flex w-full max-w-xl flex-col rounded-t-lg border border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-950 sm:rounded-lg">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] h-dvh w-screen overflow-hidden bg-white dark:bg-zinc-950">
+      <div className="flex h-dvh w-full flex-col overflow-hidden p-6">
+      <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
 
         {/* Header */}
         <div className="flex items-center gap-3 border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
@@ -340,7 +350,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
         </div>
 
         {/* Body */}
-        <div className="max-h-[60vh] overflow-y-auto px-5 py-5">
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
           {loadError ? (
             <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-400">
               {loadError}
@@ -509,7 +519,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between gap-2 border-t border-zinc-200 px-5 py-4 dark:border-zinc-800">
+        <div className="flex shrink-0 items-center justify-between gap-2 border-t border-zinc-200 px-5 py-4 dark:border-zinc-800">
           <p className="text-xs text-zinc-400">
             {selectedSuites.length > 0 ? `${totalCasesSelected} cases will be queued` : 'No suites selected'}
           </p>
@@ -543,6 +553,8 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
         </div>
 
       </div>
-    </div>
+      </div>
+    </div>,
+    document.body,
   );
 }

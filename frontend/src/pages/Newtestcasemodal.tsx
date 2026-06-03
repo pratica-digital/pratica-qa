@@ -1,10 +1,12 @@
 import {
+  useEffect,
   useState,
   type InputHTMLAttributes,
   type ReactNode,
   type SelectHTMLAttributes,
   type TextareaHTMLAttributes,
 } from 'react';
+import { createPortal } from 'react-dom';
 import { AlertCircle, ChevronDown, GripVertical, ListChecks, Plus, Trash2, X } from 'lucide-react';
 import type { TestCase } from '../data/workspace';
 import type { CreateTestCasePayload, ManagedTestSuite } from '../types/testRun';
@@ -173,6 +175,17 @@ export function NewTestCaseModal({
   const [submitting, setSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>('basic');
 
+  useEffect(() => {
+    if (!open) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open]);
+
   if (!open) {
     return null;
   }
@@ -285,12 +298,10 @@ export function NewTestCaseModal({
     { id: 'steps', label: `Steps (${steps.length})` },
   ];
 
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center"
-      onClick={(event) => event.target === event.currentTarget && onClose()}
-    >
-      <div className="relative flex w-full max-w-xl flex-col rounded-t-lg border border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-950 sm:rounded-lg">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] h-dvh w-screen overflow-hidden bg-white dark:bg-zinc-950">
+      <div className="flex h-dvh w-full flex-col overflow-hidden p-6">
+      <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
         <div className="flex items-center gap-3 border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-400">
             <ListChecks className="h-4 w-4" aria-hidden="true" />
@@ -331,7 +342,7 @@ export function NewTestCaseModal({
           ))}
         </div>
 
-        <div className="max-h-[60vh] overflow-y-auto px-5 py-5">
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
           {activeTab === 'basic' ? (
             <div className="space-y-4">
               <Field label="Case title" required>
@@ -439,7 +450,7 @@ export function NewTestCaseModal({
           ) : null}
         </div>
 
-        <div className="flex items-center justify-between gap-2 border-t border-zinc-200 px-5 py-4 dark:border-zinc-800">
+        <div className="flex shrink-0 items-center justify-between gap-2 border-t border-zinc-200 px-5 py-4 dark:border-zinc-800">
           <p className="text-xs text-zinc-400">
             {submitError || `${steps.length} ${steps.length === 1 ? 'step' : 'steps'} defined`}
           </p>
@@ -472,6 +483,8 @@ export function NewTestCaseModal({
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </div>,
+    document.body,
   );
 }

@@ -1,4 +1,5 @@
-import { useState, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react';
+import { useEffect, useState, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react';
+import { createPortal } from 'react-dom';
 import { AlertCircle, ChevronDown, Layers3, X } from 'lucide-react';
 import type { TestSuite } from '../data/workspace';
 import type { CreateTestSuitePayload, ProjectSummary } from '../types/testRun';
@@ -98,6 +99,17 @@ export function NewSuiteModal({
   const [submitError, setSubmitError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  useEffect(() => {
+    if (!open) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open]);
+
   if (!open) {
     return null;
   }
@@ -176,12 +188,10 @@ export function NewSuiteModal({
     }
   }
 
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center"
-      onClick={(event) => event.target === event.currentTarget && onClose()}
-    >
-      <div className="relative w-full max-w-lg rounded-t-lg border border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-950 sm:rounded-lg">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] h-dvh w-screen overflow-hidden bg-white dark:bg-zinc-950">
+      <div className="flex h-dvh w-full flex-col overflow-hidden p-6">
+      <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
         <div className="flex items-center gap-3 border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sky-50 text-sky-600 dark:bg-sky-950 dark:text-sky-400">
             <Layers3 className="h-4 w-4" aria-hidden="true" />
@@ -200,7 +210,7 @@ export function NewSuiteModal({
           </button>
         </div>
 
-        <div className="space-y-4 px-5 py-5">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5">
           <Field label="Suite name" required hint="Use a clear name, for example Auth login flow">
             <Input
               onChange={(event) => setField('name', event.target.value)}
@@ -288,7 +298,7 @@ export function NewSuiteModal({
           </Field>
         </div>
 
-        <div className="flex items-center justify-between gap-2 border-t border-zinc-200 px-5 py-4 dark:border-zinc-800">
+        <div className="flex shrink-0 items-center justify-between gap-2 border-t border-zinc-200 px-5 py-4 dark:border-zinc-800">
           <p className="text-xs text-rose-500">{submitError}</p>
           <div className="flex items-center justify-end gap-2">
           <button
@@ -319,6 +329,8 @@ export function NewSuiteModal({
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </div>,
+    document.body,
   );
 }
