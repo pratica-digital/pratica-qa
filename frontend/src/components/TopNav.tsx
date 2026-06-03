@@ -16,6 +16,7 @@ type TopNavProps = {
   activePage: PageId;
   createActionLabel?: string;
   isDark: boolean;
+  showPageTitle?: boolean;
   onCreateAction?: () => void;
   onOpenSidebar: () => void;
   onToggleTheme: () => void;
@@ -25,6 +26,7 @@ export function TopNav({
   activePage,
   createActionLabel,
   isDark,
+  showPageTitle = true,
   onCreateAction,
   onOpenSidebar,
   onToggleTheme,
@@ -49,9 +51,11 @@ export function TopNav({
         </button>
 
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-zinc-950 dark:text-white">
-            {pageTitles[activePage]}
-          </p>
+          {showPageTitle ? (
+            <p className="truncate text-sm font-semibold text-zinc-950 dark:text-white">
+              {pageTitles[activePage]}
+            </p>
+          ) : null}
         </div>
 
         <label className="hidden h-9 w-full max-w-sm items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 md:flex">

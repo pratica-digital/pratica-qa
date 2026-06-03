@@ -11,12 +11,9 @@ import type { TestRun } from '../types/testRun';
 import { Sidebar } from './Sidebar';
 import { TopNav } from './TopNav';
 
-const createActionLabels: Partial<Record<PageId, string>> = {
-  projects: 'Project',
-  'test-suites': 'Suite',
-  'test-cases': 'Test case',
-  'test-runs': 'Test run',
-};
+const createActionLabels: Partial<Record<PageId, string>> = {};
+
+const hideTopNavPageTitle: PageId[] = ['projects', 'test-plans', 'test-suites', 'test-cases', 'test-runs'];
 
 const getInitialTheme = () => {
   if (typeof window === 'undefined') {
@@ -96,6 +93,7 @@ export function AppShell() {
         <TopNav
           activePage={activePage}
           createActionLabel={createActionLabel}
+          showPageTitle={!hideTopNavPageTitle.includes(activePage)}
           isDark={isDark}
           onCreateAction={
             createActionLabel
