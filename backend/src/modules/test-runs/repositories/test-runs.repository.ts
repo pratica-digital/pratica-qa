@@ -1,5 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, TestCaseStatus, TestResultStatus, TestRunStatus } from '@prisma/client';
+import {
+  Prisma,
+  TestCaseStatus,
+  TestResultStatus,
+  TestRunStatus,
+  TestRunTestType,
+} from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { CreateTestRunDto } from '../dto/create-test-run.dto';
 import { ExecuteTestRunDto } from '../dto/execute-test-run.dto';
@@ -75,11 +81,18 @@ type FindTestRunsParams = {
   take: number;
 };
 
+type SuiteAssignment = {
+  suiteId: string;
+  testType: TestRunTestType;
+};
+
 @Injectable()
 export class TestRunsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async create(dto: CreateTestRunDto, suiteIds: string[]) {
+  async create(dto: CreateTestRunDto, suiteAssignments: SuiteAssignment[]) {
+    const suiteIds = suiteAssignments.map((assignment) => assignment.suiteId);
+
     return this.prisma.$transaction(async (tx) => {
       const testCases = await tx.testCase.findMany({
         where: {
@@ -103,8 +116,9 @@ export class TestRunsRepository {
           name: dto.name,
           description: dto.description ?? '',
           suites: {
-            create: suiteIds.map((suiteId, index) => ({
-              testSuiteId: suiteId,
+            create: suiteAssignments.map((assignment, index) => ({
+              testSuiteId: assignment.suiteId,
+              testType: assignment.testType,
               position: index + 1,
             })),
           },

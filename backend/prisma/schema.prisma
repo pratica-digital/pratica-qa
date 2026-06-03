@@ -40,6 +40,13 @@ enum TestRunStatus {
   COMPLETED
 }
 
+enum TestRunTestType {
+  SMOKE
+  FUNCIONAL
+  REGRESSAO
+  ROBUSTEZ
+}
+
 enum TestResultStatus {
   PENDING
   PASSED
@@ -201,6 +208,7 @@ model TestRunSuite {
   id          String   @id @default(uuid()) @db.Uuid
   testRunId   String   @db.Uuid
   testSuiteId String   @db.Uuid
+  testType    TestRunTestType @default(FUNCIONAL)
   position    Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -209,6 +217,7 @@ model TestRunSuite {
   testSuite TestSuite @relation(fields: [testSuiteId], references: [id], onDelete: Cascade)
 
   @@unique([testRunId, testSuiteId])
+  @@index([testType])
   @@index([testSuiteId])
   @@map("test_run_suites")
 }

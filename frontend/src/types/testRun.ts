@@ -14,6 +14,8 @@ export type AuthUser = {
 
 export type TestRunStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
 
+export type TestRunTestType = 'SMOKE' | 'FUNCIONAL' | 'REGRESSAO' | 'ROBUSTEZ';
+
 export type TestResultStatus = 'PENDING' | 'PASSED' | 'FAILED' | 'SKIPPED';
 
 export type TestPriority = 'LOW' | 'MEDIUM' | 'HIGH';
@@ -122,6 +124,7 @@ export type TestResult = {
 export type TestRunSuite = {
   id: string;
   testSuiteId: string;
+  testType?: TestRunTestType;
   position: number;
   testSuite?: {
     id: string;

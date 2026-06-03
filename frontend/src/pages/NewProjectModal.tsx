@@ -1,4 +1,5 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { AlertCircle, FolderOpen, X } from 'lucide-react';
 import type { CreateProjectPayload } from '../types/testRun';
 
@@ -53,6 +54,17 @@ export function NewProjectModal({ open, onClose, onCreate }: NewProjectModalProp
   const [submitting, setSubmitting] = useState(false);
 
   const normalizedKey = useMemo(() => normalizeKey(form.key), [form.key]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [open]);
 
   if (!open) {
     return null;
@@ -109,12 +121,10 @@ export function NewProjectModal({ open, onClose, onCreate }: NewProjectModalProp
     }
   }
 
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center"
-      onClick={(event) => event.target === event.currentTarget && onClose()}
-    >
-      <div className="relative w-full max-w-lg rounded-t-lg border border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-950 sm:rounded-lg">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] h-dvh w-screen overflow-hidden bg-white dark:bg-zinc-950">
+      <div className="flex h-dvh w-full flex-col overflow-hidden p-6">
+      <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
         <div className="flex items-center gap-3 border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-700 dark:bg-zinc-900 dark:text-zinc-200">
             <FolderOpen className="h-4 w-4" aria-hidden="true" />
@@ -133,7 +143,7 @@ export function NewProjectModal({ open, onClose, onCreate }: NewProjectModalProp
           </button>
         </div>
 
-        <div className="space-y-4 px-5 py-5">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5">
           <Field label="Project name" required>
             <input
               className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:placeholder:text-zinc-500 dark:focus:border-sky-400"
@@ -174,7 +184,7 @@ export function NewProjectModal({ open, onClose, onCreate }: NewProjectModalProp
           </Field>
         </div>
 
-        <div className="flex items-center justify-between gap-2 border-t border-zinc-200 px-5 py-4 dark:border-zinc-800">
+        <div className="flex shrink-0 items-center justify-between gap-2 border-t border-zinc-200 px-5 py-4 dark:border-zinc-800">
           <p className="text-xs text-rose-500">{submitError}</p>
           <div className="flex items-center justify-end gap-2">
             <button
@@ -186,7 +196,7 @@ export function NewProjectModal({ open, onClose, onCreate }: NewProjectModalProp
               Cancel
             </button>
             <button
-              className="inline-flex h-9 items-center gap-2 rounded-lg bg-zinc-950 px-4 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
+              className="inline-flex h-9 items-center gap-2 rounded-lg bg-white px-4 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
               disabled={submitting}
               onClick={() => void handleSubmit()}
               type="button"
@@ -197,6 +207,8 @@ export function NewProjectModal({ open, onClose, onCreate }: NewProjectModalProp
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </div>,
+    document.body,
   );
 }

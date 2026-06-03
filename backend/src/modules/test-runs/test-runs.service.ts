@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { TestResultStatus, UserRole, UserStatus } from '@prisma/client';
+import { TestResultStatus, TestRunTestType, UserRole, UserStatus } from '@prisma/client';
 import { AuthenticatedUser } from '../../auth/types/authenticated-user';
 import { getPagination } from '../../common/dto/pagination-query.dto';
 import { TestPlansRepository } from '../test-plans/repositories/test-plans.repository';
@@ -17,6 +17,11 @@ import { QueryTestRunsDto } from './dto/query-test-runs.dto';
 import { RerunFailedTestsDto } from './dto/rerun-failed-tests.dto';
 import { UpdateTestRunDto } from './dto/update-test-run.dto';
 import { TestRunsRepository } from './repositories/test-runs.repository';
+
+type SuiteAssignment = {
+  suiteId: string;
+  testType: TestRunTestType;
+};
 
 @Injectable()
 export class TestRunsService {
@@ -38,16 +43,20 @@ export class TestRunsService {
       throw new BadRequestException('Test plan does not belong to the project');
     }
 
-    const suiteIds = [...new Set(dto.suiteIds)];
-    const suiteCount = await this.testSuitesRepository.countByIdsInProject(suiteIds, dto.projectId);
+    const suiteAssignments = this.buildSuiteAssignments(dto);
+    const suiteIds = suiteAssignments.map((assignment) => assignment.suiteId);
 
-    if (suiteCount !== suiteIds.length) {
-      throw new BadRequestException('All test suites must belong to the project');
+    if (suiteIds.length > 0) {
+      const suiteCount = await this.testSuitesRepository.countByIdsInProject(suiteIds, dto.projectId);
+
+      if (suiteCount !== suiteIds.length) {
+        throw new BadRequestException('All test suites must belong to the project');
+      }
     }
 
     await this.ensureAssignableUser(dto.assignedToId);
 
-    return this.testRunsRepository.create(dto, suiteIds);
+    return this.testRunsRepository.create(dto, suiteAssignments);
   }
 
   async findAll(query: QueryTestRunsDto) {
@@ -158,6 +167,45 @@ export class TestRunsService {
     if (!user || user.deletedAt || user.status !== UserStatus.ACTIVE) {
       throw new NotFoundException('Assigned user not found');
     }
+  }
+
+  private buildSuiteAssignments(dto: CreateTestRunDto): SuiteAssignment[] {
+    if (dto.testTypes?.length) {
+      const seenTypes = new Set<TestRunTestType>();
+      const seenSuites = new Set<string>();
+      const assignments: SuiteAssignment[] = [];
+
+      for (const testType of dto.testTypes) {
+        if (seenTypes.has(testType.type)) {
+          throw new BadRequestException('Test types must be unique');
+        }
+
+        seenTypes.add(testType.type);
+
+        for (const suiteId of testType.suites) {
+          if (seenSuites.has(suiteId)) {
+            throw new BadRequestException('Each test suite can belong to only one test type');
+          }
+
+          seenSuites.add(suiteId);
+          assignments.push({
+            suiteId,
+            testType: testType.type,
+          });
+        }
+      }
+
+      return assignments;
+    }
+
+    if (dto.suiteIds?.length) {
+      return [...new Set(dto.suiteIds)].map((suiteId) => ({
+        suiteId,
+        testType: TestRunTestType.FUNCIONAL,
+      }));
+    }
+
+    throw new BadRequestException('Select at least one test type');
   }
 
   private ensureCanExecute(assignedToId: string, user: AuthenticatedUser) {

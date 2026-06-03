@@ -326,10 +326,11 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Test design</p>
+          
           <h1 className="mt-1 text-2xl font-semibold tracking-normal text-zinc-950 dark:text-white">
             Test Suites
           </h1>
+          <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Conjunto de testes que validam uma funcionalidade específica do sistema</p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <button

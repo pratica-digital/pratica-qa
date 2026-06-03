@@ -10,14 +10,11 @@ import { TestPlansPage } from '../pages/TestPlansPage';
 import type { TestRun } from '../types/testRun';
 import { Sidebar } from './Sidebar';
 import { TopNav } from './TopNav';
+import { TestRunReportPage } from '../pages/TestRunReportPage';
 
-const createActionLabels: Partial<Record<PageId, string>> = {
-  projects: 'Project',
-  'test-plans': 'Test plan',
-  'test-suites': 'Suite',
-  'test-cases': 'Test case',
-  'test-runs': 'Test run',
-};
+const createActionLabels: Partial<Record<PageId, string>> = {};
+
+const hideTopNavPageTitle: PageId[] = ['projects', 'test-plans', 'test-suites', 'test-cases', 'test-runs'];
 
 const getInitialTheme = () => {
   if (typeof window === 'undefined') {
@@ -36,6 +33,7 @@ const getInitialTheme = () => {
 export function AppShell() {
   const [activePage, setActivePage] = useState<PageId>('dashboard');
   const [selectedTestRun, setSelectedTestRun] = useState<TestRun | null>(null);
+  const [reportRunId, setReportRunId] = useState<string | null>(null);
   const [createActionEventId, setCreateActionEventId] = useState(0);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isDark, setIsDark] = useState(getInitialTheme);
@@ -48,9 +46,40 @@ export function AppShell() {
   const handleNavigate = useCallback((pageId: PageId) => {
     setActivePage(pageId);
     setSelectedTestRun(null);
+    setReportRunId(null);
+  }, []);
+
+  const handleOpenRun = useCallback((testRun: TestRun) => {
+    if (testRun.status === 'COMPLETED') {
+      setReportRunId(testRun.id);
+      setSelectedTestRun(null);
+    } else {
+      setSelectedTestRun(testRun);
+      setReportRunId(null);
+    }
   }, []);
 
   const page = useMemo(() => {
+  if (reportRunId) {
+      return (
+        <TestRunReportPage
+          testRunId={reportRunId}
+          onBack={() => setReportRunId(null)}
+        />
+      );
+    }
+
+    if (selectedTestRun) {
+      return (
+        <TestRunExecutionPage
+          key={selectedTestRun.id}
+          onBack={() => setSelectedTestRun(null)}
+          onRunUpdated={setSelectedTestRun}
+          testRun={selectedTestRun}
+        />
+      );
+    }
+
     if (selectedTestRun) {
       return (
         <TestRunExecutionPage
@@ -75,13 +104,14 @@ export function AppShell() {
         return (
           <TestRunsPage
             createActionEventId={createActionEventId}
-            onOpenRun={setSelectedTestRun}
+            onOpenRun={handleOpenRun}
           />
         );
+      
       default:
-        return <DashboardPage onNavigate={handleNavigate} onOpenRun={setSelectedTestRun} />;
-    }
-  }, [activePage, createActionEventId, handleNavigate, selectedTestRun]);
+      return <DashboardPage onNavigate={handleNavigate} onOpenRun={handleOpenRun} />; // ← era setSelectedTestRun
+  }
+ }, [activePage, createActionEventId, handleNavigate, handleOpenRun, reportRunId, selectedTestRun]);
 
   const createActionLabel = selectedTestRun ? undefined : createActionLabels[activePage];
 
@@ -97,6 +127,7 @@ export function AppShell() {
         <TopNav
           activePage={activePage}
           createActionLabel={createActionLabel}
+          showPageTitle={!hideTopNavPageTitle.includes(activePage)}
           isDark={isDark}
           onCreateAction={
             createActionLabel

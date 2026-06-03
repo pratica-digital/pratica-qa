@@ -33,13 +33,21 @@ export function LoginPage() {
           alt="Login illustration"
           className="mx-auto mb-6 h-22 w-64 object-cover "
         />
-        <div className="flex flex-col items-center gap-3 text-center">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-950 text-white dark:bg-white dark:text-zinc-950">
-            <ShieldCheck className="h-4 w-5" aria-hidden="true" />
-          </span>
-          <div>
-            <p className="mx-auto text-sm font-medium text-zinc-500 dark:text-zinc-400">QA workspace</p>
-            
+        <div className="flex flex-col items-center gap-2 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full border-4 border-[#E0F7FA] dark:border-zinc-700">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#ADFF2F] text-[white]">
+              <ShieldCheck className="h-4 w-4" />
+            </div>
+          </div>
+
+          {/* Texto principal */}
+          <div className="leading-tight">
+            <p className="text-lg font-semibold text-blue-900 dark:text-white">
+              QA
+            </p>
+            <p className="text-xs tracking-widest text-zinc-400">
+              WORKSPACE
+            </p>
           </div>
         </div>
 
@@ -77,7 +85,7 @@ export function LoginPage() {
           ) : null}
 
           <button
-            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-zinc-950 px-3 text-sm font-medium text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
+            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-[#1c4484] px-3 text-sm font-medium text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
             disabled={isSubmitting}
             type="submit"
           >
