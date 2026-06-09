@@ -9,6 +9,8 @@ export type AuthContextValue = {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
+  updateProfile: (payload: { name: string; email: string }) => Promise<void>;
   setAssignedTestRuns: (testRuns: TestRun[]) => void;
 };
 

@@ -15,7 +15,7 @@ import {
   User,
   XCircle,
 } from 'lucide-react';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import type { TestResult, TestRun } from '../types/testRun';
 import { useTestRunReport } from "../hooks/useTestRunReport";
 
@@ -50,11 +50,6 @@ function testTypeLabel(type?: string) {
     ROBUSTEZ: 'Robustez',
   };
   return type ? (map[type] ?? type) : '—';
-}
-
-function getSuiteTestType(testRun: TestRun, suiteId?: string) {
-  if (!suiteId || !testRun.suites) return undefined;
-  return testRun.suites.find((s) => s.testSuiteId === suiteId)?.testType;
 }
 
 // ─── Status config ────────────────────────────────────────────────────────────
@@ -610,7 +605,7 @@ async function generatePDF(testRun: TestRun, results: TestResult[]) {
   }
 
   // ── Rodapé ──
-  const totalPages = (doc.internal as { getNumberOfPages: () => number }).getNumberOfPages();
+  const totalPages = (doc.internal as unknown as { getNumberOfPages: () => number }).getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
     doc.setFontSize(7);

@@ -102,7 +102,7 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
   const visibleRuns = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
     const scopedRuns =
-      scope === 'all' && isAdmin
+      scope === 'all'
         ? testRuns
         : testRuns.filter((testRun) => testRun.assignedToId === user?.id);
 
@@ -124,7 +124,7 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
 
       return searchable.includes(normalizedSearch);
     });
-  }, [isAdmin, scope, search, testRuns, user?.id]);
+  }, [scope, search, testRuns, user?.id]);
 
   const handleAssign = async (testRunId: string, assignedToId: string) => {
     if (!token) {
@@ -261,19 +261,17 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
           >
             My TestRuns
           </button>
-          {isAdmin ? (
-            <button
-              className={`h-8 flex-1 rounded-md px-3 text-sm font-medium sm:flex-none ${
-                scope === 'all'
-                  ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950'
-                  : 'text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900'
-              }`}
-              onClick={() => setScope('all')}
-              type="button"
-            >
-              All TestRuns
-            </button>
-          ) : null}
+          <button
+            className={`h-8 flex-1 rounded-md px-3 text-sm font-medium sm:flex-none ${
+              scope === 'all'
+                ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950'
+                : 'text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900'
+            }`}
+            onClick={() => setScope('all')}
+            type="button"
+          >
+            All TestRuns
+          </button>
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">

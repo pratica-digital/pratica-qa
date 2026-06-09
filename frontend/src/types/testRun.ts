@@ -8,8 +8,24 @@ export type AuthUser = {
   email: string;
   role: UserRole;
   status?: UserStatus;
+  firstAccess?: boolean;
+  passwordChangedAt?: string | null;
   createdAt?: string;
   updatedAt?: string;
+};
+
+export type CreateUserPayload = {
+  name: string;
+  email: string;
+  role?: UserRole;
+  status?: UserStatus;
+};
+
+export type UpdateUserPayload = Partial<CreateUserPayload>;
+
+export type TemporaryPasswordResponse = {
+  user: AuthUser;
+  temporaryPassword: string;
 };
 
 export type TestRunStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';

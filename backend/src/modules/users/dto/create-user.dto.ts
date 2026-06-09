@@ -7,7 +7,6 @@ import {
   IsOptional,
   IsString,
   MaxLength,
-  MinLength,
 } from 'class-validator';
 
 export class CreateUserDto {
@@ -21,14 +20,10 @@ export class CreateUserDto {
   @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
   email: string;
 
-  @IsString()
-  @MinLength(8)
-  @MaxLength(128)
-  password: string;
-
   @IsOptional()
   @IsEnum(UserRole)
   role?: UserRole;
+
   @IsOptional()
   @IsEnum(UserStatus)
   status?: UserStatus;

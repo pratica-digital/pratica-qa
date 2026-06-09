@@ -8,6 +8,7 @@ import type {
   TestRunStatus,
   TestSuiteStatus,
   UserRole,
+  UserStatus,
 } from '../types/testRun';
 
 type BadgeProps = {
@@ -76,4 +77,9 @@ export function TestResultStatusBadge({ status }: { status: TestResultStatus }) 
 export function UserRoleBadge({ role }: { role: UserRole }) {
   const tone = role === 'ADMIN' ? 'blue' : role === 'QA' ? 'green' : 'zinc';
   return <Badge tone={tone}>{role}</Badge>;
+}
+
+export function UserStatusBadge({ status }: { status?: UserStatus }) {
+  const tone = status === 'INACTIVE' ? 'zinc' : 'green';
+  return <Badge tone={tone}>{status ?? 'ACTIVE'}</Badge>;
 }

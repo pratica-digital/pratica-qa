@@ -5,7 +5,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { authApi } from '../lib/api';
+import { authApi, usersApi } from '../lib/api';
 import type { AuthUser, TestRun } from '../types/testRun';
 import { AuthContext, type AuthContextValue } from './authContextCore';
 
@@ -33,6 +33,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [assignedTestRuns, setAssignedTestRuns] = useState<TestRun[]>([]);
   const [isLoading, setIsLoading] = useState(Boolean(token));
 
+  const storeUser = useCallback((nextUser: AuthUser) => {
+    window.localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(nextUser));
+    setUser(nextUser);
+  }, []);
+
   const clearSession = useCallback(() => {
     window.localStorage.removeItem(TOKEN_STORAGE_KEY);
     window.localStorage.removeItem(USER_STORAGE_KEY);
@@ -56,8 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        setUser(currentUser);
-        window.localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(currentUser));
+        storeUser(currentUser);
       })
       .catch(() => {
         if (isMounted) {
@@ -73,16 +77,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       isMounted = false;
     };
-  }, [clearSession, token]);
+  }, [clearSession, storeUser, token]);
 
   const login = useCallback(async (email: string, password: string) => {
     const response = await authApi.login(email, password);
 
     window.localStorage.setItem(TOKEN_STORAGE_KEY, response.accessToken);
-    window.localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(response.user));
     setToken(response.accessToken);
-    setUser(response.user);
-  }, []);
+    storeUser(response.user);
+    setIsLoading(false);
+  }, [storeUser]);
+
+  const changePassword = useCallback(
+    async (currentPassword: string, newPassword: string) => {
+      if (!token) {
+        throw new Error('Session expired');
+      }
+
+      const updatedUser = await authApi.changePassword(token, currentPassword, newPassword);
+      storeUser(updatedUser);
+    },
+    [storeUser, token],
+  );
+
+  const updateProfile = useCallback(
+    async (payload: { name: string; email: string }) => {
+      if (!token) {
+        throw new Error('Session expired');
+      }
+
+      const updatedUser = await usersApi.updateMe(token, payload);
+      storeUser(updatedUser);
+    },
+    [storeUser, token],
+  );
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -93,9 +121,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isLoading,
       login,
       logout: clearSession,
+      changePassword,
+      updateProfile,
       setAssignedTestRuns,
     }),
-    [assignedTestRuns, clearSession, isLoading, login, token, user],
+    [assignedTestRuns, changePassword, clearSession, isLoading, login, token, updateProfile, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

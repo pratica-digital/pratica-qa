@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { AlertTriangle, Trash2 } from 'lucide-react';
 
 type DeleteConfirmationModalProps = {
@@ -15,9 +17,18 @@ export function DeleteConfirmationModal({
   onCancel,
   onConfirm,
 }: DeleteConfirmationModalProps) {
-  return (
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
+
+  return createPortal(
     <div
-      className="fixed inset-0 z-[70] flex items-end justify-center bg-black/50 px-4 py-6 backdrop-blur-sm sm:items-center"
+      className="fixed inset-0 z-[10000] flex items-end justify-center bg-black/50 px-4 py-6 backdrop-blur-sm sm:items-center"
       onClick={(event) => event.target === event.currentTarget && !loading && onCancel()}
       role="presentation"
     >
@@ -64,6 +75,7 @@ export function DeleteConfirmationModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -13,6 +13,7 @@ type SidebarProps = {
 export function Sidebar({ activePage, isOpen, onClose, onNavigate }: SidebarProps) {
   const { assignedTestRuns, user } = useAuth();
   const activeAssignedRuns = assignedTestRuns.filter((run) => run.status !== 'COMPLETED');
+  const visibleNavigationItems = navigationItems.filter((item) => !item.roles || (user && item.roles.includes(user.role)));
   const progress =
     assignedTestRuns.length === 0
       ? 0
@@ -60,7 +61,7 @@ export function Sidebar({ activePage, isOpen, onClose, onNavigate }: SidebarProp
         </div>
 
         <nav className="flex-1 space-y-1 px-3 py-4">
-          {navigationItems.map((item) => {
+          {visibleNavigationItems.map((item) => {
             const Icon = item.icon;
             const isActive = activePage === item.id;
 

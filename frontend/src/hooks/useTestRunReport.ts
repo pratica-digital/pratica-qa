@@ -54,7 +54,11 @@ export function useTestRunReport(testRunId: string) {
   }, [token, testRunId]);
 
   useEffect(() => {
-    void fetchReport();
+    const timeoutId = window.setTimeout(() => {
+      void fetchReport();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [fetchReport]);
 
   return { report, isLoading, error, refetch: fetchReport };
