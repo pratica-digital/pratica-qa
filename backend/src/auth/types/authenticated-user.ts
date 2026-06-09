@@ -6,6 +6,8 @@ export type AuthenticatedUser = {
   name: string;
   role: UserRole;
   status: UserStatus;
+  firstAccess: boolean;
+  passwordChangedAt: Date | null;
 };
 
 export type JwtPayload = {

@@ -10,6 +10,8 @@ const pageTitles: Record<PageId, string> = {
   'test-suites': 'Test Suites',
   'test-cases': 'Test Cases',
   'test-runs': 'Test Runs',
+  users: 'Users',
+  profile: 'Profile',
 };
 
 type TopNavProps = {

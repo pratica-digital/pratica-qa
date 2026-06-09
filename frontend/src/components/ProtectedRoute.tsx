@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react';
+import { FirstAccessPasswordPage } from '../auth/FirstAccessPasswordPage';
 import { LoginPage } from '../auth/LoginPage';
 import { useAuth } from '../auth/useAuth';
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
 
   if (isLoading) {
     return (
@@ -15,6 +16,10 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
 
   if (!isAuthenticated) {
     return <LoginPage />;
+  }
+
+  if (user?.firstAccess) {
+    return <FirstAccessPasswordPage />;
   }
 
   return children;

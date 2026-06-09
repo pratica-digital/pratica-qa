@@ -64,7 +64,7 @@ export class TestCasesController {
     return this.testCasesService.clone(id, dto);
   }
 
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.QA)
   @Delete(':id')
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.testCasesService.remove(id);

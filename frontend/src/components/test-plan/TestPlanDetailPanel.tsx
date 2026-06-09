@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { ClipboardList, Pencil, Trash2, X } from 'lucide-react';
 import type { TestPlan } from '../../types/testRun';
 
@@ -22,13 +24,20 @@ function formatUpdatedAt(value?: string) {
 export function TestPlanDetailPanel({ testPlan, onClose, onDelete, onEdit }: TestPlanDetailPanelProps) {
   const sections = testPlan.sections ?? [];
 
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center"
-      onClick={(event) => event.target === event.currentTarget && onClose()}
-    >
-      <div className="flex max-h-[92vh] w-full max-w-3xl flex-col rounded-t-lg border border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-950 sm:rounded-lg">
-        <div className="flex items-center gap-3 border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] h-dvh w-screen overflow-hidden bg-white dark:bg-zinc-950">
+      <div className="flex h-dvh w-full flex-col overflow-hidden p-6">
+        <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
+          <div className="flex shrink-0 items-center gap-3 border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
             <ClipboardList className="h-4 w-4" aria-hidden="true" />
           </span>
@@ -69,7 +78,7 @@ export function TestPlanDetailPanel({ testPlan, onClose, onDelete, onEdit }: Tes
           </button>
         </div>
 
-        <div className="overflow-y-auto px-5 py-5">
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
           <section className="grid gap-3 md:grid-cols-[1fr_12rem]">
             <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900/60">
               <p className="text-xs font-medium uppercase text-zinc-500 dark:text-zinc-400">Plan info</p>
@@ -118,7 +127,9 @@ export function TestPlanDetailPanel({ testPlan, onClose, onDelete, onEdit }: Tes
             </div>
           </section>
         </div>
+        </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

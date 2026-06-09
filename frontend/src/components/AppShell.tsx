@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useAuth } from '../auth/useAuth';
 import type { PageId } from '../data/workspace';
 import { DashboardPage } from '../pages/DashboardPage';
+import { ProfilePage } from '../pages/ProfilePage';
 import { ProjectsPage } from '../pages/ProjectsPage';
 import { TestCasesPage } from '../pages/TestCasesPage';
 import { TestRunExecutionPage } from '../pages/TestRunExecutionPage';
 import { TestRunsPage } from '../pages/TestRunsPage';
 import { TestSuitesPage } from '../pages/TestSuitesPage';
 import { TestPlansPage } from '../pages/TestPlansPage';
+import { UsersPage } from '../pages/UsersPage';
 import type { TestRun } from '../types/testRun';
 import { Sidebar } from './Sidebar';
 import { TopNav } from './TopNav';
@@ -31,6 +34,7 @@ const getInitialTheme = () => {
 };
 
 export function AppShell() {
+  const { user } = useAuth();
   const [activePage, setActivePage] = useState<PageId>('dashboard');
   const [selectedTestRun, setSelectedTestRun] = useState<TestRun | null>(null);
   const [reportRunId, setReportRunId] = useState<string | null>(null);
@@ -43,11 +47,21 @@ export function AppShell() {
     window.localStorage.setItem('qa-platform-theme', isDark ? 'dark' : 'light');
   }, [isDark]);
 
-  const handleNavigate = useCallback((pageId: PageId) => {
-    setActivePage(pageId);
-    setSelectedTestRun(null);
-    setReportRunId(null);
-  }, []);
+  const canAccessPage = useCallback(
+    (pageId: PageId) => pageId !== 'users' || user?.role === 'ADMIN',
+    [user?.role],
+  );
+
+  const effectiveActivePage = canAccessPage(activePage) ? activePage : 'dashboard';
+
+  const handleNavigate = useCallback(
+    (pageId: PageId) => {
+      setActivePage(canAccessPage(pageId) ? pageId : 'dashboard');
+      setSelectedTestRun(null);
+      setReportRunId(null);
+    },
+    [canAccessPage],
+  );
 
   const handleOpenRun = useCallback((testRun: TestRun) => {
     if (testRun.status === 'COMPLETED') {
@@ -80,18 +94,7 @@ export function AppShell() {
       );
     }
 
-    if (selectedTestRun) {
-      return (
-        <TestRunExecutionPage
-          key={selectedTestRun.id}
-          onBack={() => setSelectedTestRun(null)}
-          onRunUpdated={setSelectedTestRun}
-          testRun={selectedTestRun}
-        />
-      );
-    }
-
-    switch (activePage) {
+    switch (effectiveActivePage) {
       case 'projects':
         return <ProjectsPage createActionEventId={createActionEventId} />;
       case 'test-suites':
@@ -107,27 +110,31 @@ export function AppShell() {
             onOpenRun={handleOpenRun}
           />
         );
+      case 'users':
+        return <UsersPage />;
+      case 'profile':
+        return <ProfilePage />;
       
       default:
       return <DashboardPage onNavigate={handleNavigate} onOpenRun={handleOpenRun} />; // ← era setSelectedTestRun
   }
- }, [activePage, createActionEventId, handleNavigate, handleOpenRun, reportRunId, selectedTestRun]);
+ }, [createActionEventId, effectiveActivePage, handleNavigate, handleOpenRun, reportRunId, selectedTestRun]);
 
-  const createActionLabel = selectedTestRun ? undefined : createActionLabels[activePage];
+  const createActionLabel = selectedTestRun ? undefined : createActionLabels[effectiveActivePage];
 
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-950 dark:bg-zinc-950 dark:text-zinc-50">
       <Sidebar
-        activePage={activePage}
+        activePage={effectiveActivePage}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
         onNavigate={handleNavigate}
       />
       <div className="lg:pl-72">
         <TopNav
-          activePage={activePage}
+          activePage={effectiveActivePage}
           createActionLabel={createActionLabel}
-          showPageTitle={!hideTopNavPageTitle.includes(activePage)}
+          showPageTitle={!hideTopNavPageTitle.includes(effectiveActivePage)}
           isDark={isDark}
           onCreateAction={
             createActionLabel

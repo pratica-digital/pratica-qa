@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ClipboardList, FolderOpen, Layers3, PlaySquare, Trash2, X } from 'lucide-react';
 import { useAuth } from '../../auth/useAuth';
 import { projectsApi, testPlansApi, testRunsApi, testSuitesApi } from '../../lib/api';
@@ -29,6 +30,15 @@ export function ProjectDetailPanel({ project, onClose, onDelete }: ProjectDetail
   const [runs, setRuns] = useState<TestRun[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
 
   useEffect(() => {
     if (!token) {
@@ -73,13 +83,11 @@ export function ProjectDetailPanel({ project, onClose, onDelete }: ProjectDetail
     };
   }, [project.id, token]);
 
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center"
-      onClick={(event) => event.target === event.currentTarget && onClose()}
-    >
-      <div className="flex max-h-[92vh] w-full max-w-4xl flex-col rounded-t-lg border border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-950 sm:rounded-lg">
-        <div className="flex items-center gap-3 border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] h-dvh w-screen overflow-hidden bg-white dark:bg-zinc-950">
+      <div className="flex h-dvh w-full flex-col overflow-hidden p-6">
+        <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
+          <div className="flex shrink-0 items-center gap-3 border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-700 dark:bg-zinc-900 dark:text-zinc-200">
             <FolderOpen className="h-4 w-4" aria-hidden="true" />
           </span>
@@ -112,7 +120,7 @@ export function ProjectDetailPanel({ project, onClose, onDelete }: ProjectDetail
           </button>
         </div>
 
-        <div className="overflow-y-auto px-5 py-5">
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
           {error ? (
             <p className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-200">
               {error}
@@ -226,7 +234,9 @@ export function ProjectDetailPanel({ project, onClose, onDelete }: ProjectDetail
             </section>
           </div>
         </div>
+        </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

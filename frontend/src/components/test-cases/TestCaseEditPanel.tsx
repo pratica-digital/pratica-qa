@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ArrowDown, ArrowUp, ListChecks, Plus, Save, Trash2, X } from 'lucide-react';
 import type {
   ManagedTestCase,
@@ -65,6 +66,15 @@ export function TestCaseEditPanel({
   const [steps, setSteps] = useState<StepDraft[]>(() => toStepDrafts(testCase));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
 
   const suiteName =
     suites.find((suite) => suite.id === testCase.suiteId)?.name ?? testCase.suite?.name ?? 'Suite';
@@ -138,13 +148,11 @@ export function TestCaseEditPanel({
     }
   }
 
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center"
-      onClick={(event) => event.target === event.currentTarget && onClose()}
-    >
-      <div className="flex max-h-[92vh] w-full max-w-3xl flex-col rounded-t-lg border border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-950 sm:rounded-lg">
-        <div className="flex items-center gap-3 border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] h-dvh w-screen overflow-hidden bg-white dark:bg-zinc-950">
+      <div className="flex h-dvh w-full flex-col overflow-hidden p-6">
+        <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
+          <div className="flex shrink-0 items-center gap-3 border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300">
             <ListChecks className="h-4 w-4" aria-hidden="true" />
           </span>
@@ -176,7 +184,7 @@ export function TestCaseEditPanel({
           </button>
         </div>
 
-        <div className="overflow-y-auto px-5 py-5">
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
           <div className="grid gap-4 lg:grid-cols-[1fr_14rem]">
             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
               Title
@@ -323,7 +331,7 @@ export function TestCaseEditPanel({
           </section>
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-zinc-200 px-5 py-4 dark:border-zinc-800 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex shrink-0 flex-col gap-3 border-t border-zinc-200 px-5 py-4 dark:border-zinc-800 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-h-5 text-sm text-rose-600 dark:text-rose-300">{error}</div>
           <div className="flex justify-end gap-2">
             <button
@@ -345,7 +353,9 @@ export function TestCaseEditPanel({
             </button>
           </div>
         </div>
+        </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

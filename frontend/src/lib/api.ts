@@ -1,5 +1,6 @@
 import type {
   AuthUser,
+  CreateUserPayload,
   CreateProjectPayload,
   CreateTestCasePayload,
   CreateTestPlanPayload,
@@ -14,9 +15,11 @@ import type {
   TestPlan,
   TestResult,
   TestRun,
+  TemporaryPasswordResponse,
   UpdateTestCasePayload,
   UpdateTestPlanPayload,
   UpdateTestSuitePayload,
+  UpdateUserPayload,
 } from '../types/testRun';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api';
@@ -32,6 +35,12 @@ type LoginResponse = {
   accessToken: string;
   tokenType: 'Bearer';
   user: AuthUser;
+};
+
+type PasswordRecoveryResponse = {
+  message: string;
+  resetToken?: string;
+  expiresAt?: string;
 };
 
 export class ApiError extends Error {
@@ -138,6 +147,22 @@ export const authApi = {
       body: { email, password },
     }),
   me: (token: string) => apiRequest<AuthUser>('/users/me', { token }),
+  changePassword: (token: string, currentPassword: string, newPassword: string) =>
+    apiRequest<AuthUser>('/auth/change-password', {
+      method: 'POST',
+      token,
+      body: { currentPassword, newPassword },
+    }),
+  requestPasswordRecovery: (email: string) =>
+    apiRequest<PasswordRecoveryResponse>('/auth/password-recovery', {
+      method: 'POST',
+      body: { email },
+    }),
+  resetPassword: (email: string, token: string, newPassword: string) =>
+    apiRequest<AuthUser>('/auth/password-reset', {
+      method: 'POST',
+      body: { email, token, newPassword },
+    }),
 };
 
 export const usersApi = {
@@ -148,6 +173,39 @@ export const usersApi = {
 
     return unwrapList(response);
   },
+  create: (token: string, payload: CreateUserPayload) =>
+    apiRequest<TemporaryPasswordResponse>('/users', {
+      method: 'POST',
+      token,
+      body: payload,
+    }),
+  update: (token: string, userId: string, payload: UpdateUserPayload) =>
+    apiRequest<AuthUser>(`/users/${userId}`, {
+      method: 'PATCH',
+      token,
+      body: payload,
+    }),
+  updateMe: (token: string, payload: Pick<CreateUserPayload, 'name' | 'email'>) =>
+    apiRequest<AuthUser>('/users/me', {
+      method: 'PATCH',
+      token,
+      body: payload,
+    }),
+  activate: (token: string, userId: string) =>
+    apiRequest<AuthUser>(`/users/${userId}/activate`, {
+      method: 'POST',
+      token,
+    }),
+  deactivate: (token: string, userId: string) =>
+    apiRequest<AuthUser>(`/users/${userId}/deactivate`, {
+      method: 'POST',
+      token,
+    }),
+  resetPassword: (token: string, userId: string) =>
+    apiRequest<TemporaryPasswordResponse>(`/users/${userId}/reset-password`, {
+      method: 'POST',
+      token,
+    }),
 };
 
 export const projectsApi = {

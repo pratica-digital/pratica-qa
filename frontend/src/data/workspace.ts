@@ -1,12 +1,31 @@
 import type { LucideIcon } from 'lucide-react';
-import { FolderOpen, LayoutDashboard, Layers3, ListChecks, PlaySquare, ClipboardList } from 'lucide-react';
+import {
+  ClipboardList,
+  FolderOpen,
+  LayoutDashboard,
+  Layers3,
+  ListChecks,
+  PlaySquare,
+  UserRound,
+  UsersRound,
+} from 'lucide-react';
+import type { UserRole } from '../types/testRun';
 
-export type PageId = 'dashboard' | 'projects' | 'test-plans' | 'test-suites' | 'test-cases' | 'test-runs';
+export type PageId =
+  | 'dashboard'
+  | 'projects'
+  | 'test-plans'
+  | 'test-suites'
+  | 'test-cases'
+  | 'test-runs'
+  | 'users'
+  | 'profile';
 
 export type NavigationItem = {
   id: PageId;
   label: string;
   icon: LucideIcon;
+  roles?: UserRole[];
 };
 
 export type Project = {
@@ -47,6 +66,8 @@ export const navigationItems: NavigationItem[] = [
   { id: 'test-suites', label: 'Test Suites', icon: Layers3 },
   { id: 'test-cases', label: 'Test Cases', icon: ListChecks },
   { id: 'test-runs', label: 'Test Runs', icon: PlaySquare },
+  { id: 'users', label: 'Users', icon: UsersRound, roles: ['ADMIN'] },
+  { id: 'profile', label: 'Profile', icon: UserRound },
 ];
 
 export const projects: Project[] = [

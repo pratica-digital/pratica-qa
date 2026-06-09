@@ -10,7 +10,7 @@ type FindUsersParams = {
   take: number;
 };
 
-export type PublicUser = Omit<User, 'password'>;
+export type PublicUser = Omit<User, 'password' | 'passwordResetTokenHash' | 'passwordResetTokenExpiresAt'>;
 
 @Injectable()
 export class UsersRepository {
@@ -23,6 +23,8 @@ export class UsersRepository {
       email: user.email,
       role: user.role,
       status: user.status,
+      firstAccess: user.firstAccess,
+      passwordChangedAt: user.passwordChangedAt,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
       deletedAt: user.deletedAt,
@@ -55,6 +57,12 @@ export class UsersRepository {
   }
 
   findByEmailWithPassword(email: string) {
+    return this.prisma.user.findUnique({
+      where: { email },
+    });
+  }
+
+  findByEmail(email: string) {
     return this.prisma.user.findUnique({
       where: { email },
     });
