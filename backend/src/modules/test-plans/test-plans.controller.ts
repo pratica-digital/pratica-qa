@@ -20,7 +20,7 @@ import { TestPlansService } from './test-plans.service';
 export class TestPlansController {
   constructor(private readonly testPlansService: TestPlansService) {}
 
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.QA)
   @Post()
   create(@Body() dto: CreateTestPlanDto) {
     return this.testPlansService.create(dto);
@@ -36,13 +36,13 @@ export class TestPlansController {
     return this.testPlansService.findOne(id);
   }
 
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.QA)
   @Patch(':id')
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateTestPlanDto) {
     return this.testPlansService.update(id, dto);
   }
 
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.QA)
   @Delete(':id')
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.testPlansService.remove(id);

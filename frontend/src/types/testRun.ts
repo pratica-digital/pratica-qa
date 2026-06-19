@@ -23,9 +23,13 @@ export type CreateUserPayload = {
 
 export type UpdateUserPayload = Partial<CreateUserPayload>;
 
-export type TemporaryPasswordResponse = {
+export type UserEmailNotificationResponse = {
   user: AuthUser;
-  temporaryPassword: string;
+  message: string;
+  token: string;
+  link: string;
+  emailSent: boolean;
+  emailError?: string;
 };
 
 export type TestRunStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
@@ -33,6 +37,8 @@ export type TestRunStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
 export type TestRunTestType = 'SMOKE' | 'FUNCIONAL' | 'REGRESSAO' | 'ROBUSTEZ';
 
 export type TestResultStatus = 'PENDING' | 'PASSED' | 'FAILED' | 'SKIPPED';
+
+export type DashboardPeriod = '30d' | '90d' | '6m' | '12m';
 
 export type TestPriority = 'LOW' | 'MEDIUM' | 'HIGH';
 
@@ -208,6 +214,66 @@ export type PaginatedResponse<T> = {
     total: number;
     page: number;
     limit: number;
+  };
+};
+
+export type DashboardMetricDelta = {
+  value: number;
+  percent: number;
+  direction: 'up' | 'down' | 'flat';
+};
+
+export type DashboardAnalytics = {
+  period: DashboardPeriod;
+  periodLabel: string;
+  generatedAt: string;
+  range: {
+    start: string;
+    end: string;
+  };
+  totals: {
+    projects: number;
+    suites: number;
+    cases: number;
+    plans: number;
+    runs: number;
+    passed: number;
+    failed: number;
+    pending: number;
+  };
+  metricDeltas: Record<
+    'projects' | 'suites' | 'cases' | 'plans' | 'runs' | 'passed' | 'failed' | 'pending',
+    DashboardMetricDelta
+  >;
+  monthlyQuality: Array<{
+    month: string;
+    label: string;
+    passed: number;
+    executed: number;
+    approvalRate: number;
+  }>;
+  monthlyExecutions: Array<{
+    month: string;
+    label: string;
+    executions: number;
+  }>;
+  resultDistribution: {
+    passed: number;
+    failed: number;
+    blocked: number;
+    notExecuted: number;
+  };
+  topProjects: Array<{
+    projectId: string;
+    key: string;
+    name: string;
+    executions: number;
+  }>;
+  recentActivity: {
+    executions: number;
+    casesExecuted: number;
+    failures: number;
+    approvals: number;
   };
 };
 

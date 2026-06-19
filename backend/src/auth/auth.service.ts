@@ -1,9 +1,11 @@
-import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadGatewayException, BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { UserStatus } from '@prisma/client';
+import { User, UserStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
 import { AuditService, RequestMetadata } from '../audit/audit.service';
+import { EmailService } from '../email/email.service';
 import { UsersRepository } from '../modules/users/repositories/users.repository';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { LoginDto } from './dto/login.dto';
@@ -12,7 +14,6 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { JwtPayload } from './types/authenticated-user';
 
 const PASSWORD_SALT_ROUNDS = 12;
-const PASSWORD_RESET_EXPIRATION_MINUTES = 30;
 
 @Injectable()
 export class AuthService {
@@ -20,6 +21,8 @@ export class AuthService {
     private readonly usersRepository: UsersRepository,
     private readonly jwtService: JwtService,
     private readonly auditService: AuditService,
+    private readonly emailService: EmailService,
+    private readonly configService: ConfigService,
   ) {}
 
   async login(dto: LoginDto, metadata?: RequestMetadata) {
@@ -102,12 +105,10 @@ export class AuthService {
 
   async requestPasswordRecovery(dto: RequestPasswordRecoveryDto, metadata?: RequestMetadata) {
     const user = await this.usersRepository.findByEmail(dto.email);
-    let resetToken: string | undefined;
-    let expiresAt: Date | undefined;
 
     if (user && user.status === UserStatus.ACTIVE && !user.deletedAt) {
-      resetToken = randomBytes(32).toString('hex');
-      expiresAt = new Date(Date.now() + PASSWORD_RESET_EXPIRATION_MINUTES * 60 * 1000);
+      const resetToken = this.generateToken();
+      const expiresAt = this.getPasswordResetExpirationDate();
 
       await this.usersRepository.update(user.id, {
         passwordResetTokenHash: await bcrypt.hash(resetToken, PASSWORD_SALT_ROUNDS),
@@ -120,12 +121,53 @@ export class AuthService {
         details: { email: user.email },
         metadata,
       });
+
+      await this.auditService.logAdminAction({
+        targetUserId: user.id,
+        action: 'PASSWORD_RECOVERY_TOKEN_GENERATED',
+        details: {
+          email: user.email,
+          expiresAt: expiresAt.toISOString(),
+        },
+        metadata,
+      });
+
+      try {
+        await this.sendPasswordRecoveryEmail(user, resetToken, expiresAt);
+
+        await this.auditService.logAdminAction({
+          targetUserId: user.id,
+          action: 'PASSWORD_RECOVERY_EMAIL_SENT',
+          details: {
+            email: user.email,
+            expiresAt: expiresAt.toISOString(),
+          },
+          metadata,
+        });
+      } catch (emailError) {
+        await this.usersRepository
+          .update(user.id, {
+            passwordResetTokenHash: null,
+            passwordResetTokenExpiresAt: null,
+          })
+          .catch(() => undefined);
+
+        await this.auditService.logAdminAction({
+          targetUserId: user.id,
+          action: 'PASSWORD_RECOVERY_EMAIL_FAILED',
+          details: {
+            email: user.email,
+            error: this.getErrorMessage(emailError),
+          },
+          metadata,
+        });
+
+        throw new BadGatewayException(`Unable to send password recovery email: ${this.getErrorMessage(emailError)}`);
+      }
     }
 
     return {
       message: 'If the email exists, password reset instructions will be sent.',
-      resetToken: process.env.NODE_ENV === 'production' ? undefined : resetToken,
-      expiresAt,
     };
   }
 
@@ -165,5 +207,49 @@ export class AuthService {
     });
 
     return this.usersRepository.toPublicUser(updatedUser);
+  }
+
+  private generateToken() {
+    return randomBytes(32).toString('hex');
+  }
+
+  private getPasswordResetExpirationDate() {
+    const minutes = this.configService.get<number>('PASSWORD_RESET_TOKEN_EXPIRES_IN_MINUTES', 30);
+    return new Date(Date.now() + minutes * 60 * 1000);
+  }
+
+  private buildPasswordResetLink(email: string, token: string) {
+    const url = new URL(this.configService.get<string>('APP_FRONTEND_URL', 'http://localhost:5173'));
+    url.searchParams.set('mode', 'reset');
+    url.searchParams.set('email', email);
+    url.searchParams.set('token', token);
+    return url.toString();
+  }
+
+  private async sendPasswordRecoveryEmail(user: User, token: string, expiresAt: Date) {
+    const link = this.buildPasswordResetLink(user.email, token);
+
+    await this.emailService.send({
+      to: user.email,
+      subject: 'Recuperação de senha da QA Platform',
+      text: [
+        `Olá, ${user.name}.`,
+        '',
+        'Recebemos uma solicitação de recuperação de senha para sua conta na QA Platform.',
+        '',
+        'Use o link abaixo para criar uma nova senha:',
+        link,
+        '',
+        `Token de redefinição: ${token}`,
+        `Validade: ${expiresAt.toLocaleString('pt-BR')}`,
+        '',
+        'Após a criação da nova senha, este token será invalidado automaticamente.',
+        'Se você não solicitou essa recuperação, ignore este e-mail.',
+      ].join('\n'),
+    });
+  }
+
+  private getErrorMessage(error: unknown) {
+    return error instanceof Error ? error.message : 'Unknown email delivery error';
   }
 }

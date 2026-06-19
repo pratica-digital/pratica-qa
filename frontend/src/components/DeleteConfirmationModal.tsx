@@ -28,36 +28,36 @@ export function DeleteConfirmationModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[10000] flex items-end justify-center bg-black/50 px-4 py-6 backdrop-blur-sm sm:items-center"
+      className="fixed inset-0 z-[10000] flex items-end justify-center bg-slate-600/40 px-4 py-6 backdrop-blur-sm sm:items-center"
       onClick={(event) => event.target === event.currentTarget && !loading && onCancel()}
       role="presentation"
     >
       <div
         aria-modal="true"
-        className="w-full max-w-md rounded-lg border border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-950"
+        className="w-full max-w-md rounded-lg border border-slate-200 bg-white shadow-2xl"
         role="dialog"
       >
-        <div className="flex items-start gap-3 border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-rose-50 text-rose-600 dark:bg-rose-950 dark:text-rose-300">
+        <div className="flex items-start gap-3 border-b border-slate-200 px-5 py-4">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-red-100 text-red-600">
             <AlertTriangle className="h-5 w-5" aria-hidden="true" />
           </span>
           <div className="min-w-0">
-            <h2 className="text-base font-semibold text-zinc-950 dark:text-white">{title}</h2>
-            <p className="mt-1 text-sm font-medium text-rose-600 dark:text-rose-300">
+            <h2 className="text-base font-semibold text-slate-950">{title}</h2>
+            <p className="mt-1 text-sm font-medium text-red-600">
               This action cannot be undone
             </p>
           </div>
         </div>
 
         {description ? (
-          <p className="px-5 py-4 text-sm leading-6 text-zinc-600 dark:text-zinc-300">
+          <p className="px-5 py-4 text-sm leading-6 text-slate-600">
             {description}
           </p>
         ) : null}
 
-        <div className="flex flex-col-reverse gap-2 border-t border-zinc-200 px-5 py-4 dark:border-zinc-800 sm:flex-row sm:justify-end">
+        <div className="flex flex-col-reverse gap-2 border-t border-slate-200 px-5 py-4 sm:flex-row sm:justify-end">
           <button
-            className="inline-flex h-9 items-center justify-center rounded-lg px-4 text-sm font-medium text-zinc-600 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-60 dark:text-zinc-400 dark:hover:bg-zinc-800"
+            className="inline-flex h-9 items-center justify-center rounded-lg bg-slate-600 px-4 text-sm font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
             disabled={loading}
             onClick={onCancel}
             type="button"
@@ -65,7 +65,7 @@ export function DeleteConfirmationModal({
             Cancel
           </button>
           <button
-            className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-rose-600 px-4 text-sm font-medium text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-rose-500 dark:hover:bg-rose-400"
+            className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 text-sm font-medium text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
             disabled={loading}
             onClick={onConfirm}
             type="button"

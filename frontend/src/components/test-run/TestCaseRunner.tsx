@@ -38,40 +38,40 @@ export function TestCaseRunner({
 
   return (
     <article
-      className={`rounded-lg border bg-white shadow-sm outline-none transition dark:bg-zinc-950 ${
+      className={`rounded-lg border bg-white shadow-sm outline-none transition ${
         isActive
-          ? 'border-zinc-950 ring-2 ring-zinc-200 dark:border-white dark:ring-zinc-800'
-          : 'border-zinc-200 dark:border-zinc-800'
+          ? 'border-slate-950 ring-2 ring-slate-200'
+          : 'border-slate-200'
       }`}
       onClick={onActivate}
       onFocus={onActivate}
       tabIndex={0}
     >
-      <div className="border-b border-zinc-200 p-4 dark:border-zinc-800">
+      <div className="border-b border-slate-200 p-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1 rounded-md border border-zinc-200 px-2 py-1 text-xs font-medium text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+              <span className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2 py-1 text-xs font-medium text-slate-500">
                 <ListChecks className="h-3 w-3" aria-hidden="true" />
                 {testCase.priority ?? 'MEDIUM'}
               </span>
               <TestResultStatusBadge status={result.status} />
             </div>
-            <h2 className="mt-3 text-base font-semibold tracking-normal text-zinc-950 dark:text-white">
+            <h2 className="mt-3 text-base font-semibold tracking-normal text-slate-950">
               {testCase.title}
             </h2>
-            <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">
+            <p className="mt-2 text-sm text-slate-600">
               {testCase.description || 'No description captured for this case.'}
             </p>
           </div>
 
-          <div className="grid gap-2 text-sm text-zinc-600 dark:text-zinc-300 sm:grid-cols-2 lg:min-w-72 lg:grid-cols-1">
+          <div className="grid gap-2 text-sm text-slate-600 sm:grid-cols-2 lg:min-w-72 lg:grid-cols-1">
             <div className="flex items-center gap-2">
-              <UserCheck className="h-4 w-4 text-zinc-400" aria-hidden="true" />
+              <UserCheck className="h-4 w-4 text-slate-400" aria-hidden="true" />
               <span>{result.executedBy?.name ?? 'No executor yet'}</span>
             </div>
             <div className="flex items-center gap-2">
-              <Clock3 className="h-4 w-4 text-zinc-400" aria-hidden="true" />
+              <Clock3 className="h-4 w-4 text-slate-400" aria-hidden="true" />
               <span>{formatDate(result.executedAt)}</span>
             </div>
           </div>
@@ -81,18 +81,18 @@ export function TestCaseRunner({
       <div className="grid gap-4 p-4 xl:grid-cols-[1fr_22rem]">
         <div className="space-y-4">
           <section>
-            <h3 className="text-xs font-medium uppercase text-zinc-500 dark:text-zinc-400">Steps</h3>
+            <h3 className="text-xs font-medium uppercase text-slate-500">Steps</h3>
             {steps.length > 0 ? (
               <ol className="mt-3 space-y-3">
                 {steps.map((step) => (
                   <li className="flex gap-3" key={step.id}>
-                    <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-zinc-100 text-xs font-semibold text-zinc-700 dark:bg-zinc-900 dark:text-zinc-200">
+                    <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-slate-100 text-xs font-semibold text-slate-700">
                       {step.order}
                     </span>
                     <div className="min-w-0">
-                      <p className="text-sm text-zinc-800 dark:text-zinc-100">{step.description}</p>
+                      <p className="text-sm text-slate-800">{step.description}</p>
                       {step.expectedResult ? (
-                        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                        <p className="mt-1 text-xs text-slate-500">
                           Expected: {step.expectedResult}
                         </p>
                       ) : null}
@@ -101,28 +101,28 @@ export function TestCaseRunner({
                 ))}
               </ol>
             ) : (
-              <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+              <p className="mt-2 text-sm text-slate-500">
                 No step detail is available for this case.
               </p>
             )}
           </section>
 
           <section>
-            <h3 className="text-xs font-medium uppercase text-zinc-500 dark:text-zinc-400">
+            <h3 className="text-xs font-medium uppercase text-slate-500">
               Expected result
             </h3>
-            <p className="mt-2 text-sm text-zinc-700 dark:text-zinc-200">
+            <p className="mt-2 text-sm text-slate-700">
               {testCase.expectedResult || 'Use the step-level expected results for verification.'}
             </p>
           </section>
 
           {result.comment ? (
-            <section className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900/60">
-              <h3 className="flex items-center gap-2 text-xs font-medium uppercase text-zinc-500 dark:text-zinc-400">
+            <section className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <h3 className="flex items-center gap-2 text-xs font-medium uppercase text-slate-500">
                 <FileText className="h-3.5 w-3.5" aria-hidden="true" />
                 Last comment
               </h3>
-              <p className="mt-2 whitespace-pre-wrap text-sm text-zinc-700 dark:text-zinc-200">
+              <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">
                 {result.comment}
               </p>
             </section>
@@ -130,13 +130,13 @@ export function TestCaseRunner({
 
           {result.attachments && result.attachments.length > 0 ? (
             <section>
-              <h3 className="text-xs font-medium uppercase text-zinc-500 dark:text-zinc-400">
+              <h3 className="text-xs font-medium uppercase text-slate-500">
                 Attachments
               </h3>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {result.attachments.map((attachment) => (
                   <span
-                    className="rounded-md border border-zinc-200 px-2 py-1 text-xs text-zinc-600 dark:border-zinc-800 dark:text-zinc-300"
+                    className="rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-600"
                     key={attachment}
                   >
                     {attachment}
@@ -147,9 +147,9 @@ export function TestCaseRunner({
           ) : null}
         </div>
 
-        <aside className="space-y-3 rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900/60">
+        <aside className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
           {disabled && disabledReason ? (
-            <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">
+            <p className="rounded-md border border-amber-200 bg-amber-100 px-3 py-2 text-sm text-amber-800">
               {disabledReason}
             </p>
           ) : null}

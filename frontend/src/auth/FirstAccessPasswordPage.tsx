@@ -40,29 +40,29 @@ export function FirstAccessPasswordPage() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-zinc-50 px-4 py-10 text-zinc-950 dark:bg-zinc-950 dark:text-white">
-      <section className="w-full max-w-md rounded-lg border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-8">
+    <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10 text-slate-950">
+      <section className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
         <div className="flex items-center justify-between gap-4">
           <img src={praticaLogo} alt="Pratica" className="h-12 w-40 object-contain object-left" />
-          <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-200">
+          <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 text-blue-800">
             <ShieldCheck className="h-5 w-5" aria-hidden="true" />
           </span>
         </div>
 
         <div className="mt-8">
-          <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{user?.email}</p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-normal text-zinc-950 dark:text-white">
+          <p className="text-sm font-medium text-slate-500">{user?.email}</p>
+          <h1 className="mt-2 text-2xl font-semibold tracking-normal text-slate-950">
             Change temporary password
           </h1>
         </div>
 
         <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-200">
+          <label className="block text-sm font-medium text-slate-700">
             Temporary password
             <input
               autoComplete="current-password"
               autoFocus
-              className="mt-1 h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-950 outline-none transition focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200 dark:border-zinc-800 dark:bg-zinc-950 dark:text-white dark:focus:border-zinc-600 dark:focus:ring-zinc-800"
+              className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
               onChange={(event) => setCurrentPassword(event.target.value)}
               required
               type="password"
@@ -70,11 +70,11 @@ export function FirstAccessPasswordPage() {
             />
           </label>
 
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-200">
+          <label className="block text-sm font-medium text-slate-700">
             New password
             <input
               autoComplete="new-password"
-              className="mt-1 h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-950 outline-none transition focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200 dark:border-zinc-800 dark:bg-zinc-950 dark:text-white dark:focus:border-zinc-600 dark:focus:ring-zinc-800"
+              className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
               minLength={8}
               onChange={(event) => setNewPassword(event.target.value)}
               required
@@ -83,11 +83,11 @@ export function FirstAccessPasswordPage() {
             />
           </label>
 
-          <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-200">
+          <label className="block text-sm font-medium text-slate-700">
             Confirm password
             <input
               autoComplete="new-password"
-              className="mt-1 h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-950 outline-none transition focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200 dark:border-zinc-800 dark:bg-zinc-950 dark:text-white dark:focus:border-zinc-600 dark:focus:ring-zinc-800"
+              className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
               minLength={8}
               onChange={(event) => setConfirmPassword(event.target.value)}
               required
@@ -97,13 +97,13 @@ export function FirstAccessPasswordPage() {
           </label>
 
           {error ? (
-            <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-200">
+            <p className="rounded-lg border border-red-200 bg-red-100 px-3 py-2 text-sm text-red-800">
               {error}
             </p>
           ) : null}
 
           <button
-            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-blue-900 px-3 text-sm font-medium text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
+            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-blue-700 px-3 text-sm font-medium text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
             disabled={isSubmitting}
             type="submit"
           >
@@ -113,7 +113,7 @@ export function FirstAccessPasswordPage() {
         </form>
 
         <button
-          className="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-zinc-200 px-3 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-950"
+          className="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-slate-600 bg-slate-600 px-3 text-sm font-medium text-white hover:bg-slate-700"
           onClick={logout}
           type="button"
         >

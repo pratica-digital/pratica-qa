@@ -1,4 +1,5 @@
 import { Bell, LogOut, Menu, Moon, Plus, Search, Sun, UserRound } from 'lucide-react';
+import { canManageTests } from '../auth/permissions';
 import { useAuth } from '../auth/useAuth';
 import { UserRoleBadge } from './badges';
 import type { PageId } from '../data/workspace';
@@ -35,16 +36,17 @@ export function TopNav({
 }: TopNavProps) {
   const { logout, user } = useAuth();
   const isReadOnly = user?.role === 'VIEWER';
+  const canCreateTestItems = canManageTests(user);
   const adminCreatePages: PageId[] = ['projects', 'test-plans', 'test-suites', 'test-runs'];
   const requiresAdminCreate = adminCreatePages.includes(activePage);
   const isCreateDisabled =
-    isReadOnly || !onCreateAction || (requiresAdminCreate && user?.role !== 'ADMIN');
+    isReadOnly || !onCreateAction || (requiresAdminCreate && !canCreateTestItems);
 
   return (
-    <header className="sticky top-0 z-30 border-b border-zinc-200 bg-white/90 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/90">
+    <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur">
       <div className="flex h-16 items-center gap-3 px-4 sm:px-6 lg:px-8">
         <button
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-white lg:hidden"
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-950 lg:hidden"
           onClick={onOpenSidebar}
           title="Open sidebar"
           type="button"
@@ -54,16 +56,16 @@ export function TopNav({
 
         <div className="min-w-0 flex-1">
           {showPageTitle ? (
-            <p className="truncate text-sm font-semibold text-zinc-950 dark:text-white">
+            <p className="truncate text-sm font-semibold text-slate-950">
               {pageTitles[activePage]}
             </p>
           ) : null}
         </div>
 
-        <label className="hidden h-9 w-full max-w-sm items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 md:flex">
+        <label className="hidden h-9 w-full max-w-sm items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-500 md:flex">
           <Search className="h-4 w-4" aria-hidden="true" />
           <input
-            className="w-full border-0 bg-transparent p-0 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 dark:text-white"
+            className="w-full border-0 bg-transparent p-0 text-sm text-slate-900 outline-none placeholder:text-slate-400"
             placeholder="Search"
             type="search"
           />
@@ -71,12 +73,12 @@ export function TopNav({
 
         {createActionLabel ? (
           <button
-            className="hidden h-9 items-center gap-2 rounded-lg bg-zinc-950 px-3 text-sm font-medium text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200 sm:flex"
+            className="hidden h-9 items-center gap-2 rounded-lg bg-blue-700 px-3 text-sm font-medium text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50 sm:flex"
             disabled={isCreateDisabled}
             onClick={onCreateAction}
             title={
-              requiresAdminCreate && user?.role !== 'ADMIN'
-                ? 'Only admins can create this item'
+              requiresAdminCreate && !canCreateTestItems
+                ? 'Requires test management permission'
                 : isReadOnly
                   ? 'Viewer mode is read-only'
                   : `New ${createActionLabel.toLowerCase()}`
@@ -89,14 +91,14 @@ export function TopNav({
         ) : null}
 
         <button
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-white"
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-950"
           title="Notifications"
           type="button"
         >
           <Bell className="h-4 w-4" aria-hidden="true" />
         </button>
         <button
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-white"
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-950"
           onClick={onToggleTheme}
           title="Toggle dark mode"
           type="button"
@@ -108,12 +110,12 @@ export function TopNav({
           )}
         </button>
 
-        <div className="hidden min-w-0 items-center gap-2 border-l border-zinc-200 pl-3 dark:border-zinc-800 md:flex">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-600 dark:bg-zinc-900 dark:text-zinc-300">
+        <div className="hidden min-w-0 items-center gap-2 border-l border-slate-200 pl-3 md:flex">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
             <UserRound className="h-4 w-4" aria-hidden="true" />
           </span>
           <div className="min-w-0">
-            <p className="max-w-36 truncate text-sm font-medium text-zinc-950 dark:text-white">
+            <p className="max-w-36 truncate text-sm font-medium text-slate-950">
               {user?.name}
             </p>
             {user?.role ? <UserRoleBadge role={user.role} /> : null}
@@ -121,7 +123,7 @@ export function TopNav({
         </div>
 
         <button
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-white"
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-950"
           onClick={logout}
           title="Log out"
           type="button"

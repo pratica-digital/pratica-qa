@@ -123,7 +123,7 @@ export function AppShell() {
   const createActionLabel = selectedTestRun ? undefined : createActionLabels[effectiveActivePage];
 
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-950 dark:bg-zinc-950 dark:text-zinc-50">
+    <div className="min-h-screen bg-slate-50 text-slate-950">
       <Sidebar
         activePage={effectiveActivePage}
         isOpen={isSidebarOpen}

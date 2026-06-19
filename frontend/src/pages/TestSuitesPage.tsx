@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Filter, Layers3, Pencil, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
+import { canManageTests } from '../auth/permissions';
 import { useAuth } from '../auth/useAuth';
 import { SuiteStatusBadge } from '../components/badges';
 import { DeleteConfirmationModal } from '../components/DeleteConfirmationModal';
@@ -81,7 +82,7 @@ function getUpdatedAt(suite: ManagedTestSuite) {
 export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps) {
   const { token, user } = useAuth();
   const isReadOnly = user?.role === 'VIEWER';
-  const isAdmin = user?.role === 'ADMIN';
+  const canManageTestAssets = canManageTests(user);
 
   const [suites, setSuites] = useState<ManagedTestSuite[]>([]);
   const [cases, setCases] = useState<ManagedTestCase[]>([]);
@@ -137,14 +138,14 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
   }, [fetchData]);
 
   useEffect(() => {
-    if (createActionEventId > 0 && isAdmin) {
+    if (createActionEventId > 0 && canManageTestAssets) {
       const timeoutId = window.setTimeout(() => setModalOpen(true), 0);
 
       return () => window.clearTimeout(timeoutId);
     }
 
     return undefined;
-  }, [createActionEventId, isAdmin]);
+  }, [canManageTestAssets, createActionEventId]);
 
   const visibleSuites = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
@@ -327,14 +328,14 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           
-          <h1 className="mt-1 text-2xl font-semibold tracking-normal text-zinc-950 dark:text-white">
+          <h1 className="mt-1 text-2xl font-semibold tracking-normal text-slate-950">
             Test Suites
           </h1>
-          <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Conjunto de testes que validam uma funcionalidade específica do sistema</p>
+          <p className="text-sm font-medium text-slate-500">Conjunto de testes que validam uma funcionalidade específica do sistema</p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <button
-            className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-zinc-900"
+            className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-slate-600 bg-slate-600 px-3 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
             disabled={isLoading}
             onClick={() => void fetchData()}
             type="button"
@@ -343,8 +344,8 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
             Refresh
           </button>
           <button
-            className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-zinc-950 px-3 text-sm font-medium text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
-            disabled={!isAdmin}
+            className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-blue-700 px-3 text-sm font-medium text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={!canManageTestAssets}
             title={isReadOnly ? 'Viewer mode is read-only' : 'Create suite'}
             type="button"
             onClick={() => setModalOpen(true)}
@@ -356,36 +357,36 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <label className="flex h-10 w-full items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400 sm:max-w-md">
+        <label className="flex h-10 w-full items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-500 sm:max-w-md">
           <Search className="h-4 w-4" aria-hidden="true" />
           <input
-            className="w-full border-0 bg-transparent p-0 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 dark:text-white"
+            className="w-full border-0 bg-transparent p-0 text-sm text-slate-900 outline-none placeholder:text-slate-400"
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Search suites"
             type="search"
             value={search}
           />
         </label>
-        <span className="inline-flex h-10 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-600 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300">
+        <span className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-600">
           <Filter className="h-4 w-4" aria-hidden="true" />
           {visibleSuites.length} shown
         </span>
       </div>
 
       {error ? (
-        <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-200">
+        <p className="rounded-lg border border-red-200 bg-red-100 px-3 py-2 text-sm text-red-800">
           {error}
         </p>
       ) : null}
 
       {success ? (
-        <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
+        <p className="rounded-lg border border-emerald-200 bg-emerald-100 px-3 py-2 text-sm text-emerald-800">
           {success}
         </p>
       ) : null}
 
       {isLoading ? (
-        <div className="rounded-lg border border-zinc-200 bg-white p-8 text-center text-sm text-zinc-500 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400">
+        <div className="rounded-lg border border-slate-200 bg-white p-8 text-center text-sm text-slate-500 shadow-sm">
           Loading test suites
         </div>
       ) : visibleSuites.length > 0 ? (
@@ -396,7 +397,7 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
 
               return (
                 <article
-                  className="cursor-pointer rounded-lg border border-zinc-200 bg-white p-4 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-900/60"
+                  className="cursor-pointer rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
                   key={suite.id}
                   onClick={() => void handleOpenSuite(suite)}
                   role="button"
@@ -404,37 +405,37 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex min-w-0 gap-3">
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sky-50 text-sky-700 dark:bg-sky-950 dark:text-sky-300">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-800">
                         <Layers3 className="h-4 w-4" aria-hidden="true" />
                       </span>
                       <div className="min-w-0">
-                        <h2 className="truncate text-sm font-semibold text-zinc-950 dark:text-white">
+                        <h2 className="truncate text-sm font-semibold text-slate-950">
                           {suite.name}
                         </h2>
-                        <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+                        <p className="truncate text-xs text-slate-500">
                           {suite.project?.name ?? 'Project'}
                         </p>
                       </div>
                     </div>
                     <SuiteStatusBadge status={suite.status} />
                   </div>
-                  <p className="mt-4 line-clamp-2 min-h-10 text-sm text-zinc-600 dark:text-zinc-300">
+                  <p className="mt-4 line-clamp-2 min-h-10 text-sm text-slate-600">
                     {suite.description || 'No description'}
                   </p>
                   <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
                     <div>
-                      <p className="font-semibold text-zinc-950 dark:text-white">{suiteCases.length}</p>
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400">Cases</p>
+                      <p className="font-semibold text-slate-950">{suiteCases.length}</p>
+                      <p className="text-xs text-slate-500">Cases</p>
                     </div>
                     <div>
-                      <p className="font-semibold text-zinc-950 dark:text-white">{suite.position}</p>
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400">Position</p>
+                      <p className="font-semibold text-slate-950">{suite.position}</p>
+                      <p className="text-xs text-slate-500">Position</p>
                     </div>
                   </div>
                   <div className="mt-4 grid grid-cols-2 gap-2">
                     <button
-                      className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-zinc-900"
-                      disabled={!isAdmin}
+                      className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-slate-600 bg-slate-600 px-3 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled={!canManageTestAssets}
                       onClick={(event) => {
                         event.stopPropagation();
                         setEditingSuite(suite);
@@ -445,8 +446,8 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
                       Edit
                     </button>
                     <button
-                      className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-rose-200 bg-white px-3 text-sm font-medium text-rose-600 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-900 dark:bg-zinc-950 dark:text-rose-300 dark:hover:bg-rose-950"
-                      disabled={!isAdmin}
+                      className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-red-600 bg-red-600 px-3 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                      disabled={!canManageTestAssets}
                       onClick={(event) => {
                         event.stopPropagation();
                         requestSuiteDelete(suite);
@@ -462,13 +463,13 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
             })}
           </section>
 
-          <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
-            <div className="border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
-              <h2 className="text-sm font-semibold text-zinc-950 dark:text-white">Suite matrix</h2>
+          <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-200 px-4 py-3">
+              <h2 className="text-sm font-semibold text-slate-950">Suite matrix</h2>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[820px] text-left text-sm">
-                <thead className="bg-zinc-50 text-xs font-medium uppercase text-zinc-500 dark:bg-zinc-900/70 dark:text-zinc-400">
+                <thead className="bg-slate-100 text-xs font-medium uppercase text-slate-700">
                   <tr>
                     <th className="px-4 py-3">Suite</th>
                     <th className="px-4 py-3">Project</th>
@@ -479,34 +480,34 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
                     <th className="px-4 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                <tbody className="divide-y divide-slate-200">
                   {visibleSuites.map((suite) => (
                     <tr
-                      className="cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-900/60"
+                      className="cursor-pointer hover:bg-slate-50"
                       key={suite.id}
                       onClick={() => void handleOpenSuite(suite)}
                     >
                       <td className="px-4 py-3">
-                        <p className="font-medium text-zinc-950 dark:text-white">{suite.name}</p>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400">{suite.id}</p>
+                        <p className="font-medium text-slate-950">{suite.name}</p>
+                        <p className="text-xs text-slate-500">{suite.id}</p>
                       </td>
-                      <td className="px-4 py-3 text-zinc-600 dark:text-zinc-300">
+                      <td className="px-4 py-3 text-slate-600">
                         {suite.project?.name ?? suite.projectId}
                       </td>
                       <td className="px-4 py-3">
                         <SuiteStatusBadge status={suite.status} />
                       </td>
-                      <td className="px-4 py-3 text-zinc-600 dark:text-zinc-300">{suite.position}</td>
-                      <td className="px-4 py-3 text-zinc-600 dark:text-zinc-300">
+                      <td className="px-4 py-3 text-slate-600">{suite.position}</td>
+                      <td className="px-4 py-3 text-slate-600">
                         {getSuiteCases(suite, cases, caseOrder).length}
                       </td>
-                      <td className="px-4 py-3 text-zinc-600 dark:text-zinc-300">
+                      <td className="px-4 py-3 text-slate-600">
                         {getUpdatedAt(suite)}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <button
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"
-                          disabled={!isAdmin}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+                          disabled={!canManageTestAssets}
                           onClick={(event) => {
                             event.stopPropagation();
                             setEditingSuite(suite);
@@ -517,8 +518,8 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
                           <Pencil className="h-4 w-4" aria-hidden="true" />
                         </button>
                         <button
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-rose-950 dark:hover:text-rose-300"
-                          disabled={!isAdmin}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-100 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
+                          disabled={!canManageTestAssets}
                           onClick={(event) => {
                             event.stopPropagation();
                             requestSuiteDelete(suite);
@@ -537,9 +538,9 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
           </div>
         </>
       ) : (
-        <div className="rounded-lg border border-zinc-200 bg-white p-8 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
-          <h2 className="text-sm font-semibold text-zinc-950 dark:text-white">No test suites found</h2>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+        <div className="rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
+          <h2 className="text-sm font-semibold text-slate-950">No test suites found</h2>
+          <p className="mt-1 text-sm text-slate-500">
             Adjust the search or create the first suite.
           </p>
         </div>
@@ -558,7 +559,7 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
           cases={getSuiteCases(editingSuite, cases, caseOrder)}
           onClose={() => setEditingSuite(null)}
           onSave={handleSaveSuite}
-          readOnly={!isAdmin}
+          readOnly={!canManageTestAssets}
           suite={editingSuite}
         />
       ) : null}
@@ -567,7 +568,7 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
         <TestSuiteDetailPanel
           cases={getSuiteCases(selectedSuite, cases, caseOrder)}
           onClose={() => setSelectedSuite(null)}
-          onDelete={isAdmin ? () => requestSuiteDelete(selectedSuite) : undefined}
+          onDelete={canManageTestAssets ? () => requestSuiteDelete(selectedSuite) : undefined}
           onEdit={() => {
             setEditingSuite(selectedSuite);
             setSelectedSuite(null);

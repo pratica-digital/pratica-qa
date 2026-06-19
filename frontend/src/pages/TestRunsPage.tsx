@@ -1,9 +1,10 @@
 import { Eye, Filter, Play, Plus, RefreshCw, Search, Trash2, UserPlus } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { canManageTests } from '../auth/permissions';
 import { useAuth } from '../auth/useAuth';
 import { TestRunStatusBadge, UserRoleBadge } from '../components/badges';
 import { DeleteConfirmationModal } from '../components/DeleteConfirmationModal';
-import { ApiError, testRunsApi, usersApi } from '../lib/api';
+import { ApiError, testRunsApi } from '../lib/api';
 import type { AuthUser, TestRun } from '../types/testRun';
 import { NewTestRunModal } from './Newtestrunmodal';
 
@@ -38,9 +39,10 @@ function getUpdatedAt(testRun: TestRun) {
 
 export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPageProps) {
   const { token, user, setAssignedTestRuns } = useAuth();
+  const canManageTestAssets = canManageTests(user);
   const [testRuns, setTestRuns] = useState<TestRun[]>([]);
   const [users, setUsers] = useState<AuthUser[]>([]);
-  const [scope, setScope] = useState<RunScope>(() => (user?.role === 'ADMIN' ? 'all' : 'mine'));
+  const [scope, setScope] = useState<RunScope>(() => (canManageTests(user) ? 'all' : 'mine'));
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -50,8 +52,6 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
   const [modalOpen, setModalOpen] = useState(false);
   const [runPendingDelete, setRunPendingDelete] = useState<TestRun | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  const isAdmin = user?.role === 'ADMIN';
 
   const fetchData = useCallback(async () => {
     if (!token || !user) {
@@ -64,7 +64,7 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
     try {
       const [runs, assignableUsers] = await Promise.all([
         testRunsApi.list(token),
-        isAdmin ? usersApi.list(token) : Promise.resolve<AuthUser[]>([]),
+        canManageTestAssets ? testRunsApi.assignableUsers(token) : Promise.resolve<AuthUser[]>([]),
       ]);
 
       setTestRuns(runs);
@@ -79,7 +79,7 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
     } finally {
       setIsLoading(false);
     }
-  }, [isAdmin, setAssignedTestRuns, token, user]);
+  }, [canManageTestAssets, setAssignedTestRuns, token, user]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -90,14 +90,14 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
   }, [fetchData]);
 
   useEffect(() => {
-    if (createActionEventId > 0 && isAdmin) {
+    if (createActionEventId > 0 && canManageTestAssets) {
       const timeoutId = window.setTimeout(() => setModalOpen(true), 0);
 
       return () => window.clearTimeout(timeoutId);
     }
 
     return undefined;
-  }, [createActionEventId, isAdmin]);
+  }, [canManageTestAssets, createActionEventId]);
 
   const visibleRuns = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
@@ -220,15 +220,15 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Execution queue</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-normal text-zinc-950 dark:text-white">
+          <p className="text-sm font-medium text-slate-500">Execution queue</p>
+          <h1 className="mt-1 text-2xl font-semibold tracking-normal text-slate-950">
             Test Runs
           </h1>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          {isAdmin ? (
+          {canManageTestAssets ? (
             <button
-              className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-zinc-950 px-3 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
+              className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-blue-700 px-3 text-sm font-medium text-white hover:bg-blue-800"
               onClick={() => setModalOpen(true)}
               type="button"
             >
@@ -237,7 +237,7 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
             </button>
           ) : null}
           <button
-            className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-zinc-900"
+            className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-slate-600 bg-slate-600 px-3 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
             disabled={isLoading}
             onClick={() => void fetchData()}
             type="button"
@@ -249,12 +249,12 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
       </div>
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="inline-flex w-full rounded-lg border border-zinc-200 bg-white p-1 dark:border-zinc-800 dark:bg-zinc-950 sm:w-auto">
+        <div className="inline-flex w-full rounded-lg border border-slate-200 bg-white p-1 sm:w-auto">
           <button
             className={`h-8 flex-1 rounded-md px-3 text-sm font-medium sm:flex-none ${
               scope === 'mine'
-                ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950'
-                : 'text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900'
+                ? 'bg-blue-700 text-white'
+                : 'text-slate-600 hover:bg-slate-100'
             }`}
             onClick={() => setScope('mine')}
             type="button"
@@ -264,8 +264,8 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
           <button
             className={`h-8 flex-1 rounded-md px-3 text-sm font-medium sm:flex-none ${
               scope === 'all'
-                ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950'
-                : 'text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-900'
+                ? 'bg-blue-700 text-white'
+                : 'text-slate-600 hover:bg-slate-100'
             }`}
             onClick={() => setScope('all')}
             type="button"
@@ -275,17 +275,17 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <label className="flex h-10 w-full items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400 sm:w-80">
+          <label className="flex h-10 w-full items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-500 sm:w-80">
             <Search className="h-4 w-4" aria-hidden="true" />
             <input
-              className="w-full border-0 bg-transparent p-0 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 dark:text-white"
+              className="w-full border-0 bg-transparent p-0 text-sm text-slate-900 outline-none placeholder:text-slate-400"
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Search test runs"
               type="search"
               value={search}
             />
           </label>
-          <span className="inline-flex h-10 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-600 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300">
+          <span className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-600">
             <Filter className="h-4 w-4" aria-hidden="true" />
             {visibleRuns.length} shown
           </span>
@@ -293,31 +293,30 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
       </div>
 
       {error ? (
-        <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-200">
+        <p className="rounded-lg border border-red-200 bg-red-100 px-3 py-2 text-sm text-red-800">
           {error}
         </p>
       ) : null}
 
       {success ? (
-        <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
+        <p className="rounded-lg border border-emerald-200 bg-emerald-100 px-3 py-2 text-sm text-emerald-800">
           {success}
         </p>
       ) : null}
 
       {isLoading ? (
-        <div className="rounded-lg border border-zinc-200 bg-white p-8 text-center text-sm text-zinc-500 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400">
+        <div className="rounded-lg border border-slate-200 bg-white p-8 text-center text-sm text-slate-500 shadow-sm">
           Loading test runs
         </div>
       ) : visibleRuns.length > 0 ? (
         <section className="grid gap-3">
           {visibleRuns.map((testRun) => {
             const progress = getResultProgress(testRun);
-            const canExecute =
-              user?.role === 'ADMIN' || (user?.role === 'QA' && testRun.assignedToId === user.id);
+            const canExecute = canManageTests(user);
 
             return (
               <article
-                className="cursor-pointer rounded-lg border border-zinc-200 bg-white p-4 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-900/60"
+                className="cursor-pointer rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
                 key={testRun.id}
                 onClick={() => void handleOpenRun(testRun)}
                 role="button"
@@ -328,41 +327,41 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
                     <div className="flex flex-wrap items-center gap-2">
                       <TestRunStatusBadge status={testRun.status} />
                       {testRun.project?.key ? (
-                        <span className="rounded-md border border-zinc-200 px-2 py-1 text-xs font-medium text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
+                        <span className="rounded-md border border-slate-200 px-2 py-1 text-xs font-medium text-slate-500">
                           {testRun.project.key}
                         </span>
                       ) : null}
                     </div>
-                    <h2 className="mt-2 truncate text-base font-semibold tracking-normal text-zinc-950 dark:text-white">
+                    <h2 className="mt-2 truncate text-base font-semibold tracking-normal text-slate-950">
                       {testRun.name}
                     </h2>
-                    <p className="mt-1 line-clamp-2 text-sm text-zinc-600 dark:text-zinc-300">
+                    <p className="mt-1 line-clamp-2 text-sm text-slate-600">
                       {testRun.description || testRun.testPlan?.name || 'No description'}
                     </p>
-                    <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+                    <p className="mt-2 text-xs text-slate-500">
                       Updated {getUpdatedAt(testRun)}
                     </p>
                   </div>
 
                   <div>
-                    <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
+                    <div className="flex items-center justify-between text-xs text-slate-500">
                       <span>Execution</span>
                       <span>
                         {progress.complete}/{progress.total}
                       </span>
                     </div>
-                    <div className="mt-2 h-2 rounded-full bg-zinc-100 dark:bg-zinc-900">
+                    <div className="mt-2 h-2 rounded-full bg-slate-100">
                       <div
-                        className="h-2 rounded-full bg-emerald-500"
+                        className="h-2 rounded-full bg-emerald-600"
                         style={{ width: `${progress.percent}%` }}
                       />
                     </div>
                     <div className="mt-3 flex items-center justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-zinc-950 dark:text-white">
+                        <p className="truncate text-sm font-medium text-slate-950">
                           {testRun.assignedTo?.name ?? 'Unassigned'}
                         </p>
-                        <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+                        <p className="truncate text-xs text-slate-500">
                           {testRun.assignedTo?.email ?? 'No user'}
                         </p>
                       </div>
@@ -371,14 +370,14 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    {isAdmin ? (
+                    {canManageTestAssets ? (
                       <label
-                        className="flex h-9 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-2 text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300"
+                        className="flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-600"
                         onClick={(event) => event.stopPropagation()}
                       >
-                        <UserPlus className="h-4 w-4 shrink-0 text-zinc-400" aria-hidden="true" />
+                        <UserPlus className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
                         <select
-                          className="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-zinc-900 outline-none disabled:cursor-wait dark:text-white"
+                          className="min-w-0 flex-1 border-0 bg-transparent p-0 text-sm text-slate-900 outline-none disabled:cursor-wait"
                           disabled={assigningRunId === testRun.id || users.length === 0}
                           onChange={(event) => void handleAssign(testRun.id, event.target.value)}
                           onClick={(event) => event.stopPropagation()}
@@ -397,7 +396,11 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
                     ) : null}
 
                     <button
-                      className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-zinc-950 px-3 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
+                      className={`inline-flex h-9 items-center justify-center gap-2 rounded-lg px-3 text-sm font-medium text-white ${
+                        canExecute
+                          ? 'bg-emerald-600 hover:bg-emerald-700'
+                          : 'bg-slate-600 hover:bg-slate-700'
+                      }`}
                       disabled={openingRunId === testRun.id}
                       onClick={(event) => {
                         event.stopPropagation();
@@ -412,9 +415,9 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
                       )}
                       {openingRunId === testRun.id ? 'Opening' : canExecute ? 'Execute' : 'View'}
                     </button>
-                    {isAdmin ? (
+                    {canManageTestAssets ? (
                       <button
-                        className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-rose-200 bg-white px-3 text-sm font-medium text-rose-600 hover:bg-rose-50 dark:border-rose-900 dark:bg-zinc-950 dark:text-rose-300 dark:hover:bg-rose-950"
+                        className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-red-600 bg-red-600 px-3 text-sm font-medium text-white hover:bg-red-700"
                         onClick={(event) => {
                           event.stopPropagation();
                           requestRunDelete(testRun);
@@ -432,9 +435,9 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
           })}
         </section>
       ) : (
-        <div className="rounded-lg border border-zinc-200 bg-white p-8 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
-          <h2 className="text-sm font-semibold text-zinc-950 dark:text-white">No test runs found</h2>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+        <div className="rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
+          <h2 className="text-sm font-semibold text-slate-950">No test runs found</h2>
+          <p className="mt-1 text-sm text-slate-500">
             Adjust the filter or refresh the queue.
           </p>
         </div>
