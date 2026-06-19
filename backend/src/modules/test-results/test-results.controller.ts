@@ -23,7 +23,7 @@ import { TestResultsService } from './test-results.service';
 export class TestResultsController {
   constructor(private readonly testResultsService: TestResultsService) {}
 
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.QA)
   @Post()
   create(@Body() dto: CreateTestResultDto) {
     return this.testResultsService.create(dto);
@@ -59,7 +59,7 @@ export class TestResultsController {
     return this.testResultsService.addAttachments(id, dto, user);
   }
 
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.QA)
   @Delete(':id')
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.testResultsService.remove(id);

@@ -1,9 +1,10 @@
-import type { MouseEvent } from 'react';
+import type { MouseEvent, ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Activity,
   AlertTriangle,
   ArrowUpRight,
+  BarChart3,
   CheckCircle2,
   ClipboardList,
   Clock3,
@@ -13,11 +14,14 @@ import {
   Loader2,
   Play,
   PlaySquare,
+  PieChart,
   RefreshCw,
   Trash2,
+  TrendingUp,
   XCircle,
   type LucideIcon,
 } from 'lucide-react';
+import { canManageTests } from '../auth/permissions';
 import { useAuth } from '../auth/useAuth';
 import {
   CaseStatusBadge,
@@ -32,9 +36,21 @@ import { ExpandableCard } from '../components/dashboard/ExpandableCard';
 import { ProjectDetailPanel } from '../components/projects/ProjectDetailPanel';
 import { TestPlanDetailPanel } from '../components/test-plan/TestPlanDetailPanel';
 import { TestSuiteDetailPanel } from '../components/test-suites/TestSuiteDetailPanel';
-import { ApiError, projectsApi, testCasesApi, testPlansApi, testResultsApi, testRunsApi, testSuitesApi } from '../lib/api';
+import {
+  ApiError,
+  projectsApi,
+  reportsApi,
+  testCasesApi,
+  testPlansApi,
+  testResultsApi,
+  testRunsApi,
+  testSuitesApi,
+} from '../lib/api';
 import type { PageId } from '../data/workspace';
 import type {
+  DashboardAnalytics,
+  DashboardMetricDelta,
+  DashboardPeriod,
   ManagedTestCase,
   ManagedTestSuite,
   ProjectSummary,
@@ -85,6 +101,13 @@ type SuitePreview = {
 
 type MetricKey = 'passed' | 'failed' | 'pending';
 
+const dashboardPeriodOptions: Array<{ label: string; value: DashboardPeriod }> = [
+  { label: 'Last 30 days', value: '30d' },
+  { label: 'Last 90 days', value: '90d' },
+  { label: 'Last 6 months', value: '6m' },
+  { label: 'Last 12 months', value: '12m' },
+];
+
 type DashboardDeleteTarget =
   | { type: 'project'; item: ProjectSummary }
   | { type: 'suite'; item: ManagedTestSuite }
@@ -115,17 +138,13 @@ const initialDashboardData: DashboardData = {
 };
 
 const metricToneClasses = {
-  emerald: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300',
-  sky: 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-300',
-  amber: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300',
-  rose: 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300',
-  violet: 'border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-900 dark:bg-violet-950 dark:text-violet-300',
-  zinc: 'border-zinc-200 bg-zinc-50 text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300',
+  emerald: 'border-emerald-200 bg-emerald-100 text-emerald-800',
+  blue: 'border-blue-200 bg-blue-100 text-blue-800',
+  amber: 'border-amber-200 bg-amber-100 text-amber-800',
+  red: 'border-red-200 bg-red-100 text-red-800',
+  violet: 'border-violet-200 bg-violet-50 text-violet-700',
+  slate: 'border-slate-200 bg-slate-50 text-slate-700',
 };
-
-function getTotal<T>(page: { data: T[]; meta?: { total: number } }) {
-  return page.meta?.total ?? page.data.length;
-}
 
 function formatDate(value?: string | null) {
   if (!value) {
@@ -230,9 +249,9 @@ function SectionHeader({
 }) {
   return (
     <div className="flex items-center justify-between gap-3">
-      <h2 className="text-sm font-semibold text-zinc-950 dark:text-white">{children}</h2>
+      <h2 className="text-sm font-semibold text-slate-950">{children}</h2>
       <button
-        className="inline-flex h-8 items-center gap-1 rounded-lg px-2 text-sm font-medium text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-white"
+        className="inline-flex h-8 items-center gap-1 rounded-lg px-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-950"
         onClick={onAction}
         type="button"
       >
@@ -245,7 +264,7 @@ function SectionHeader({
 
 function LoadingBlock({ label }: { label: string }) {
   return (
-    <div className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-zinc-300 px-3 py-5 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
+    <div className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 px-3 py-5 text-sm text-slate-500">
       <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
       {label}
     </div>
@@ -254,7 +273,7 @@ function LoadingBlock({ label }: { label: string }) {
 
 function EmptyBlock({ label }: { label: string }) {
   return (
-    <p className="rounded-lg border border-dashed border-zinc-300 px-3 py-4 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
+    <p className="rounded-lg border border-dashed border-slate-300 px-3 py-4 text-sm text-slate-500">
       {label}
     </p>
   );
@@ -263,7 +282,7 @@ function EmptyBlock({ label }: { label: string }) {
 function DetailButton({ children, onClick }: { children: string; onClick: () => void }) {
   return (
     <button
-      className="inline-flex h-9 items-center justify-center rounded-lg border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-zinc-900"
+      className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
       onClick={(event) => {
         stopPropagation(event);
         onClick();
@@ -278,7 +297,7 @@ function DetailButton({ children, onClick }: { children: string; onClick: () => 
 function DeleteActionButton({ onClick, title }: { onClick: () => void; title: string }) {
   return (
     <button
-      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-rose-200 bg-red text-rose-600 transition hover:bg-rose-50 dark:border-rose-900 dark:bg-zinc-950 dark:text-rose-300 dark:hover:bg-rose-950"
+      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-600 bg-red-600 text-white transition hover:bg-red-700"
       onClick={(event) => {
         stopPropagation(event);
         onClick();
@@ -293,27 +312,40 @@ function DeleteActionButton({ onClick, title }: { onClick: () => void; title: st
 
 function DashboardMetricCard({
   active,
+  delta,
   description,
   icon: Icon,
+  inverseDelta = false,
   label,
   onClick,
+  periodLabel,
   tone,
   value,
 }: {
   active?: boolean;
-  description: string;
+  delta?: DashboardMetricDelta;
   icon: LucideIcon;
+  inverseDelta?: boolean;
   label: string;
   onClick: () => void;
+  periodLabel?: string;
   tone: keyof typeof metricToneClasses;
   value: number;
 }) {
+  const deltaTone =
+    !delta || delta.direction === 'flat'
+      ? 'text-slate-500'
+      : (delta.direction === 'up' && !inverseDelta) || (delta.direction === 'down' && inverseDelta)
+        ? 'text-emerald-600'
+        : 'text-red-600';
+  const deltaSign = delta && delta.value > 0 ? '+' : '';
+
   return (
     <button
-      className={`group rounded-lg border bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-zinc-300 hover:bg-zinc-50 dark:bg-zinc-950 dark:hover:border-zinc-700 dark:hover:bg-zinc-900/60 ${
+      className={`group rounded-lg border bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50 ${
         active
-          ? 'border-zinc-950 ring-2 ring-zinc-200 dark:border-white dark:ring-zinc-800'
-          : 'border-zinc-200 dark:border-zinc-800'
+          ? 'border-slate-950 ring-2 ring-slate-200'
+          : 'border-slate-200'
       }`}
       onClick={onClick}
       type="button"
@@ -322,13 +354,19 @@ function DashboardMetricCard({
         <span className={`flex h-9 w-9 items-center justify-center rounded-lg border ${metricToneClasses[tone]}`}>
           <Icon className="h-4 w-4" aria-hidden="true" />
         </span>
-        <ArrowUpRight className="h-4 w-4 text-zinc-400 transition group-hover:text-zinc-700 dark:group-hover:text-zinc-200" />
+        <ArrowUpRight className="h-4 w-4 text-slate-400 transition group-hover:text-slate-700" />
       </div>
-      <p className="mt-4 text-sm text-zinc-500 dark:text-zinc-400">{label}</p>
-      <p className="mt-1 text-2xl font-semibold tracking-normal text-zinc-950 dark:text-white">
+      <p className="mt-4 text-sm text-slate-500">{label}</p>
+      <p className="mt-1 text-2xl font-semibold tracking-normal text-slate-950">
         {value}
       </p>
-      <p className="mt-2 line-clamp-2 min-h-10 text-xs text-zinc-500 dark:text-zinc-400">
+      {delta ? (
+        <p className={`mt-2 text-xs font-medium ${deltaTone}`}>
+          {deltaSign}
+          {delta.value} in {periodLabel ?? 'selected period'}
+        </p>
+      ) : null}
+      <p className="mt-2 line-clamp-2 min-h-10 text-xs text-slate-500">
         {description}
       </p>
     </button>
@@ -356,7 +394,7 @@ function ResultPreviewList({
     <div className="space-y-2">
       {results.map((result) => (
         <button
-          className="grid w-full gap-3 rounded-lg border border-zinc-200 bg-white p-3 text-left transition hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-900 sm:grid-cols-[1fr_auto]"
+          className="grid w-full gap-3 rounded-lg border border-slate-200 bg-white p-3 text-left transition hover:border-slate-300 hover:bg-slate-50 sm:grid-cols-[1fr_auto]"
           disabled={!result.testRun?.id || openingRunId === result.testRun?.id}
           key={result.id}
           onClick={() => onOpenRun(result)}
@@ -365,23 +403,23 @@ function ResultPreviewList({
           <span className="min-w-0">
             <span className="flex flex-wrap items-center gap-2">
               <TestResultStatusBadge status={result.status} />
-              <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+              <span className="text-xs font-medium text-slate-500">
                 {getSuiteName(result.testCase.suiteId, suites)}
               </span>
             </span>
-            <span className="mt-2 block text-sm font-medium text-zinc-950 dark:text-white">
+            <span className="mt-2 block text-sm font-medium text-slate-950">
               {result.testCase.title}
             </span>
-            <span className="mt-1 block text-xs text-zinc-500 dark:text-zinc-400">
+            <span className="mt-1 block text-xs text-slate-500">
               {result.testRun?.name ?? 'Run unavailable'}
             </span>
             {result.comment ? (
-              <span className="mt-2 block line-clamp-2 text-sm text-zinc-600 dark:text-zinc-300">
+              <span className="mt-2 block line-clamp-2 text-sm text-slate-600">
                 {result.comment}
               </span>
             ) : null}
           </span>
-          <span className="inline-flex items-center justify-end gap-2 text-sm font-medium text-zinc-600 dark:text-zinc-300">
+          <span className="inline-flex items-center justify-end gap-2 text-sm font-medium text-slate-600">
             {openingRunId === result.testRun?.id ? 'Opening' : 'Open run'}
             <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
           </span>
@@ -391,10 +429,244 @@ function ResultPreviewList({
   );
 }
 
+function ChartCard({
+  children,
+  icon: Icon,
+  subtitle,
+  title,
+}: {
+  children: ReactNode;
+  icon: LucideIcon;
+  subtitle?: string;
+  title: string;
+}) {
+  return (
+    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-semibold text-slate-950">{title}</h2>
+          {subtitle ? <p className="mt-1 text-xs text-slate-500">{subtitle}</p> : null}
+        </div>
+        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-100 text-blue-800">
+          <Icon className="h-4 w-4" aria-hidden="true" />
+        </span>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function ChartEmptyState({ label }: { label: string }) {
+  return (
+    <div className="flex min-h-56 items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 text-center text-sm text-slate-500">
+      {label}
+    </div>
+  );
+}
+
+function AnalyticsSkeleton() {
+  return (
+    <section className="grid gap-6 lg:grid-cols-2">
+      {Array.from({ length: 4 }).map((_, index) => (
+        <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm" key={index}>
+          <div className="h-4 w-48 animate-pulse rounded bg-slate-200" />
+          <div className="mt-5 h-56 animate-pulse rounded-lg bg-slate-100" />
+        </div>
+      ))}
+    </section>
+  );
+}
+
+function ApprovalRateChart({ data }: { data: DashboardAnalytics['monthlyQuality'] }) {
+  const hasData = data.some((item) => item.executed > 0);
+
+  if (!hasData) {
+    return <ChartEmptyState label="Nenhum dado disponível para o período selecionado." />;
+  }
+
+  const width = 720;
+  const height = 260;
+  const padding = { top: 20, right: 20, bottom: 42, left: 42 };
+  const innerWidth = width - padding.left - padding.right;
+  const innerHeight = height - padding.top - padding.bottom;
+  const points = data.map((item, index) => {
+    const x = padding.left + (data.length <= 1 ? innerWidth / 2 : (index / (data.length - 1)) * innerWidth);
+    const y = padding.top + ((100 - item.approvalRate) / 100) * innerHeight;
+
+    return { ...item, x, y };
+  });
+  const linePath = points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ');
+  const areaPath = `${linePath} L ${points[points.length - 1].x} ${padding.top + innerHeight} L ${points[0].x} ${padding.top + innerHeight} Z`;
+
+  return (
+    <div className="overflow-hidden rounded-lg bg-slate-50">
+      <svg className="h-72 w-full" role="img" viewBox={`0 0 ${width} ${height}`}>
+        <title>Taxa de aprovação dos testes por mês</title>
+        {[0, 25, 50, 75, 100].map((value) => {
+          const y = padding.top + ((100 - value) / 100) * innerHeight;
+
+          return (
+            <g key={value}>
+              <line stroke="#e2e8f0" strokeDasharray="4 4" x1={padding.left} x2={width - padding.right} y1={y} y2={y} />
+              <text fill="#64748b" fontSize="11" x={8} y={y + 4}>
+                {value}%
+              </text>
+            </g>
+          );
+        })}
+        <path d={areaPath} fill="#dbeafe" opacity="0.9" />
+        <path d={linePath} fill="none" stroke="#1d4ed8" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" />
+        {points.map((point, index) => (
+          <g key={point.month}>
+            <circle cx={point.x} cy={point.y} fill="#ffffff" r="5" stroke="#1d4ed8" strokeWidth="3">
+              <title>
+                {point.label}: {point.approvalRate}% ({point.passed}/{point.executed})
+              </title>
+            </circle>
+            {index % Math.ceil(points.length / 6) === 0 || index === points.length - 1 ? (
+              <text fill="#64748b" fontSize="11" textAnchor="middle" x={point.x} y={height - 16}>
+                {point.label}
+              </text>
+            ) : null}
+          </g>
+        ))}
+      </svg>
+    </div>
+  );
+}
+
+function MonthlyExecutionsChart({ data }: { data: DashboardAnalytics['monthlyExecutions'] }) {
+  const max = Math.max(...data.map((item) => item.executions), 0);
+
+  if (max === 0) {
+    return <ChartEmptyState label="Nenhum dado disponível para o período selecionado." />;
+  }
+
+  return (
+    <div className="flex min-h-72 items-end gap-2 rounded-lg bg-slate-50 px-3 py-4">
+      {data.map((item) => {
+        const height = Math.max(12, Math.round((item.executions / max) * 190));
+
+        return (
+          <div className="flex min-w-0 flex-1 flex-col items-center justify-end gap-2" key={item.month}>
+            <div className="text-xs font-medium text-slate-600">{item.executions}</div>
+            <div
+              className="w-full max-w-10 rounded-t-lg bg-blue-700 transition hover:bg-blue-800"
+              style={{ height }}
+              title={`${item.label}: ${item.executions} executions`}
+            />
+            <div className="w-full truncate text-center text-[11px] text-slate-500">{item.label}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function ResultDistributionChart({ data }: { data: DashboardAnalytics['resultDistribution'] }) {
+  const segments = [
+    { color: '#059669', label: 'Passou', value: data.passed },
+    { color: '#dc2626', label: 'Falhou', value: data.failed },
+    { color: '#d97706', label: 'Bloqueado', value: data.blocked },
+    { color: '#475569', label: 'Não executado', value: data.notExecuted },
+  ];
+  const total = segments.reduce((sum, segment) => sum + segment.value, 0);
+  let cursor = 0;
+
+  if (total === 0) {
+    return <ChartEmptyState label="Nenhum dado disponível para o período selecionado." />;
+  }
+
+  const gradient = segments
+    .map((segment) => {
+      const start = cursor;
+      const end = cursor + (segment.value / total) * 100;
+      cursor = end;
+
+      return `${segment.color} ${start}% ${end}%`;
+    })
+    .join(', ');
+
+  return (
+    <div className="grid min-h-72 gap-5 rounded-lg bg-slate-50 p-4 sm:grid-cols-[12rem_1fr] sm:items-center">
+      <div className="relative mx-auto h-44 w-44 rounded-full" style={{ background: `conic-gradient(${gradient})` }}>
+        <div className="absolute inset-10 flex flex-col items-center justify-center rounded-full bg-white text-center">
+          <span className="text-2xl font-semibold text-slate-950">{total}</span>
+          <span className="text-xs text-slate-500">resultados</span>
+        </div>
+      </div>
+      <div className="grid gap-2">
+        {segments.map((segment) => (
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm" key={segment.label}>
+            <span className="flex items-center gap-2 text-slate-600">
+              <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: segment.color }} />
+              {segment.label}
+            </span>
+            <span className="font-semibold text-slate-950">{segment.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TopProjectsChart({ data }: { data: DashboardAnalytics['topProjects'] }) {
+  const max = Math.max(...data.map((item) => item.executions), 0);
+
+  if (data.length === 0 || max === 0) {
+    return <ChartEmptyState label="Nenhum dado disponível para o período selecionado." />;
+  }
+
+  return (
+    <div className="space-y-3 rounded-lg bg-slate-50 p-4">
+      {data.map((project, index) => (
+        <div className="grid gap-2" key={project.projectId}>
+          <div className="flex items-center justify-between gap-3 text-sm">
+            <span className="min-w-0 truncate font-medium text-slate-700">
+              {index + 1}. {project.name}
+            </span>
+            <span className="text-slate-500">{project.executions}</span>
+          </div>
+          <div className="h-3 rounded-full bg-white">
+            <div
+              className="h-3 rounded-full bg-emerald-600"
+              style={{ width: `${Math.max(8, (project.executions / max) * 100)}%` }}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function RecentActivityPanel({ data }: { data: DashboardAnalytics['recentActivity'] }) {
+  const items = [
+    { label: 'Execuções realizadas', value: data.executions, tone: 'bg-blue-100 text-blue-800' },
+    { label: 'Casos executados', value: data.casesExecuted, tone: 'bg-slate-100 text-slate-700' },
+    { label: 'Falhas encontradas', value: data.failures, tone: 'bg-red-100 text-red-800' },
+    { label: 'Aprovações', value: data.approvals, tone: 'bg-emerald-100 text-emerald-800' },
+  ];
+
+  return (
+    <div className="grid gap-3 rounded-lg bg-slate-50 p-4 sm:grid-cols-2">
+      {items.map((item) => (
+        <div className="rounded-lg border border-slate-200 bg-white p-3" key={item.label}>
+          <span className={`inline-flex rounded-md px-2 py-1 text-xs font-medium ${item.tone}`}>
+            {item.label}
+          </span>
+          <p className="mt-3 text-2xl font-semibold text-slate-950">{item.value}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function DashboardPage({ onNavigate, onOpenRun }: DashboardPageProps) {
   const { token, user } = useAuth();
-  const isAdmin = user?.role === 'ADMIN';
+  const canManageTestAssets = canManageTests(user);
   const [data, setData] = useState<DashboardData>(initialDashboardData);
+  const [analytics, setAnalytics] = useState<DashboardAnalytics | null>(null);
+  const [selectedPeriod, setSelectedPeriod] = useState<DashboardPeriod>('12m');
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState('');
@@ -426,21 +698,21 @@ export function DashboardPage({ onNavigate, onOpenRun }: DashboardPageProps) {
       const [
         projectsPage,
         suitesPage,
-        casesPage,
         plansPage,
         runsPage,
         passedPage,
         failedPage,
         pendingPage,
+        analyticsData,
       ] = await Promise.all([
         projectsApi.listPage(token, { limit: 8 }),
         testSuitesApi.listPage(token, { limit: 100 }),
-        testCasesApi.listPage(token, { limit: 1 }),
         testPlansApi.listPage(token, { limit: 8 }),
         testRunsApi.listPage(token, { limit: 10 }),
         testResultsApi.listPage(token, { status: 'PASSED', limit: 6 }),
         testResultsApi.listPage(token, { status: 'FAILED', limit: 8 }),
         testResultsApi.listPage(token, { status: 'PENDING', limit: 6 }),
+        reportsApi.dashboardAnalytics(token, selectedPeriod),
       ]);
 
       const latestProjectRunEntries = await Promise.all(
@@ -458,6 +730,7 @@ export function DashboardPage({ onNavigate, onOpenRun }: DashboardPageProps) {
         }),
       );
 
+      setAnalytics(analyticsData);
       setData({
         projects: projectsPage.data,
         suites: suitesPage.data,
@@ -467,16 +740,7 @@ export function DashboardPage({ onNavigate, onOpenRun }: DashboardPageProps) {
         failedResults: failedPage.data,
         pendingResults: pendingPage.data,
         latestProjectRuns: Object.fromEntries(latestProjectRunEntries),
-        totals: {
-          projects: getTotal(projectsPage),
-          suites: getTotal(suitesPage),
-          cases: getTotal(casesPage),
-          plans: getTotal(plansPage),
-          runs: getTotal(runsPage),
-          passed: getTotal(passedPage),
-          failed: getTotal(failedPage),
-          pending: getTotal(pendingPage),
-        },
+        totals: analyticsData.totals,
       });
     } catch (fetchError) {
       if (fetchError instanceof ApiError && fetchError.status === 401) {
@@ -487,7 +751,7 @@ export function DashboardPage({ onNavigate, onOpenRun }: DashboardPageProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [token]);
+  }, [selectedPeriod, token]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -970,110 +1234,98 @@ export function DashboardPage({ onNavigate, onOpenRun }: DashboardPageProps) {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">QA command center</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-normal text-zinc-950 dark:text-white">
+          <p className="text-sm font-medium text-slate-500">QA command center</p>
+          <h1 className="mt-1 text-2xl font-semibold tracking-normal text-slate-950">
             Operational dashboard
           </h1>
         </div>
-        <button
-          className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-zinc-900"
-          disabled={isLoading}
-          onClick={() => void fetchDashboard()}
-          type="button"
-        >
-          <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} aria-hidden="true" />
-          Refresh
-        </button>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <label className="flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-600">
+            Period
+            <select
+              className="border-0 bg-transparent p-0 text-sm font-medium text-slate-950 outline-none"
+              onChange={(event) => setSelectedPeriod(event.target.value as DashboardPeriod)}
+              value={selectedPeriod}
+            >
+              {dashboardPeriodOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-slate-600 bg-slate-600 px-3 text-sm font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={isLoading}
+            onClick={() => void fetchDashboard()}
+            type="button"
+          >
+            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} aria-hidden="true" />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {error ? (
-        <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-200">
+        <p className="rounded-lg border border-red-200 bg-red-100 px-3 py-2 text-sm text-red-800">
           {error}
         </p>
       ) : null}
 
       {success ? (
-        <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
+        <p className="rounded-lg border border-emerald-200 bg-emerald-100 px-3 py-2 text-sm text-emerald-800">
           {success}
         </p>
       ) : null}
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        
         <DashboardMetricCard
-          description="Open the project portfolio"
-          icon={FolderOpen}
-          label="Total Projects"
-          onClick={() => onNavigate('projects')}
-          tone="sky"
-          value={data.totals.projects}
-        />
-        <DashboardMetricCard
-          description="Review suite coverage"
+          delta={analytics?.metricDeltas.suites}
           icon={Layers3}
           label="Total Test Suites"
           onClick={() => onNavigate('test-suites')}
+          periodLabel={analytics?.periodLabel}
           tone="emerald"
           value={data.totals.suites}
         />
         <DashboardMetricCard
-          description="Browse the case library"
+          delta={analytics?.metricDeltas.cases}
           icon={ListChecks}
           label="Total Test Cases"
           onClick={() => onNavigate('test-cases')}
+          periodLabel={analytics?.periodLabel}
           tone="amber"
           value={data.totals.cases}
         />
         <DashboardMetricCard
-          description="Open planning assets"
+          delta={analytics?.metricDeltas.plans}
           icon={ClipboardList}
           label="Total Test Plans"
           onClick={() => onNavigate('test-plans')}
+          periodLabel={analytics?.periodLabel}
           tone="violet"
           value={data.totals.plans}
         />
         <DashboardMetricCard
-          description="Open the execution queue"
+          delta={analytics?.metricDeltas.runs}
+          
           icon={PlaySquare}
           label="Total Test Runs"
           onClick={() => onNavigate('test-runs')}
-          tone="zinc"
+          periodLabel={analytics?.periodLabel}
+          tone="slate"
           value={data.totals.runs}
         />
-        <DashboardMetricCard
-          active={activeMetric === 'passed'}
-          description="Expand recent successful executions"
-          icon={CheckCircle2}
-          label="Passed Tests"
-          onClick={() => setActiveMetric((current) => (current === 'passed' ? null : 'passed'))}
-          tone="emerald"
-          value={data.totals.passed}
-        />
-        <DashboardMetricCard
-          active={activeMetric === 'failed'}
-          description="Open the latest failed executions"
-          icon={XCircle}
-          label="Failed Tests"
-          onClick={() => setActiveMetric((current) => (current === 'failed' ? null : 'failed'))}
-          tone="rose"
-          value={data.totals.failed}
-        />
-        <DashboardMetricCard
-          active={activeMetric === 'pending'}
-          description="Inspect work still waiting for execution"
-          icon={Clock3}
-          label="Pending Executions"
-          onClick={() => setActiveMetric((current) => (current === 'pending' ? null : 'pending'))}
-          tone="amber"
-          value={data.totals.pending}
-        />
+        
       </section>
 
       {activeMetric ? (
-        <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+        <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
           <div className="mb-3 flex items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold text-zinc-950 dark:text-white">{activeMetricTitle}</h2>
+            <h2 className="text-sm font-semibold text-slate-950">{activeMetricTitle}</h2>
             <button
-              className="rounded-lg p-1.5 text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"
+              className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
               onClick={() => setActiveMetric(null)}
               title="Close preview"
               type="button"
@@ -1092,498 +1344,91 @@ export function DashboardPage({ onNavigate, onOpenRun }: DashboardPageProps) {
       ) : null}
 
       {isLoading ? (
+        <AnalyticsSkeleton />
+      ) : analytics ? (
+        <section className="space-y-6">
+          <ChartCard
+            icon={TrendingUp}
+            subtitle={`${analytics.periodLabel} - qualidade geral das execuções`}
+            title="Taxa de Aprovação dos Testes"
+          >
+            <ApprovalRateChart data={analytics.monthlyQuality} />
+          </ChartCard>
+
+          <section className="grid gap-6 lg:grid-cols-2">
+            <ChartCard
+              icon={BarChart3}
+              subtitle={`${analytics.periodLabel} - volume de test runs`}
+              title="Execuções por Mês"
+            >
+              <MonthlyExecutionsChart data={analytics.monthlyExecutions} />
+            </ChartCard>
+
+            <ChartCard
+              icon={PieChart}
+              subtitle={`${analytics.periodLabel} - saúde geral dos resultados`}
+              title="Distribuição dos Resultados"
+            >
+              <ResultDistributionChart data={analytics.resultDistribution} />
+            </ChartCard>
+
+            <ChartCard
+              icon={FolderOpen}
+              subtitle={`${analytics.periodLabel} - top 5 por execuções`}
+              title="Projetos Mais Ativos"
+            >
+              <TopProjectsChart data={analytics.topProjects} />
+            </ChartCard>
+
+            <ChartCard
+              icon={Activity}
+              subtitle="Execuções, casos e resultados recentes"
+              title="Atividade dos Últimos 30 Dias"
+            >
+              <RecentActivityPanel data={analytics.recentActivity} />
+            </ChartCard>
+          </section>
+        </section>
+      ) : (
+        <ChartEmptyState label="Nenhum dado disponível para o período selecionado." />
+      )}
+
+      {isLoading ? (
         <LoadingBlock label="Loading dashboard data" />
       ) : null}
 
-      <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-        <div className="space-y-6">
-          <section className="space-y-3">
-            <SectionHeader actionLabel="View all" onAction={() => onNavigate('projects')}>
-              Recent Projects
-            </SectionHeader>
-            {recentProjects.length === 0 ? <EmptyBlock label="No projects found." /> : null}
-            {recentProjects.map((project) => {
-              const key = `project:${project.id}`;
-              const preview = projectPreviews[project.id];
-              const latestRun = data.latestProjectRuns[project.id];
 
-              return (
-                <ExpandableCard
-                  actions={
-                    <>
-                      <DetailButton onClick={() => setSelectedProject(project)}>Open</DetailButton>
-                      {isAdmin ? (
-                        <DeleteActionButton
-                          onClick={() => requestDashboardDelete({ type: 'project', item: project })}
-                          title="Delete project"
-                        />
-                      ) : null}
-                    </>
-                  }
-                  badge={project.status ? <ProjectStatusBadge status={project.status} /> : null}
-                  icon={
-                    <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-sky-50 text-sky-700 dark:bg-sky-950 dark:text-sky-300">
-                      <FolderOpen className="h-4 w-4" aria-hidden="true" />
-                    </span>
-                  }
-                  isExpanded={Boolean(expandedCards[key])}
-                  key={project.id}
-                  meta={
-                    <span className="grid gap-3 text-xs text-zinc-500 dark:text-zinc-400 sm:grid-cols-4">
-                      <span>Created {formatDate(project.createdAt)}</span>
-                      <span>{project._count?.suites ?? 0} suites</span>
-                      <span>{caseCountByProjectId[project.id] ?? 0} cases</span>
-                      <span className="truncate">
-                        Latest run: {latestRun?.name ?? 'No run yet'}
-                      </span>
-                    </span>
-                  }
-                  onPrimaryClick={() => setSelectedProject(project)}
-                  onToggle={() => handleProjectToggle(project)}
-                  subtitle={project.description || project.key || project.id}
-                  title={project.name}
-                >
-                  {loadingPreviewIds[key] ? (
-                    <LoadingBlock label="Loading linked project data" />
-                  ) : preview ? (
-                    <div className="space-y-4">
-                      <div className="grid gap-3 lg:grid-cols-3">
-                        <div className="space-y-2">
-                          <h3 className="text-xs font-medium uppercase text-zinc-500 dark:text-zinc-400">
-                            Linked suites
-                          </h3>
-                          {preview.suites.length === 0 ? <EmptyBlock label="No suites." /> : null}
-                          {preview.suites.map((suite) => (
-                            <button
-                              className="w-full rounded-lg border border-zinc-200 p-3 text-left transition hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900"
-                              key={suite.id}
-                              onClick={() => void handleOpenSuite(suite)}
-                              type="button"
-                            >
-                              <span className="block text-sm font-medium text-zinc-950 dark:text-white">
-                                {suite.name}
-                              </span>
-                              <span className="mt-1 block text-xs text-zinc-500 dark:text-zinc-400">
-                                {suite._count?.testCases ?? 0} cases
-                              </span>
-                            </button>
-                          ))}
-                        </div>
-                        <div className="space-y-2">
-                          <h3 className="text-xs font-medium uppercase text-zinc-500 dark:text-zinc-400">
-                            Linked test plans
-                          </h3>
-                          {preview.plans.length === 0 ? <EmptyBlock label="No plans." /> : null}
-                          {preview.plans.map((plan) => (
-                            <button
-                              className="w-full rounded-lg border border-zinc-200 p-3 text-left transition hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900"
-                              key={plan.id}
-                              onClick={() => void handleOpenPlan(plan)}
-                              type="button"
-                            >
-                              <span className="block text-sm font-medium text-zinc-950 dark:text-white">
-                                {plan.name}
-                              </span>
-                              <span className="mt-1 block text-xs text-zinc-500 dark:text-zinc-400">
-                                v{plan.version} - {plan.sections?.length ?? 0} sections
-                              </span>
-                            </button>
-                          ))}
-                        </div>
-                        <div className="space-y-2">
-                          <h3 className="text-xs font-medium uppercase text-zinc-500 dark:text-zinc-400">
-                            Latest runs
-                          </h3>
-                          {preview.runs.length === 0 ? <EmptyBlock label="No runs." /> : null}
-                          {preview.runs.map((run) => {
-                            const stats = getRunStats(run);
+      <section className="grid gap-6 lg:grid-cols-1">
 
-                            return (
-                              <button
-                                className="w-full rounded-lg border border-zinc-200 p-3 text-left transition hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900"
-                                key={run.id}
-                                onClick={() => void handleOpenRun(run)}
-                                type="button"
-                              >
-                                <span className="flex items-center justify-between gap-2">
-                                  <span className="truncate text-sm font-medium text-zinc-950 dark:text-white">
-                                    {run.name}
-                                  </span>
-                                  <TestRunStatusBadge status={run.status} />
-                                </span>
-                                <span className="mt-2 block text-xs text-zinc-500 dark:text-zinc-400">
-                                  {stats.passed} passed / {stats.failed} failed
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        <DetailButton onClick={() => setSelectedProject(project)}>Project detail</DetailButton>
-                        <DetailButton onClick={() => onNavigate('test-suites')}>Suites</DetailButton>
-                        <DetailButton onClick={() => onNavigate('test-plans')}>Plans</DetailButton>
-                        <DetailButton onClick={() => onNavigate('test-runs')}>Runs</DetailButton>
-                      </div>
-                    </div>
-                  ) : (
-                    <EmptyBlock label="Expand again to load project links." />
-                  )}
-                </ExpandableCard>
-              );
-            })}
-          </section>
-
-          <section className="space-y-3">
-            <SectionHeader actionLabel="View all" onAction={() => onNavigate('test-suites')}>
-              Test Suites
-            </SectionHeader>
-            {recentSuites.length === 0 ? <EmptyBlock label="No test suites found." /> : null}
-            {recentSuites.map((suite) => {
-              const key = `suite:${suite.id}`;
-              const preview = suitePreviews[suite.id];
-              const summary = getSuiteExecutionSummary(suite.id, preview?.runs ?? data.runs);
-
-              return (
-                <ExpandableCard
-                  actions={
-                    <>
-                      <DetailButton onClick={() => void handleOpenSuite(suite)}>Open</DetailButton>
-                      {isAdmin ? (
-                        <DeleteActionButton
-                          onClick={() => requestDashboardDelete({ type: 'suite', item: suite })}
-                          title="Delete test suite"
-                        />
-                      ) : null}
-                    </>
-                  }
-                  badge={<SuiteStatusBadge status={suite.status} />}
-                  icon={
-                    <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
-                      <Layers3 className="h-4 w-4" aria-hidden="true" />
-                    </span>
-                  }
-                  isExpanded={Boolean(expandedCards[key])}
-                  key={suite.id}
-                  meta={
-                    <span className="grid gap-3 text-xs text-zinc-500 dark:text-zinc-400 sm:grid-cols-4">
-                      <span>{suite.project?.name ?? 'Project'}</span>
-                      <span>{suite._count?.testCases ?? 0} cases</span>
-                      <span>{summary.failed} failed</span>
-                      <span>Updated {formatDate(suite.updatedAt)}</span>
-                    </span>
-                  }
-                  onPrimaryClick={() => void handleOpenSuite(suite)}
-                  onToggle={() => handleSuiteToggle(suite)}
-                  subtitle={suite.description || 'No description'}
-                  title={suite.name}
-                >
-                  {loadingPreviewIds[key] ? (
-                    <LoadingBlock label="Loading suite cases and execution summary" />
-                  ) : preview ? (
-                    <div className="grid gap-4 lg:grid-cols-[1fr_16rem]">
-                      <div>
-                        <h3 className="text-xs font-medium uppercase text-zinc-500 dark:text-zinc-400">
-                          Test cases
-                        </h3>
-                        <div className="mt-3 space-y-2">
-                          {preview.cases.length === 0 ? <EmptyBlock label="No cases in this suite." /> : null}
-                          {preview.cases.map((testCase) => (
-                            <button
-                              className="grid w-full gap-3 rounded-lg border border-zinc-200 p-3 text-left transition hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900 sm:grid-cols-[1fr_auto]"
-                              key={testCase.id}
-                              onClick={() => onNavigate('test-cases')}
-                              type="button"
-                            >
-                              <span className="min-w-0">
-                                <span className="block text-sm font-medium text-zinc-950 dark:text-white">
-                                  {testCase.title}
-                                </span>
-                                <span className="mt-1 block text-xs text-zinc-500 dark:text-zinc-400">
-                                  {testCase.steps?.length ?? 0} steps
-                                </span>
-                              </span>
-                              <span className="flex flex-wrap items-center gap-2">
-                                <PriorityBadge priority={testCase.priority} />
-                                <CaseStatusBadge status={testCase.status} />
-                              </span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      <aside className="space-y-3 rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900/60">
-                        <h3 className="text-xs font-medium uppercase text-zinc-500 dark:text-zinc-400">
-                          Execution summary
-                        </h3>
-                        <div className="grid grid-cols-3 gap-2 text-center text-sm">
-                          <div>
-                            <p className="font-semibold text-zinc-950 dark:text-white">{summary.passed}</p>
-                            <p className="text-xs text-zinc-500 dark:text-zinc-400">Pass</p>
-                          </div>
-                          <div>
-                            <p className="font-semibold text-zinc-950 dark:text-white">{summary.failed}</p>
-                            <p className="text-xs text-zinc-500 dark:text-zinc-400">Fail</p>
-                          </div>
-                          <div>
-                            <p className="font-semibold text-zinc-950 dark:text-white">{summary.pending}</p>
-                            <p className="text-xs text-zinc-500 dark:text-zinc-400">Open</p>
-                          </div>
-                        </div>
-                        <div>
-                          <h4 className="text-xs font-medium uppercase text-zinc-500 dark:text-zinc-400">
-                            Latest updates
-                          </h4>
-                          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">
-                            Suite updated {formatDate(suite.updatedAt)}
-                          </p>
-                          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
-                            {preview.runs[0]?.name ?? 'No recent run linked'}
-                          </p>
-                        </div>
-                      </aside>
-                    </div>
-                  ) : (
-                    <EmptyBlock label="Expand again to load suite details." />
-                  )}
-                </ExpandableCard>
-              );
-            })}
-          </section>
-        </div>
-
-        <aside className="space-y-6">
-          <section className="space-y-3">
-            <SectionHeader actionLabel="View all" onAction={() => onNavigate('test-runs')}>
-              Test Runs
-            </SectionHeader>
-            {recentRuns.length === 0 ? <EmptyBlock label="No test runs found." /> : null}
-            {recentRuns.map((run) => {
-              const key = `run:${run.id}`;
-              const stats = getRunStats(run);
-
-              return (
-                <ExpandableCard
-                  actions={
-                    <>
-                      <DetailButton onClick={() => void handleOpenRun(run)}>Execute</DetailButton>
-                      {isAdmin ? (
-                        <DeleteActionButton
-                          onClick={() => requestDashboardDelete({ type: 'run', item: run })}
-                          title="Delete test run"
-                        />
-                      ) : null}
-                    </>
-                  }
-                  badge={<TestRunStatusBadge status={run.status} />}
-                  icon={
-                    <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-zinc-100 text-zinc-700 dark:bg-zinc-900 dark:text-zinc-200">
-                      <PlaySquare className="h-4 w-4" aria-hidden="true" />
-                    </span>
-                  }
-                  isExpanded={Boolean(expandedCards[key])}
-                  key={run.id}
-                  meta={
-                    <span className="space-y-2">
-                      <span className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
-                        <span>{stats.complete}/{stats.total} executed</span>
-                        <span>{stats.percent}%</span>
-                      </span>
-                      <span className="block h-2 rounded-full bg-zinc-100 dark:bg-zinc-900">
-                        <span
-                          className="block h-2 rounded-full bg-emerald-500"
-                          style={{ width: `${stats.percent}%` }}
-                        />
-                      </span>
-                      <span className="grid grid-cols-3 gap-2 text-xs text-zinc-500 dark:text-zinc-400">
-                        <span>{stats.passed} pass</span>
-                        <span>{stats.failed} fail</span>
-                        <span>{stats.pending} open</span>
-                      </span>
-                    </span>
-                  }
-                  onPrimaryClick={() => void handleOpenRun(run)}
-                  onToggle={() => handleRunToggle(run)}
-                  subtitle={run.project?.name ?? run.testPlan?.name ?? 'Execution'}
-                  title={run.name}
-                >
-                  {loadingPreviewIds[key] ? (
-                    <LoadingBlock label="Loading execution details" />
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="flex flex-wrap gap-2">
-                        <DetailButton onClick={() => void handleOpenRun(run)}>
-                          {openingRunId === run.id ? 'Opening' : 'Open execution'}
-                        </DetailButton>
-                        <DetailButton onClick={() => onNavigate('test-runs')}>Runs page</DetailButton>
-                      </div>
-                      <div className="max-h-96 space-y-4 overflow-y-auto pr-1">
-                        {groupRunResults(run).length === 0 ? (
-                          <EmptyBlock label="No execution results in this run." />
-                        ) : null}
-                        {groupRunResults(run).map((group) => (
-                          <section className="space-y-2" key={group.suiteId}>
-                            <div className="flex items-center justify-between border-b border-zinc-200 pb-2 dark:border-zinc-800">
-                              <h3 className="text-xs font-medium uppercase text-zinc-500 dark:text-zinc-400">
-                                {group.suiteName}
-                              </h3>
-                              <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                                {group.results.length} tests
-                              </span>
-                            </div>
-                            {group.results.map((result) => (
-                              <article
-                                className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800"
-                                key={result.id}
-                              >
-                                <div className="flex flex-wrap items-start justify-between gap-2">
-                                  <div className="min-w-0">
-                                    <p className="text-sm font-medium text-zinc-950 dark:text-white">
-                                      {result.testCase.title}
-                                    </p>
-                                    <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                                      {formatDate(result.executedAt)}
-                                    </p>
-                                  </div>
-                                  <TestResultStatusBadge status={result.status} />
-                                </div>
-                                {result.comment ? (
-                                  <p className="mt-2 line-clamp-3 text-sm text-zinc-600 dark:text-zinc-300">
-                                    {result.comment}
-                                  </p>
-                                ) : null}
-                              </article>
-                            ))}
-                          </section>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </ExpandableCard>
-              );
-            })}
-          </section>
-
-          <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <h2 className="text-sm font-semibold text-zinc-950 dark:text-white">
-                Recent Failed Tests
-              </h2>
-              <AlertTriangle className="h-4 w-4 text-rose-500" aria-hidden="true" />
-            </div>
-            <ResultPreviewList
-              emptyLabel="No failed tests found."
-              onOpenRun={(result) => void handleOpenResultRun(result)}
-              openingRunId={openingRunId}
-              results={data.failedResults}
-              suites={data.suites}
-            />
-          </section>
-        </aside>
-      </section>
-
-      <section className="grid gap-6 lg:grid-cols-2">
-        <section className="space-y-3">
-          <SectionHeader actionLabel="View all" onAction={() => onNavigate('test-plans')}>
-            Test Plans
-          </SectionHeader>
-          {recentPlans.length === 0 ? <EmptyBlock label="No test plans found." /> : null}
-          {recentPlans.map((plan) => {
-            const key = `plan:${plan.id}`;
-            const detail = planDetails[plan.id] ?? plan;
-            const sections = detail.sections ?? [];
-
-            return (
-              <ExpandableCard
-                actions={
-                  <>
-                    <DetailButton onClick={() => void handleOpenPlan(plan)}>Open</DetailButton>
-                    {isAdmin ? (
-                      <DeleteActionButton
-                        onClick={() => requestDashboardDelete({ type: 'plan', item: plan })}
-                        title="Delete test plan"
-                      />
-                    ) : null}
-                  </>
-                }
-                icon={
-                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-violet-50 text-violet-700 dark:bg-violet-950 dark:text-violet-300">
-                    <ClipboardList className="h-4 w-4" aria-hidden="true" />
-                  </span>
-                }
-                isExpanded={Boolean(expandedCards[key])}
-                key={plan.id}
-                meta={
-                  <span className="grid gap-3 text-xs text-zinc-500 dark:text-zinc-400 sm:grid-cols-3">
-                    <span>v{plan.version}</span>
-                    <span>{sections.length} sections</span>
-                    <span>Created {formatDate(plan.createdAt)}</span>
-                  </span>
-                }
-                onPrimaryClick={() => void handleOpenPlan(plan)}
-                onToggle={() => handlePlanToggle(plan)}
-                subtitle={plan.project?.name ?? plan.description ?? 'Test plan'}
-                title={plan.name}
-              >
-                {loadingPreviewIds[key] ? (
-                  <LoadingBlock label="Loading test plan sections" />
-                ) : sections.length > 0 ? (
-                  <div className="space-y-3">
-                    {sections.map((section, index) => (
-                      <article
-                        className="grid gap-3 rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900/60 sm:grid-cols-[2.5rem_1fr]"
-                        key={`${section.title}-${index}`}
-                      >
-                        <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-sm font-semibold text-zinc-600 dark:bg-zinc-950 dark:text-zinc-300">
-                          {index + 1}
-                        </span>
-                        <div className="min-w-0">
-                          <h3 className="text-sm font-semibold text-zinc-950 dark:text-white">
-                            {section.title}
-                          </h3>
-                          <p className="mt-2 whitespace-pre-wrap text-sm text-zinc-700 dark:text-zinc-200">
-                            {section.content}
-                          </p>
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                ) : (
-                  <EmptyBlock label="No sections defined for this plan." />
-                )}
-              </ExpandableCard>
-            );
-          })}
-        </section>
-
-        <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+        <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold text-zinc-950 dark:text-white">Execution Summary</h2>
-            <Activity className="h-4 w-4 text-zinc-400" aria-hidden="true" />
+            <h2 className="text-sm font-semibold text-slate-950">Execution Summary</h2>
+            <Activity className="h-4 w-4 text-slate-400" aria-hidden="true" />
           </div>
           <div className="mt-5 grid grid-cols-4 gap-3 text-center">
             <div>
-              <p className="text-2xl font-semibold text-zinc-950 dark:text-white">
+              <p className="text-2xl font-semibold text-slate-950">
                 {data.totals.passed}
               </p>
-              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Passed</p>
+              <p className="mt-1 text-xs text-slate-500">Passed</p>
             </div>
             <div>
-              <p className="text-2xl font-semibold text-zinc-950 dark:text-white">
+              <p className="text-2xl font-semibold text-slate-950">
                 {data.totals.failed}
               </p>
-              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Failed</p>
+              <p className="mt-1 text-xs text-slate-500">Failed</p>
             </div>
             <div>
-              <p className="text-2xl font-semibold text-zinc-950 dark:text-white">
+              <p className="text-2xl font-semibold text-slate-950">
                 {data.pendingResults.filter((result) => result.testRun?.status === 'IN_PROGRESS').length}
               </p>
-              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Active</p>
+              <p className="mt-1 text-xs text-slate-500">Active</p>
             </div>
             <div>
-              <p className="text-2xl font-semibold text-zinc-950 dark:text-white">
+              <p className="text-2xl font-semibold text-slate-950">
                 {data.totals.pending}
               </p>
-              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Pending</p>
+              <p className="mt-1 text-xs text-slate-500">Pending</p>
             </div>
           </div>
           <div className="mt-5 space-y-2">
@@ -1592,23 +1437,23 @@ export function DashboardPage({ onNavigate, onOpenRun }: DashboardPageProps) {
 
               return (
                 <button
-                  className="w-full rounded-lg border border-zinc-200 p-3 text-left transition hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-900"
+                  className="w-full rounded-lg border border-slate-200 p-3 text-left transition hover:bg-slate-50"
                   key={run.id}
                   onClick={() => void handleOpenRun(run)}
                   type="button"
                 >
                   <span className="flex items-center justify-between gap-3">
-                    <span className="truncate text-sm font-medium text-zinc-950 dark:text-white">
+                    <span className="truncate text-sm font-medium text-slate-950">
                       {run.name}
                     </span>
-                    <span className="inline-flex items-center gap-1 text-xs text-zinc-500 dark:text-zinc-400">
+                    <span className="inline-flex items-center gap-1 text-xs text-slate-500">
                       <Play className="h-3.5 w-3.5" aria-hidden="true" />
                       {stats.percent}%
                     </span>
                   </span>
-                  <span className="mt-2 block h-2 rounded-full bg-zinc-100 dark:bg-zinc-900">
+                  <span className="mt-2 block h-2 rounded-full bg-slate-100">
                     <span
-                      className="block h-2 rounded-full bg-emerald-500"
+                      className="block h-2 rounded-full bg-emerald-600"
                       style={{ width: `${stats.percent}%` }}
                     />
                   </span>
@@ -1623,7 +1468,7 @@ export function DashboardPage({ onNavigate, onOpenRun }: DashboardPageProps) {
         <ProjectDetailPanel
           onClose={() => setSelectedProject(null)}
           onDelete={
-            isAdmin
+            canManageTestAssets
               ? (project) => requestDashboardDelete({ type: 'project', item: project })
               : undefined
           }
@@ -1635,7 +1480,7 @@ export function DashboardPage({ onNavigate, onOpenRun }: DashboardPageProps) {
         <TestPlanDetailPanel
           onClose={() => setSelectedPlan(null)}
           onDelete={
-            isAdmin
+            canManageTestAssets
               ? () => requestDashboardDelete({ type: 'plan', item: selectedPlan })
               : undefined
           }
@@ -1649,7 +1494,7 @@ export function DashboardPage({ onNavigate, onOpenRun }: DashboardPageProps) {
           cases={selectedSuiteDetail.cases}
           onClose={() => setSelectedSuiteDetail(null)}
           onDelete={
-            isAdmin
+            canManageTestAssets
               ? () => requestDashboardDelete({ type: 'suite', item: selectedSuiteDetail.suite })
               : undefined
           }

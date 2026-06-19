@@ -20,7 +20,7 @@ import { ProjectsService } from './projects.service';
 export class ProjectsController {
   constructor(private readonly projectsService: ProjectsService) {}
 
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.QA)
   @Post()
   create(@Body() dto: CreateProjectDto) {
     return this.projectsService.create(dto);
@@ -36,13 +36,13 @@ export class ProjectsController {
     return this.projectsService.findOne(id);
   }
 
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.QA)
   @Patch(':id')
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateProjectDto) {
     return this.projectsService.update(id, dto);
   }
 
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.QA)
   @Delete(':id')
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.projectsService.remove(id);

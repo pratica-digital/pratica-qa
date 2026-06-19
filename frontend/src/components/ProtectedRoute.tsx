@@ -8,7 +8,7 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-50 text-sm text-zinc-500 dark:bg-zinc-950 dark:text-zinc-400">
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm text-slate-500">
         Loading workspace
       </div>
     );

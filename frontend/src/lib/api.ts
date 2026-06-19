@@ -1,6 +1,8 @@
 import type {
   AuthUser,
   CreateUserPayload,
+  DashboardAnalytics,
+  DashboardPeriod,
   CreateProjectPayload,
   CreateTestCasePayload,
   CreateTestPlanPayload,
@@ -15,7 +17,7 @@ import type {
   TestPlan,
   TestResult,
   TestRun,
-  TemporaryPasswordResponse,
+  UserEmailNotificationResponse,
   UpdateTestCasePayload,
   UpdateTestPlanPayload,
   UpdateTestSuitePayload,
@@ -39,8 +41,6 @@ type LoginResponse = {
 
 type PasswordRecoveryResponse = {
   message: string;
-  resetToken?: string;
-  expiresAt?: string;
 };
 
 export class ApiError extends Error {
@@ -174,7 +174,7 @@ export const usersApi = {
     return unwrapList(response);
   },
   create: (token: string, payload: CreateUserPayload) =>
-    apiRequest<TemporaryPasswordResponse>('/users', {
+    apiRequest<UserEmailNotificationResponse>('/users', {
       method: 'POST',
       token,
       body: payload,
@@ -202,7 +202,7 @@ export const usersApi = {
       token,
     }),
   resetPassword: (token: string, userId: string) =>
-    apiRequest<TemporaryPasswordResponse>(`/users/${userId}/reset-password`, {
+    apiRequest<UserEmailNotificationResponse>(`/users/${userId}/reset-password`, {
       method: 'POST',
       token,
     }),
@@ -240,6 +240,13 @@ export const projectsApi = {
   remove: (token: string, projectId: string) =>
     apiRequest<void>(`/projects/${projectId}`, {
       method: 'DELETE',
+      token,
+    }),
+};
+
+export const reportsApi = {
+  dashboardAnalytics: (token: string, period: DashboardPeriod = '12m') =>
+    apiRequest<DashboardAnalytics>(withQuery('/reports/dashboard-analytics', { period }), {
       token,
     }),
 };
@@ -413,6 +420,7 @@ export const testCasesApi = {
 };
 
 export const testRunsApi = {
+  assignableUsers: (token: string) => apiRequest<AuthUser[]>('/test-runs/assignable-users', { token }),
   listPage: async (
     token: string,
     params: { projectId?: string; testPlanId?: string; search?: string; status?: string; limit?: number } = {},

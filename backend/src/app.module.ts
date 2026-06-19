@@ -8,6 +8,7 @@ import { RolesGuard } from './auth/guards/roles.guard';
 import { validateEnv } from './config/env.validation';
 import { HealthModule } from './health/health.module';
 import { ProjectsModule } from './modules/projects/projects.module';
+import { ReportsModule } from './modules/reports/reports.module';
 import { TestCasesModule } from './modules/test-cases/test-cases.module';
 import { TestPlansModule } from './modules/test-plans/test-plans.module';
 import { TestResultsModule } from './modules/test-results/test-results.module';
@@ -27,6 +28,7 @@ import { PrismaModule } from './prisma/prisma.module';
     UsersModule,
     HealthModule,
     ProjectsModule,
+    ReportsModule,
     TestSuitesModule,
     TestCasesModule,
     TestPlansModule,

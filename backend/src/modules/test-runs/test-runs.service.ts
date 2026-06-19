@@ -86,6 +86,17 @@ export class TestRunsService {
     };
   }
 
+  async findAssignableUsers() {
+    const users = await this.usersRepository.findMany({
+      role: UserRole.QA,
+      status: UserStatus.ACTIVE,
+      skip: 0,
+      take: 100,
+    });
+
+    return users.map((user) => this.usersRepository.toPublicUser(user));
+  }
+
   async findOne(id: string) {
     const testRun = await this.testRunsRepository.findById(id);
 
@@ -209,10 +220,10 @@ export class TestRunsService {
   }
 
   private ensureCanExecute(assignedToId: string, user: AuthenticatedUser) {
-    if (user.role === UserRole.ADMIN || assignedToId === user.id) {
+    if (user.role === UserRole.ADMIN || user.role === UserRole.QA || assignedToId === user.id) {
       return;
     }
 
-    throw new ForbiddenException('Only the assigned user or an admin can execute this test run');
+    throw new ForbiddenException('Only QA users or admins can execute this test run');
   }
 }

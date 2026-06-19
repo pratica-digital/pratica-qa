@@ -33,12 +33,12 @@ const initialForm: ProjectForm = {
 function Field({ label, required = false, hint, children }: FieldProps) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+      <label className="text-sm font-medium text-slate-700">
         {label}
-        {required ? <span className="ml-1 text-sky-500">*</span> : null}
+        {required ? <span className="ml-1 text-blue-500">*</span> : null}
       </label>
       {children}
-      {hint ? <p className="text-xs text-zinc-400">{hint}</p> : null}
+      {hint ? <p className="text-xs text-slate-400">{hint}</p> : null}
     </div>
   );
 }
@@ -122,19 +122,19 @@ export function NewProjectModal({ open, onClose, onCreate }: NewProjectModalProp
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] h-dvh w-screen overflow-hidden bg-white dark:bg-zinc-950">
+    <div className="fixed inset-0 z-[9999] h-dvh w-screen overflow-hidden bg-slate-50">
       <div className="flex h-dvh w-full flex-col overflow-hidden p-6">
       <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
-        <div className="flex items-center gap-3 border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-700 dark:bg-zinc-900 dark:text-zinc-200">
+        <div className="flex items-center gap-3 border-b border-slate-200 px-5 py-4">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-700">
             <FolderOpen className="h-4 w-4" aria-hidden="true" />
           </span>
           <div className="min-w-0 flex-1">
-            <h2 className="text-sm font-semibold text-zinc-950 dark:text-white">New project</h2>
-            <p className="truncate text-xs text-zinc-400">Create the QA workspace container</p>
+            <h2 className="text-sm font-semibold text-slate-950">New project</h2>
+            <p className="truncate text-xs text-slate-400">Create the QA workspace container</p>
           </div>
           <button
-            className="rounded-lg p-1.5 text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+            className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
             onClick={onClose}
             title="Close modal"
             type="button"
@@ -146,7 +146,7 @@ export function NewProjectModal({ open, onClose, onCreate }: NewProjectModalProp
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5">
           <Field label="Project name" required>
             <input
-              className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:placeholder:text-zinc-500 dark:focus:border-sky-400"
+              className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
               onChange={(event) => setField('name', event.target.value)}
               placeholder="Customer Web App"
               value={form.name}
@@ -160,7 +160,7 @@ export function NewProjectModal({ open, onClose, onCreate }: NewProjectModalProp
 
           <Field label="Project key" required hint="Example: WEB, API, MOBILE_CHECKOUT">
             <input
-              className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm uppercase text-zinc-900 outline-none transition placeholder:normal-case placeholder:text-zinc-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:placeholder:text-zinc-500 dark:focus:border-sky-400"
+              className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm uppercase text-slate-900 outline-none transition placeholder:normal-case placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
               maxLength={24}
               onChange={(event) => setField('key', normalizeKey(event.target.value))}
               placeholder="WEB"
@@ -175,7 +175,7 @@ export function NewProjectModal({ open, onClose, onCreate }: NewProjectModalProp
 
           <Field label="Description" hint="Optional scope or product context">
             <textarea
-              className="w-full resize-none rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:placeholder:text-zinc-500 dark:focus:border-sky-400"
+              className="w-full resize-none rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
               onChange={(event) => setField('description', event.target.value)}
               placeholder="Primary QA project for the customer web experience"
               rows={3}
@@ -184,11 +184,11 @@ export function NewProjectModal({ open, onClose, onCreate }: NewProjectModalProp
           </Field>
         </div>
 
-        <div className="flex shrink-0 items-center justify-between gap-2 border-t border-zinc-200 px-5 py-4 dark:border-zinc-800">
-          <p className="text-xs text-rose-500">{submitError}</p>
+        <div className="flex shrink-0 items-center justify-between gap-2 border-t border-slate-200 px-5 py-4">
+          <p className="text-xs text-red-500">{submitError}</p>
           <div className="flex items-center justify-end gap-2">
             <button
-              className="h-9 rounded-lg px-4 text-sm font-medium text-zinc-600 transition hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+              className="h-9 rounded-lg bg-slate-600 px-4 text-sm font-medium text-white transition hover:bg-slate-700"
               disabled={submitting}
               onClick={onClose}
               type="button"
@@ -196,7 +196,7 @@ export function NewProjectModal({ open, onClose, onCreate }: NewProjectModalProp
               Cancel
             </button>
             <button
-              className="inline-flex h-9 items-center gap-2 rounded-lg bg-white px-4 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
+              className="inline-flex h-9 items-center gap-2 rounded-lg bg-blue-700 px-4 text-sm font-medium text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
               disabled={submitting}
               onClick={() => void handleSubmit()}
               type="button"

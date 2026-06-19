@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { canManageTests } from '../auth/permissions';
 import { useAuth } from '../auth/useAuth';
 import { DeleteConfirmationModal } from '../components/DeleteConfirmationModal';
 import { TestPlanDetailPanel } from '../components/test-plan/TestPlanDetailPanel';
@@ -114,7 +115,7 @@ export function TestPlansPage() {
     }
   }
 
-  const isAdmin = user?.role === 'ADMIN';
+  const canManageTestAssets = canManageTests(user);
 
   function formatCreatedAt(createdAt?: string) {
     return createdAt ? new Date(createdAt).toLocaleString() : 'Recently created';
@@ -124,8 +125,8 @@ export function TestPlansPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="mt-1 text-2xl font-semibold text-zinc-950">Test Plans</h1>
-          <p className="text-sm font-medium text-zinc-500">Definir a estratégia, escopo e abordagem dos testes</p>
+          <h1 className="mt-1 text-2xl font-semibold text-slate-950">Test Plans</h1>
+          <p className="text-sm font-medium text-slate-500">Definir a estratégia, escopo e abordagem dos testes</p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -136,10 +137,10 @@ export function TestPlansPage() {
             <RefreshCw className="h-4 w-4" /> Refresh
           </button>
           <button
-            className="inline-flex h-9 items-center gap-2 rounded-lg bg-zinc-950 px-3 text-sm text-white"
+            className="inline-flex h-9 items-center gap-2 rounded-lg bg-blue-700 px-3 text-sm text-white"
             onClick={() => setModalOpen(true)}
-            disabled={!isAdmin}
-            title={!isAdmin ? 'Only admins can create test plans' : 'Create test plan'}
+            disabled={!canManageTestAssets}
+            title={!canManageTestAssets ? 'Requires test management permission' : 'Create test plan'}
           >
             <Plus className="h-4 w-4" /> New plan
           </button>
@@ -147,11 +148,11 @@ export function TestPlansPage() {
       </div>
 
       {error ? (
-        <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>
+        <p className="rounded-lg border border-red-200 bg-red-100 px-3 py-2 text-sm text-red-800">{error}</p>
       ) : null}
 
       {success ? (
-        <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+        <p className="rounded-lg border border-emerald-200 bg-emerald-100 px-3 py-2 text-sm text-emerald-800">
           {success}
         </p>
       ) : null}
@@ -163,7 +164,7 @@ export function TestPlansPage() {
           {plans.map((plan) => (
             <article
               key={plan.id}
-              className="cursor-pointer rounded-lg border bg-white p-4 transition hover:border-zinc-300 hover:bg-zinc-50"
+              className="cursor-pointer rounded-lg border bg-white p-4 transition hover:border-slate-300 hover:bg-slate-50"
               onClick={() => void handleOpenPlan(plan)}
               role="button"
               tabIndex={0}
@@ -171,34 +172,34 @@ export function TestPlansPage() {
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <h2 className="text-sm font-semibold">{plan.name}</h2>
-                  <p className="text-xs text-zinc-500">
+                  <p className="text-xs text-slate-500">
                     v{plan.version} - {plan.sections?.length ?? 0} sections
                   </p>
                   {plan.description ? (
-                    <p className="mt-2 line-clamp-2 text-sm text-zinc-600">{plan.description}</p>
+                    <p className="mt-2 line-clamp-2 text-sm text-slate-600">{plan.description}</p>
                   ) : null}
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <div className="hidden text-xs text-zinc-400 sm:block">{formatCreatedAt(plan.createdAt)}</div>
+                  <div className="hidden text-xs text-slate-400 sm:block">{formatCreatedAt(plan.createdAt)}</div>
                   <button
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
                     onClick={(event) => {
                       event.stopPropagation();
                       setEditingPlan(plan);
                     }}
-                    title={isAdmin ? 'Edit test plan' : 'View test plan'}
+                    title={canManageTestAssets ? 'Edit test plan' : 'View test plan'}
                     type="button"
                   >
                     <Pencil className="h-4 w-4" aria-hidden="true" />
                   </button>
                   <button
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-40"
-                    disabled={!isAdmin}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-100 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
+                    disabled={!canManageTestAssets}
                     onClick={(event) => {
                       event.stopPropagation();
                       requestPlanDelete(plan);
                     }}
-                    title={isAdmin ? 'Delete test plan' : 'Only admins can delete test plans'}
+                    title={canManageTestAssets ? 'Delete test plan' : 'Requires test management permission'}
                     type="button"
                   >
                     <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -217,7 +218,7 @@ export function TestPlansPage() {
       {selectedPlan ? (
         <TestPlanDetailPanel
           onClose={() => setSelectedPlan(null)}
-          onDelete={isAdmin ? () => requestPlanDelete(selectedPlan) : undefined}
+          onDelete={canManageTestAssets ? () => requestPlanDelete(selectedPlan) : undefined}
           onEdit={() => {
             setEditingPlan(selectedPlan);
             setSelectedPlan(null);
@@ -231,7 +232,7 @@ export function TestPlansPage() {
           key={editingPlan.id}
           onClose={() => setEditingPlan(null)}
           onSave={handleSavePlan}
-          readOnly={!isAdmin}
+          readOnly={!canManageTestAssets}
           testPlan={editingPlan}
         />
       ) : null}

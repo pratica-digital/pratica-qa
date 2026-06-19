@@ -125,10 +125,10 @@ export class TestResultsService {
   }
 
   private ensureCanExecuteResult(assignedToId: string, user: AuthenticatedUser) {
-    if (user.role === UserRole.ADMIN || assignedToId === user.id) {
+    if (user.role === UserRole.ADMIN || user.role === UserRole.QA || assignedToId === user.id) {
       return;
     }
 
-    throw new ForbiddenException('Only the assigned user or an admin can update this test result');
+    throw new ForbiddenException('Only QA users or admins can update this test result');
   }
 }

@@ -84,24 +84,24 @@ export function ProjectDetailPanel({ project, onClose, onDelete }: ProjectDetail
   }, [project.id, token]);
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] h-dvh w-screen overflow-hidden bg-white dark:bg-zinc-950">
+    <div className="fixed inset-0 z-[9999] h-dvh w-screen overflow-hidden bg-slate-50">
       <div className="flex h-dvh w-full flex-col overflow-hidden p-6">
         <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
-          <div className="flex shrink-0 items-center gap-3 border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-700 dark:bg-zinc-900 dark:text-zinc-200">
+          <div className="flex shrink-0 items-center gap-3 border-b border-slate-200 px-5 py-4">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-700">
             <FolderOpen className="h-4 w-4" aria-hidden="true" />
           </span>
           <div className="min-w-0 flex-1">
-            <h2 className="truncate text-sm font-semibold text-zinc-950 dark:text-white">
+            <h2 className="truncate text-sm font-semibold text-slate-950">
               {projectDetail.name}
             </h2>
-            <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">
+            <p className="truncate text-xs text-slate-500">
               {projectDetail.key ?? projectDetail.id}
             </p>
           </div>
           {onDelete ? (
             <button
-              className="inline-flex h-8 items-center gap-2 rounded-lg border border-rose-200 px-3 text-sm font-medium text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950"
+              className="inline-flex h-8 items-center gap-2 rounded-lg border border-red-600 bg-red-600 px-3 text-sm font-medium text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
               onClick={() => onDelete(projectDetail)}
               title="Delete project"
               type="button"
@@ -111,7 +111,7 @@ export function ProjectDetailPanel({ project, onClose, onDelete }: ProjectDetail
             </button>
           ) : null}
           <button
-            className="rounded-lg p-1.5 text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+            className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
             onClick={onClose}
             title="Close"
             type="button"
@@ -122,37 +122,37 @@ export function ProjectDetailPanel({ project, onClose, onDelete }: ProjectDetail
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
           {error ? (
-            <p className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-200">
+            <p className="mb-4 rounded-lg border border-red-200 bg-red-100 px-3 py-2 text-sm text-red-800">
               {error}
             </p>
           ) : null}
 
           <section className="grid gap-3 md:grid-cols-4">
-            <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900/60 md:col-span-2">
-              <p className="text-xs font-medium uppercase text-zinc-500 dark:text-zinc-400">Project info</p>
-              <p className="mt-2 text-sm text-zinc-700 dark:text-zinc-200">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 md:col-span-2">
+              <p className="text-xs font-medium uppercase text-slate-500">Project info</p>
+              <p className="mt-2 text-sm text-slate-700">
                 {projectDetail.description || 'No description'}
               </p>
-              <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400">
+              <p className="mt-3 text-xs text-slate-500">
                 Updated {formatUpdatedAt(projectDetail.updatedAt)}
               </p>
             </div>
-            <div className="rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">Suites</p>
-              <p className="mt-1 text-2xl font-semibold text-zinc-950 dark:text-white">
+            <div className="rounded-lg border border-slate-200 bg-white p-3">
+              <p className="text-xs text-slate-500">Suites</p>
+              <p className="mt-1 text-2xl font-semibold text-slate-950">
                 {projectDetail._count?.suites ?? suites.length}
               </p>
             </div>
-            <div className="rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
-              <p className="text-xs text-zinc-500 dark:text-zinc-400">Plans / Runs</p>
-              <p className="mt-1 text-2xl font-semibold text-zinc-950 dark:text-white">
+            <div className="rounded-lg border border-slate-200 bg-white p-3">
+              <p className="text-xs text-slate-500">Plans / Runs</p>
+              <p className="mt-1 text-2xl font-semibold text-slate-950">
                 {projectDetail._count?.testPlans ?? plans.length}/{projectDetail._count?.testRuns ?? runs.length}
               </p>
             </div>
           </section>
 
           {isLoading ? (
-            <p className="mt-5 rounded-lg border border-zinc-200 bg-white px-3 py-4 text-center text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400">
+            <p className="mt-5 rounded-lg border border-slate-200 bg-white px-3 py-4 text-center text-sm text-slate-500">
               Loading project details
             </p>
           ) : null}
@@ -160,22 +160,22 @@ export function ProjectDetailPanel({ project, onClose, onDelete }: ProjectDetail
           <div className="mt-5 grid gap-5 lg:grid-cols-3">
             <section>
               <div className="flex items-center gap-2">
-                <Layers3 className="h-4 w-4 text-zinc-400" aria-hidden="true" />
-                <h3 className="text-sm font-semibold text-zinc-950 dark:text-white">Test suites</h3>
+                <Layers3 className="h-4 w-4 text-slate-400" aria-hidden="true" />
+                <h3 className="text-sm font-semibold text-slate-950">Test suites</h3>
               </div>
               <div className="mt-3 space-y-2">
                 {suites.length === 0 ? (
-                  <p className="rounded-lg border border-dashed border-zinc-300 px-3 py-4 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
+                  <p className="rounded-lg border border-dashed border-slate-300 px-3 py-4 text-sm text-slate-500">
                     No suites.
                   </p>
                 ) : null}
                 {suites.map((suite) => (
                   <article
-                    className="rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950"
+                    className="rounded-lg border border-slate-200 bg-white p-3"
                     key={suite.id}
                   >
-                    <p className="text-sm font-medium text-zinc-950 dark:text-white">{suite.name}</p>
-                    <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                    <p className="text-sm font-medium text-slate-950">{suite.name}</p>
+                    <p className="mt-1 text-xs text-slate-500">
                       {suite._count?.testCases ?? 0} cases
                     </p>
                   </article>
@@ -185,22 +185,22 @@ export function ProjectDetailPanel({ project, onClose, onDelete }: ProjectDetail
 
             <section>
               <div className="flex items-center gap-2">
-                <ClipboardList className="h-4 w-4 text-zinc-400" aria-hidden="true" />
-                <h3 className="text-sm font-semibold text-zinc-950 dark:text-white">Test plans</h3>
+                <ClipboardList className="h-4 w-4 text-slate-400" aria-hidden="true" />
+                <h3 className="text-sm font-semibold text-slate-950">Test plans</h3>
               </div>
               <div className="mt-3 space-y-2">
                 {plans.length === 0 ? (
-                  <p className="rounded-lg border border-dashed border-zinc-300 px-3 py-4 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
+                  <p className="rounded-lg border border-dashed border-slate-300 px-3 py-4 text-sm text-slate-500">
                     No plans.
                   </p>
                 ) : null}
                 {plans.map((plan) => (
                   <article
-                    className="rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950"
+                    className="rounded-lg border border-slate-200 bg-white p-3"
                     key={plan.id}
                   >
-                    <p className="text-sm font-medium text-zinc-950 dark:text-white">{plan.name}</p>
-                    <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                    <p className="text-sm font-medium text-slate-950">{plan.name}</p>
+                    <p className="mt-1 text-xs text-slate-500">
                       v{plan.version} - {plan.sections?.length ?? 0} sections
                     </p>
                   </article>
@@ -210,22 +210,22 @@ export function ProjectDetailPanel({ project, onClose, onDelete }: ProjectDetail
 
             <section>
               <div className="flex items-center gap-2">
-                <PlaySquare className="h-4 w-4 text-zinc-400" aria-hidden="true" />
-                <h3 className="text-sm font-semibold text-zinc-950 dark:text-white">Test runs</h3>
+                <PlaySquare className="h-4 w-4 text-slate-400" aria-hidden="true" />
+                <h3 className="text-sm font-semibold text-slate-950">Test runs</h3>
               </div>
               <div className="mt-3 space-y-2">
                 {runs.length === 0 ? (
-                  <p className="rounded-lg border border-dashed border-zinc-300 px-3 py-4 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
+                  <p className="rounded-lg border border-dashed border-slate-300 px-3 py-4 text-sm text-slate-500">
                     No runs.
                   </p>
                 ) : null}
                 {runs.map((run) => (
                   <article
-                    className="rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950"
+                    className="rounded-lg border border-slate-200 bg-white p-3"
                     key={run.id}
                   >
-                    <p className="text-sm font-medium text-zinc-950 dark:text-white">{run.name}</p>
-                    <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                    <p className="text-sm font-medium text-slate-950">{run.name}</p>
+                    <p className="mt-1 text-xs text-slate-500">
                       {run.status} - {run.results?.length ?? 0} results
                     </p>
                   </article>

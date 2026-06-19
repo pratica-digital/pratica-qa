@@ -195,14 +195,14 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">Case library</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-normal text-zinc-950 dark:text-white">
+          <p className="text-sm font-medium text-slate-500">Case library</p>
+          <h1 className="mt-1 text-2xl font-semibold tracking-normal text-slate-950">
             Test Cases
           </h1>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <button
-            className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-zinc-900"
+            className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-slate-600 bg-slate-600 px-3 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
             disabled={isLoading}
             onClick={() => void fetchData()}
             type="button"
@@ -211,7 +211,7 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
             Refresh
           </button>
           <button
-            className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-zinc-950 px-3 text-sm font-medium text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
+            className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-blue-700 px-3 text-sm font-medium text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
             disabled={!canEdit}
             onClick={() => setModalOpen(true)}
             title={isReadOnly ? 'Viewer mode is read-only' : 'Create test case'}
@@ -224,36 +224,36 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <label className="flex h-10 w-full items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400 sm:max-w-md">
+        <label className="flex h-10 w-full items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-500 sm:max-w-md">
           <Search className="h-4 w-4" aria-hidden="true" />
           <input
-            className="w-full border-0 bg-transparent p-0 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 dark:text-white"
+            className="w-full border-0 bg-transparent p-0 text-sm text-slate-900 outline-none placeholder:text-slate-400"
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Search test cases"
             type="search"
             value={search}
           />
         </label>
-        <span className="inline-flex h-10 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-600 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300">
+        <span className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-600">
           <Filter className="h-4 w-4" aria-hidden="true" />
           {visibleCases.length} shown
         </span>
       </div>
 
       {error ? (
-        <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-200">
+        <p className="rounded-lg border border-red-200 bg-red-100 px-3 py-2 text-sm text-red-800">
           {error}
         </p>
       ) : null}
 
       {success ? (
-        <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
+        <p className="rounded-lg border border-emerald-200 bg-emerald-100 px-3 py-2 text-sm text-emerald-800">
           {success}
         </p>
       ) : null}
 
       {isLoading ? (
-        <div className="rounded-lg border border-zinc-200 bg-white p-8 text-center text-sm text-zinc-500 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400">
+        <div className="rounded-lg border border-slate-200 bg-white p-8 text-center text-sm text-slate-500 shadow-sm">
           Loading test cases
         </div>
       ) : visibleCases.length > 0 ? (
@@ -261,34 +261,34 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
           <section className="grid gap-3 md:grid-cols-2">
             {visibleCases.slice(0, 2).map((testCase) => (
               <article
-                className="cursor-pointer rounded-lg border border-zinc-200 bg-white p-4 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-900/60"
+                className="cursor-pointer rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
                 key={testCase.id}
                 onClick={() => void handleOpenCase(testCase)}
                 role="button"
                 tabIndex={0}
               >
                 <div className="flex items-start gap-3">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-800">
                     <ListChecks className="h-4 w-4" aria-hidden="true" />
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                      <span className="text-xs font-medium text-slate-500">
                         {testCase.id}
                       </span>
                       <PriorityBadge priority={testCase.priority} />
                       <CaseStatusBadge status={testCase.status} />
                     </div>
-                    <h2 className="mt-2 text-sm font-semibold text-zinc-950 dark:text-white">
+                    <h2 className="mt-2 text-sm font-semibold text-slate-950">
                       {testCase.title}
                     </h2>
-                    <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                    <p className="mt-1 text-xs text-slate-500">
                       {getSuiteName(testCase, suites)} - {getStepCount(testCase)} steps
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
                     <button
-                      className="rounded-lg p-2 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"
+                      className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
                       disabled={!canEdit}
                       onClick={(event) => {
                         event.stopPropagation();
@@ -300,7 +300,7 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
                       <Pencil className="h-4 w-4" aria-hidden="true" />
                     </button>
                     <button
-                      className="rounded-lg p-2 text-zinc-400 hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-rose-950 dark:hover:text-rose-300"
+                      className="rounded-lg p-2 text-slate-400 hover:bg-red-100 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
                       disabled={!canEdit}
                       onClick={(event) => {
                         event.stopPropagation();
@@ -317,13 +317,13 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
             ))}
           </section>
 
-          <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
-            <div className="border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
-              <h2 className="text-sm font-semibold text-zinc-950 dark:text-white">Case table</h2>
+          <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-200 px-4 py-3">
+              <h2 className="text-sm font-semibold text-slate-950">Case table</h2>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[980px] text-left text-sm">
-                <thead className="bg-zinc-50 text-xs font-medium uppercase text-zinc-500 dark:bg-zinc-900/70 dark:text-zinc-400">
+                <thead className="bg-slate-100 text-xs font-medium uppercase text-slate-700">
                   <tr>
                     <th className="px-4 py-3">Case</th>
                     <th className="px-4 py-3">Suite</th>
@@ -334,18 +334,18 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
                     <th className="px-4 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                <tbody className="divide-y divide-slate-200">
                   {visibleCases.map((testCase) => (
                     <tr
-                      className="cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-900/60"
+                      className="cursor-pointer hover:bg-slate-50"
                       key={testCase.id}
                       onClick={() => void handleOpenCase(testCase)}
                     >
                       <td className="px-4 py-3">
-                        <p className="font-medium text-zinc-950 dark:text-white">{testCase.title}</p>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400">{testCase.id}</p>
+                        <p className="font-medium text-slate-950">{testCase.title}</p>
+                        <p className="text-xs text-slate-500">{testCase.id}</p>
                       </td>
-                      <td className="px-4 py-3 text-zinc-600 dark:text-zinc-300">
+                      <td className="px-4 py-3 text-slate-600">
                         {getSuiteName(testCase, suites)}
                       </td>
                       <td className="px-4 py-3">
@@ -354,7 +354,7 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
                       <td className="px-4 py-3">
                         <CaseStatusBadge status={testCase.status} />
                       </td>
-                      <td className="px-4 py-3 text-zinc-600 dark:text-zinc-300">
+                      <td className="px-4 py-3 text-slate-600">
                         {getStepCount(testCase)}
                       </td>
 
@@ -362,7 +362,7 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
                         <div className="flex flex-wrap gap-1.5">
                           {(testCase.tags ?? []).map((tag) => (
                             <span
-                              className="inline-flex h-6 items-center gap-1 rounded-md border border-zinc-200 px-2 text-xs text-zinc-600 dark:border-zinc-800 dark:text-zinc-300"
+                              className="inline-flex h-6 items-center gap-1 rounded-md border border-slate-200 px-2 text-xs text-slate-600"
                               key={tag}
                             >
                               <Tag className="h-3 w-3" aria-hidden="true" />
@@ -373,7 +373,7 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
                       </td>
                       <td className="px-4 py-3 text-right">
                         <button
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-zinc-900 dark:hover:text-zinc-200"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
                           disabled={!canEdit}
                           onClick={(event) => {
                             event.stopPropagation();
@@ -385,7 +385,7 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
                           <Pencil className="h-4 w-4" aria-hidden="true" />
                         </button>
                         <button
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-40 dark:hover:bg-rose-950 dark:hover:text-rose-300"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-100 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
                           disabled={!canEdit}
                           onClick={(event) => {
                             event.stopPropagation();
@@ -405,9 +405,9 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
           </div>
         </>
       ) : (
-        <div className="rounded-lg border border-zinc-200 bg-white p-8 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
-          <h2 className="text-sm font-semibold text-zinc-950 dark:text-white">No test cases found</h2>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+        <div className="rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
+          <h2 className="text-sm font-semibold text-slate-950">No test cases found</h2>
+          <p className="mt-1 text-sm text-slate-500">
             Adjust the search or create the first case.
           </p>
         </div>

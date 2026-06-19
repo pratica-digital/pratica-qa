@@ -72,50 +72,50 @@ const STATUS_CONFIG: Record<
   PASSED: {
     label: 'Passed',
     icon: CheckCircle2,
-    cardBg: 'bg-emerald-50 dark:bg-emerald-950/30',
-    cardBorder: 'border-emerald-200 dark:border-emerald-800',
-    cardText: 'text-emerald-700 dark:text-emerald-300',
-    badgeBg: 'bg-emerald-100 dark:bg-emerald-900/50',
-    badgeText: 'text-emerald-700 dark:text-emerald-300',
-    sectionBorder: 'border-emerald-200 dark:border-emerald-800',
-    sectionTitle: 'text-emerald-700 dark:text-emerald-300',
-    dot: 'bg-emerald-500',
+    cardBg: 'bg-emerald-100',
+    cardBorder: 'border-emerald-200',
+    cardText: 'text-emerald-800',
+    badgeBg: 'bg-emerald-100',
+    badgeText: 'text-emerald-800',
+    sectionBorder: 'border-emerald-200',
+    sectionTitle: 'text-emerald-800',
+    dot: 'bg-emerald-600',
   },
   FAILED: {
     label: 'Failed',
     icon: XCircle,
-    cardBg: 'bg-rose-50 dark:bg-rose-950/30',
-    cardBorder: 'border-rose-200 dark:border-rose-800',
-    cardText: 'text-rose-700 dark:text-rose-300',
-    badgeBg: 'bg-rose-100 dark:bg-rose-900/50',
-    badgeText: 'text-rose-700 dark:text-rose-300',
-    sectionBorder: 'border-rose-200 dark:border-rose-800',
-    sectionTitle: 'text-rose-700 dark:text-rose-300',
-    dot: 'bg-rose-500',
+    cardBg: 'bg-red-100',
+    cardBorder: 'border-red-200',
+    cardText: 'text-red-800',
+    badgeBg: 'bg-red-100',
+    badgeText: 'text-red-800',
+    sectionBorder: 'border-red-200',
+    sectionTitle: 'text-red-800',
+    dot: 'bg-red-600',
   },
   SKIPPED: {
     label: 'Skipped',
     icon: MinusCircle,
-    cardBg: 'bg-amber-50 dark:bg-amber-950/30',
-    cardBorder: 'border-amber-200 dark:border-amber-800',
-    cardText: 'text-amber-700 dark:text-amber-300',
-    badgeBg: 'bg-amber-100 dark:bg-amber-900/50',
-    badgeText: 'text-amber-700 dark:text-amber-300',
-    sectionBorder: 'border-amber-200 dark:border-amber-800',
-    sectionTitle: 'text-amber-700 dark:text-amber-300',
+    cardBg: 'bg-amber-100',
+    cardBorder: 'border-amber-200',
+    cardText: 'text-amber-800',
+    badgeBg: 'bg-amber-100',
+    badgeText: 'text-amber-800',
+    sectionBorder: 'border-amber-200',
+    sectionTitle: 'text-amber-800',
     dot: 'bg-amber-400',
   },
   PENDING: {
     label: 'Not Run',
     icon: Clock,
-    cardBg: 'bg-zinc-50 dark:bg-zinc-900/30',
-    cardBorder: 'border-zinc-200 dark:border-zinc-700',
-    cardText: 'text-zinc-500 dark:text-zinc-400',
-    badgeBg: 'bg-zinc-100 dark:bg-zinc-800',
-    badgeText: 'text-zinc-500 dark:text-zinc-400',
-    sectionBorder: 'border-zinc-200 dark:border-zinc-700',
-    sectionTitle: 'text-zinc-500 dark:text-zinc-400',
-    dot: 'bg-zinc-400',
+    cardBg: 'bg-slate-50',
+    cardBorder: 'border-slate-200',
+    cardText: 'text-slate-500',
+    badgeBg: 'bg-slate-100',
+    badgeText: 'text-slate-500',
+    sectionBorder: 'border-slate-200',
+    sectionTitle: 'text-slate-500',
+    dot: 'bg-slate-400',
   },
 };
 
@@ -146,13 +146,13 @@ function SummaryCard({
       </div>
       <p className={`text-3xl font-bold ${cfg.cardText}`}>{count}</p>
       <div className="space-y-1">
-        <div className="h-1.5 w-full rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
+        <div className="h-1.5 w-full rounded-full bg-slate-200 overflow-hidden">
           <div
             className={`h-1.5 rounded-full ${cfg.dot}`}
             style={{ width: `${pct}%`, transition: 'width 0.6s ease' }}
           />
         </div>
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">{pct}% do total</p>
+        <p className="text-xs text-slate-500">{pct}% do total</p>
       </div>
     </div>
   );
@@ -167,7 +167,7 @@ function TestCaseAccordion({ result }: { result: TestResult }) {
 
   return (
     <div
-      className={`rounded-lg border ${cfg.sectionBorder} bg-white dark:bg-zinc-950 overflow-hidden transition-shadow hover:shadow-sm`}
+      className={`rounded-lg border ${cfg.sectionBorder} bg-white overflow-hidden transition-shadow hover:shadow-sm`}
     >
       <button
         className="w-full flex items-center gap-3 px-4 py-3 text-left"
@@ -177,11 +177,11 @@ function TestCaseAccordion({ result }: { result: TestResult }) {
       >
         <Icon className={`h-4 w-4 shrink-0 ${cfg.cardText}`} aria-hidden="true" />
         <div className="flex-1 min-w-0">
-          <span className="text-sm font-semibold text-zinc-950 dark:text-white truncate block">
+          <span className="text-sm font-semibold text-slate-950 truncate block">
             {tc.title}
           </span>
           {result.executedAt && (
-            <span className="text-xs text-zinc-500 dark:text-zinc-400">
+            <span className="text-xs text-slate-500">
               Executado em {fmt(result.executedAt)}
               {result.executedBy ? ` · ${result.executedBy.name}` : ''}
             </span>
@@ -193,38 +193,38 @@ function TestCaseAccordion({ result }: { result: TestResult }) {
           {cfg.label}
         </span>
         {open ? (
-          <ChevronUp className="h-4 w-4 shrink-0 text-zinc-400" />
+          <ChevronUp className="h-4 w-4 shrink-0 text-slate-400" />
         ) : (
-          <ChevronDown className="h-4 w-4 shrink-0 text-zinc-400" />
+          <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
         )}
       </button>
 
       {open && (
-        <div className="px-4 pb-4 border-t border-zinc-100 dark:border-zinc-800 space-y-4 pt-4">
+        <div className="px-4 pb-4 border-t border-slate-100 space-y-4 pt-4">
           {tc.description && (
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400 mb-1">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">
                 Descrição
               </p>
-              <p className="text-sm text-zinc-700 dark:text-zinc-300">{tc.description}</p>
+              <p className="text-sm text-slate-700">{tc.description}</p>
             </div>
           )}
 
           {tc.steps && tc.steps.length > 0 && (
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400 mb-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">
                 Steps
               </p>
               <ol className="space-y-2">
                 {tc.steps.map((step) => (
                   <li key={step.id} className="flex gap-3 text-sm">
-                    <span className="shrink-0 flex h-5 w-5 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800 text-xs font-semibold text-zinc-600 dark:text-zinc-400">
+                    <span className="shrink-0 flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600">
                       {step.order}
                     </span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-zinc-700 dark:text-zinc-300">{step.description}</p>
+                      <p className="text-slate-700">{step.description}</p>
                       {step.expectedResult && (
-                        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400 italic">
+                        <p className="mt-1 text-xs text-slate-500 italic">
                           Esperado: {step.expectedResult}
                         </p>
                       )}
@@ -237,19 +237,19 @@ function TestCaseAccordion({ result }: { result: TestResult }) {
 
           {tc.expectedResult && (
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400 mb-1">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">
                 Resultado Esperado
               </p>
-              <p className="text-sm text-zinc-700 dark:text-zinc-300">{tc.expectedResult}</p>
+              <p className="text-sm text-slate-700">{tc.expectedResult}</p>
             </div>
           )}
 
           {result.comment && (
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400 mb-1">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">
                 Observações
               </p>
-              <p className="text-sm text-zinc-700 dark:text-zinc-300">{result.comment}</p>
+              <p className="text-sm text-slate-700">{result.comment}</p>
             </div>
           )}
         </div>
@@ -281,13 +281,13 @@ function StatusSection({
         <Icon className={`h-4 w-4 ${cfg.sectionTitle}`} aria-hidden="true" />
         <h2 className={`text-sm font-semibold ${cfg.sectionTitle}`}>
           {cfg.label}
-          <span className="ml-2 text-zinc-400 font-normal">({results.length})</span>
+          <span className="ml-2 text-slate-400 font-normal">({results.length})</span>
         </h2>
         <div className={`flex-1 h-px ${cfg.sectionBorder} border-t`} />
         {collapsed ? (
-          <ChevronDown className="h-4 w-4 text-zinc-400" />
+          <ChevronDown className="h-4 w-4 text-slate-400" />
         ) : (
-          <ChevronUp className="h-4 w-4 text-zinc-400" />
+          <ChevronUp className="h-4 w-4 text-slate-400" />
         )}
       </button>
 
@@ -644,8 +644,8 @@ export function TestRunReportPage({ testRunId, onBack }: TestRunReportPageProps)
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-3">
-        <Loader2 className="h-6 w-6 animate-spin text-zinc-400" />
-        <p className="text-sm text-zinc-500 dark:text-zinc-400">Carregando relatório…</p>
+        <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+        <p className="text-sm text-slate-500">Carregando relatório…</p>
       </div>
     );
   }
@@ -655,14 +655,14 @@ export function TestRunReportPage({ testRunId, onBack }: TestRunReportPageProps)
     return (
       <div className="space-y-4">
         <button
-          className="inline-flex items-center gap-2 text-sm text-zinc-500 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
+          className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-950"
           onClick={onBack}
           type="button"
         >
           <ArrowLeft className="h-4 w-4" />
           Voltar
         </button>
-        <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300 flex items-center gap-2">
+        <div className="rounded-lg border border-red-200 bg-red-100 px-4 py-3 text-sm text-red-800 flex items-center gap-2">
           <AlertTriangle className="h-4 w-4 shrink-0" />
           {error || 'Relatório não encontrado.'}
         </div>
@@ -686,7 +686,7 @@ export function TestRunReportPage({ testRunId, onBack }: TestRunReportPageProps)
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <button
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-500 hover:bg-zinc-50 hover:text-zinc-950 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-white"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-950"
             onClick={onBack}
             title="Voltar"
             type="button"
@@ -694,8 +694,8 @@ export function TestRunReportPage({ testRunId, onBack }: TestRunReportPageProps)
             <ArrowLeft className="h-4 w-4" />
           </button>
           <div>
-            <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Relatório</p>
-            <h1 className="text-lg font-semibold text-zinc-950 dark:text-white leading-tight">
+            <p className="text-xs font-medium text-slate-500">Relatório</p>
+            <h1 className="text-lg font-semibold text-slate-950 leading-tight">
               {testRun.name}
             </h1>
           </div>
@@ -703,7 +703,7 @@ export function TestRunReportPage({ testRunId, onBack }: TestRunReportPageProps)
 
         <div className="flex items-center gap-2">
           <button
-            className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-600 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-900"
+            className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-slate-600 bg-slate-600 px-3 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
             disabled={isLoading}
             onClick={() => void refetch()}
             type="button"
@@ -713,7 +713,7 @@ export function TestRunReportPage({ testRunId, onBack }: TestRunReportPageProps)
           </button>
 
           <button
-            className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-zinc-950 px-4 text-sm font-medium text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
+            className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-blue-700 px-4 text-sm font-medium text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
             disabled={isExporting}
             onClick={() => void handleExport()}
             type="button"
@@ -729,10 +729,10 @@ export function TestRunReportPage({ testRunId, onBack }: TestRunReportPageProps)
       </div>
 
       {/* Header info */}
-      <div className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950 overflow-hidden shadow-sm">
-        <div className="border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50 px-5 py-3 flex items-center gap-2">
-          <FileText className="h-4 w-4 text-zinc-400" />
-          <span className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+      <div className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
+        <div className="border-b border-slate-100 bg-slate-50 px-5 py-3 flex items-center gap-2">
+          <FileText className="h-4 w-4 text-slate-400" />
+          <span className="text-sm font-semibold text-slate-700">
             Informações do Run
           </span>
         </div>
@@ -780,11 +780,11 @@ export function TestRunReportPage({ testRunId, onBack }: TestRunReportPageProps)
             },
           ].map(({ icon: Icon, label, value }) => (
             <div key={label}>
-              <p className="flex items-center gap-1.5 text-xs font-medium text-zinc-400 dark:text-zinc-500 mb-1">
+              <p className="flex items-center gap-1.5 text-xs font-medium text-slate-400 mb-1">
                 <Icon className="h-3 w-3" aria-hidden="true" />
                 {label}
               </p>
-              <p className="text-sm font-medium text-zinc-950 dark:text-white truncate">{value}</p>
+              <p className="text-sm font-medium text-slate-950 truncate">{value}</p>
             </div>
           ))}
         </div>
@@ -800,17 +800,17 @@ export function TestRunReportPage({ testRunId, onBack }: TestRunReportPageProps)
 
       {/* Progress bar */}
       {summary.total > 0 && (
-        <div className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950 p-4 shadow-sm">
-          <div className="flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 mb-2">
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
             <span className="font-medium">Progresso geral</span>
             <span>
               {summary.passed + summary.failed + summary.skipped} / {summary.total} executados
             </span>
           </div>
-          <div className="h-2.5 w-full rounded-full overflow-hidden bg-zinc-100 dark:bg-zinc-900 flex">
+          <div className="h-2.5 w-full rounded-full overflow-hidden bg-slate-100 flex">
             {[
-              { count: summary.passed, color: 'bg-emerald-500' },
-              { count: summary.failed, color: 'bg-rose-500' },
+              { count: summary.passed, color: 'bg-emerald-600' },
+              { count: summary.failed, color: 'bg-red-600' },
               { count: summary.skipped, color: 'bg-amber-400' },
             ].map(({ count, color }) =>
               count > 0 ? (
@@ -824,15 +824,15 @@ export function TestRunReportPage({ testRunId, onBack }: TestRunReportPageProps)
           </div>
           <div className="mt-2 flex flex-wrap gap-4">
             {[
-              { label: 'Passed', count: summary.passed, dot: 'bg-emerald-500' },
-              { label: 'Failed', count: summary.failed, dot: 'bg-rose-500' },
+              { label: 'Passed', count: summary.passed, dot: 'bg-emerald-600' },
+              { label: 'Failed', count: summary.failed, dot: 'bg-red-600' },
               { label: 'Skipped', count: summary.skipped, dot: 'bg-amber-400' },
-              { label: 'Not Run', count: summary.notRun, dot: 'bg-zinc-400' },
+              { label: 'Not Run', count: summary.notRun, dot: 'bg-slate-400' },
             ].map(({ label, count, dot }) => (
               <div key={label} className="flex items-center gap-1.5">
                 <span className={`h-2 w-2 rounded-full ${dot}`} />
-                <span className="text-xs text-zinc-600 dark:text-zinc-400">
-                  {label}: <strong className="text-zinc-900 dark:text-white">{count}</strong>
+                <span className="text-xs text-slate-600">
+                  {label}: <strong className="text-slate-900">{count}</strong>
                 </span>
               </div>
             ))}
@@ -842,11 +842,11 @@ export function TestRunReportPage({ testRunId, onBack }: TestRunReportPageProps)
 
       {/* Test case sections */}
       {summary.total === 0 ? (
-        <div className="rounded-lg border border-zinc-200 bg-white p-8 text-center dark:border-zinc-800 dark:bg-zinc-950 shadow-sm">
-          <p className="text-sm font-semibold text-zinc-950 dark:text-white">
+        <div className="rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
+          <p className="text-sm font-semibold text-slate-950">
             Nenhum caso de teste encontrado
           </p>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+          <p className="mt-1 text-sm text-slate-500">
             Este test run ainda não possui resultados registrados.
           </p>
         </div>

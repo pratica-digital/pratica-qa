@@ -25,15 +25,15 @@ export function NewTestPlanModal({ open, onClose, onCreated }: Props) {
   if (!open) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] h-dvh w-screen overflow-hidden bg-white dark:bg-zinc-950">
+    <div className="fixed inset-0 z-[9999] h-dvh w-screen overflow-hidden bg-slate-50">
       <div className="flex h-dvh w-full flex-col overflow-y-auto p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">New test plan</h2>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400">Create a test plan for a project</p>
+            <h2 className="text-lg font-semibold text-slate-900">New test plan</h2>
+            <p className="text-sm text-slate-500">Create a test plan for a project</p>
           </div>
           <button
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-white"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-950"
             onClick={onClose}
             title="Close new test plan"
             type="button"

@@ -149,22 +149,22 @@ export function TestCaseEditPanel({
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] h-dvh w-screen overflow-hidden bg-white dark:bg-zinc-950">
+    <div className="fixed inset-0 z-[9999] h-dvh w-screen overflow-hidden bg-slate-50">
       <div className="flex h-dvh w-full flex-col overflow-hidden p-6">
         <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
-          <div className="flex shrink-0 items-center gap-3 border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+          <div className="flex shrink-0 items-center gap-3 border-b border-slate-200 px-5 py-4">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-800">
             <ListChecks className="h-4 w-4" aria-hidden="true" />
           </span>
           <div className="min-w-0 flex-1">
-            <h2 className="truncate text-sm font-semibold text-zinc-950 dark:text-white">
+            <h2 className="truncate text-sm font-semibold text-slate-950">
               Edit test case
             </h2>
-            <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">{suiteName}</p>
+            <p className="truncate text-xs text-slate-500">{suiteName}</p>
           </div>
           {onDelete ? (
             <button
-              className="inline-flex h-8 items-center gap-2 rounded-lg border border-rose-200 px-3 text-sm font-medium text-rose-600 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950"
+              className="inline-flex h-8 items-center gap-2 rounded-lg border border-red-600 bg-red-600 px-3 text-sm font-medium text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
               disabled={readOnly || saving}
               onClick={() => onDelete(testCase)}
               title="Delete test case"
@@ -175,7 +175,7 @@ export function TestCaseEditPanel({
             </button>
           ) : null}
           <button
-            className="rounded-lg p-1.5 text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+            className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
             onClick={onClose}
             title="Close"
             type="button"
@@ -186,10 +186,10 @@ export function TestCaseEditPanel({
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
           <div className="grid gap-4 lg:grid-cols-[1fr_14rem]">
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            <label className="block text-sm font-medium text-slate-700">
               Title
               <input
-                className="mt-1.5 h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-950 outline-none transition focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200 disabled:cursor-not-allowed disabled:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white dark:focus:border-zinc-600 dark:focus:ring-zinc-800"
+                className="mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50"
                 disabled={readOnly || saving}
                 onChange={(event) => setTitle(event.target.value)}
                 value={title}
@@ -197,10 +197,10 @@ export function TestCaseEditPanel({
             </label>
 
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-1">
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              <label className="block text-sm font-medium text-slate-700">
                 Priority
                 <select
-                  className="mt-1.5 h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-950 outline-none transition focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200 disabled:cursor-not-allowed disabled:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white dark:focus:border-zinc-600 dark:focus:ring-zinc-800"
+                  className="mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50"
                   disabled={readOnly || saving}
                   onChange={(event) => setPriority(event.target.value as TestPriority)}
                   value={priority}
@@ -213,10 +213,10 @@ export function TestCaseEditPanel({
                 </select>
               </label>
 
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+              <label className="block text-sm font-medium text-slate-700">
                 Status
                 <select
-                  className="mt-1.5 h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-950 outline-none transition focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200 disabled:cursor-not-allowed disabled:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white dark:focus:border-zinc-600 dark:focus:ring-zinc-800"
+                  className="mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50"
                   disabled={readOnly || saving}
                   onChange={(event) => setStatus(event.target.value as TestCaseStatus)}
                   value={status}
@@ -232,20 +232,20 @@ export function TestCaseEditPanel({
           </div>
 
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            <label className="block text-sm font-medium text-slate-700">
               Description
               <textarea
-                className="mt-1.5 min-h-28 w-full resize-y rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-950 outline-none transition focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200 disabled:cursor-not-allowed disabled:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white dark:focus:border-zinc-600 dark:focus:ring-zinc-800"
+                className="mt-1.5 min-h-28 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50"
                 disabled={readOnly || saving}
                 onChange={(event) => setDescription(event.target.value)}
                 value={description}
               />
             </label>
 
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            <label className="block text-sm font-medium text-slate-700">
               Expected result
               <textarea
-                className="mt-1.5 min-h-28 w-full resize-y rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-950 outline-none transition focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200 disabled:cursor-not-allowed disabled:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white dark:focus:border-zinc-600 dark:focus:ring-zinc-800"
+                className="mt-1.5 min-h-28 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50"
                 disabled={readOnly || saving}
                 onChange={(event) => setExpectedResult(event.target.value)}
                 value={expectedResult}
@@ -255,9 +255,9 @@ export function TestCaseEditPanel({
 
           <section className="mt-5">
             <div className="flex items-center justify-between gap-3">
-              <h3 className="text-sm font-semibold text-zinc-950 dark:text-white">Steps</h3>
+              <h3 className="text-sm font-semibold text-slate-950">Steps</h3>
               <button
-                className="inline-flex h-9 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-zinc-900"
+                className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-600 bg-slate-600 px-3 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={readOnly || saving}
                 onClick={() => setSteps((current) => [...current, createBlankStep()])}
                 type="button"
@@ -269,28 +269,28 @@ export function TestCaseEditPanel({
 
             <div className="mt-3 space-y-3">
               {steps.length === 0 ? (
-                <p className="rounded-lg border border-dashed border-zinc-300 px-3 py-4 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
+                <p className="rounded-lg border border-dashed border-slate-300 px-3 py-4 text-sm text-slate-500">
                   No steps defined.
                 </p>
               ) : null}
 
               {steps.map((step, index) => (
                 <div
-                  className="grid gap-2 rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900/60 lg:grid-cols-[2.5rem_1fr_1fr_7.5rem]"
+                  className="grid gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 lg:grid-cols-[2.5rem_1fr_1fr_7.5rem]"
                   key={step.clientId}
                 >
-                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-sm font-semibold text-zinc-600 dark:bg-zinc-950 dark:text-zinc-300">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-sm font-semibold text-slate-600">
                     {index + 1}
                   </span>
                   <input
-                    className="h-10 rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-950 outline-none transition focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200 disabled:cursor-not-allowed disabled:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-white dark:focus:border-zinc-600 dark:focus:ring-zinc-800"
+                    className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50"
                     disabled={readOnly || saving}
                     onChange={(event) => updateStep(index, 'description', event.target.value)}
                     placeholder="Step description"
                     value={step.description}
                   />
                   <input
-                    className="h-10 rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-950 outline-none transition focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200 disabled:cursor-not-allowed disabled:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-white dark:focus:border-zinc-600 dark:focus:ring-zinc-800"
+                    className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50"
                     disabled={readOnly || saving}
                     onChange={(event) => updateStep(index, 'expectedResult', event.target.value)}
                     placeholder="Step expected result"
@@ -298,7 +298,7 @@ export function TestCaseEditPanel({
                   />
                   <div className="flex h-10 items-center justify-end gap-1">
                     <button
-                      className="rounded-lg p-2 text-zinc-400 hover:bg-white hover:text-zinc-700 disabled:cursor-not-allowed disabled:opacity-30 dark:hover:bg-zinc-950 dark:hover:text-zinc-200"
+                      className="rounded-lg p-2 text-slate-400 hover:bg-white hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
                       disabled={readOnly || saving || index === 0}
                       onClick={() => moveStep(index, -1)}
                       title="Move up"
@@ -307,7 +307,7 @@ export function TestCaseEditPanel({
                       <ArrowUp className="h-4 w-4" aria-hidden="true" />
                     </button>
                     <button
-                      className="rounded-lg p-2 text-zinc-400 hover:bg-white hover:text-zinc-700 disabled:cursor-not-allowed disabled:opacity-30 dark:hover:bg-zinc-950 dark:hover:text-zinc-200"
+                      className="rounded-lg p-2 text-slate-400 hover:bg-white hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
                       disabled={readOnly || saving || index === steps.length - 1}
                       onClick={() => moveStep(index, 1)}
                       title="Move down"
@@ -316,7 +316,7 @@ export function TestCaseEditPanel({
                       <ArrowDown className="h-4 w-4" aria-hidden="true" />
                     </button>
                     <button
-                      className="rounded-lg p-2 text-zinc-400 hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-30 dark:hover:bg-rose-950 dark:hover:text-rose-300"
+                      className="rounded-lg p-2 text-slate-400 hover:bg-red-100 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-30"
                       disabled={readOnly || saving}
                       onClick={() => removeStep(index)}
                       title="Remove step"
@@ -331,11 +331,11 @@ export function TestCaseEditPanel({
           </section>
         </div>
 
-        <div className="flex shrink-0 flex-col gap-3 border-t border-zinc-200 px-5 py-4 dark:border-zinc-800 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-h-5 text-sm text-rose-600 dark:text-rose-300">{error}</div>
+        <div className="flex shrink-0 flex-col gap-3 border-t border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-h-5 text-sm text-red-600">{error}</div>
           <div className="flex justify-end gap-2">
             <button
-              className="h-9 rounded-lg px-4 text-sm font-medium text-zinc-600 transition hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+              className="h-9 rounded-lg bg-slate-600 px-4 text-sm font-medium text-white transition hover:bg-slate-700"
               disabled={saving}
               onClick={onClose}
               type="button"
@@ -343,7 +343,7 @@ export function TestCaseEditPanel({
               Cancel
             </button>
             <button
-              className="inline-flex h-9 items-center gap-2 rounded-lg bg-zinc-950 px-4 text-sm font-medium text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
+              className="inline-flex h-9 items-center gap-2 rounded-lg bg-blue-700 px-4 text-sm font-medium text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
               disabled={readOnly || saving}
               onClick={() => void handleSave()}
               type="button"

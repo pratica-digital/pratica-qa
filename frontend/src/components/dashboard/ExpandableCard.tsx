@@ -27,7 +27,7 @@ export function ExpandableCard({
   onPrimaryClick,
 }: ExpandableCardProps) {
   return (
-    <article className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm transition hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700">
+    <article className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm transition hover:border-slate-300">
       <div className="grid gap-3 p-4 sm:grid-cols-[1fr_auto] sm:items-start">
         <button
           className="min-w-0 cursor-pointer text-left outline-none"
@@ -38,13 +38,13 @@ export function ExpandableCard({
             {icon ? <span className="shrink-0">{icon}</span> : null}
             <span className="min-w-0 flex-1">
               <span className="flex flex-wrap items-center gap-2">
-                <span className="truncate text-sm font-semibold text-zinc-950 dark:text-white">
+                <span className="truncate text-sm font-semibold text-slate-950">
                   {title}
                 </span>
                 {badge}
               </span>
               {subtitle ? (
-                <span className="mt-1 block line-clamp-2 text-sm text-zinc-600 dark:text-zinc-300">
+                <span className="mt-1 block line-clamp-2 text-sm text-slate-600">
                   {subtitle}
                 </span>
               ) : null}
@@ -57,7 +57,7 @@ export function ExpandableCard({
           {actions}
           <button
             aria-expanded={isExpanded}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-200 text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-900 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-white"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition hover:bg-slate-50 hover:text-slate-900"
             onClick={onToggle}
             title={isExpanded ? 'Collapse preview' : 'Expand preview'}
             type="button"
@@ -76,7 +76,7 @@ export function ExpandableCard({
         }`}
       >
         <div className="overflow-hidden">
-          <div className="border-t border-zinc-200 p-4 dark:border-zinc-800">{children}</div>
+          <div className="border-t border-slate-200 p-4">{children}</div>
         </div>
       </div>
     </article>

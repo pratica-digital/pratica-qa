@@ -9,6 +9,7 @@ import {
   UserRound,
 } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
+import { canManageTests } from '../auth/permissions';
 import { useAuth } from '../auth/useAuth';
 import { TestCaseRunner } from '../components/test-run/TestCaseRunner';
 import { TestRunStatusBadge, UserRoleBadge } from '../components/badges';
@@ -121,10 +122,7 @@ export function TestRunExecutionPage({
     () => groupResultsBySuite(run, visibleResults),
     [run, visibleResults],
   );
-  const isAssigned = Boolean(user && (run.assignedToId === user.id || run.assignedTo?.id === user.id));
-  const canExecute = Boolean(
-    user && token && (user.role === 'ADMIN' || (user.role === 'QA' && isAssigned)),
-  );
+  const canExecute = Boolean(user && token && canManageTests(user));
 
   const disabledReason = useMemo(() => {
     if (!user) {
@@ -135,20 +133,12 @@ export function TestRunExecutionPage({
       return 'Viewer mode is read-only.';
     }
 
-    if (user.role === 'ADMIN') {
+    if (canManageTests(user)) {
       return undefined;
     }
 
-    if (user.role !== 'QA') {
-      return 'Execution is available to QA users.';
-    }
-
-    if (!isAssigned) {
-      return 'Only the assigned user can execute this run.';
-    }
-
-    return undefined;
-  }, [isAssigned, user]);
+    return 'Execution is available to QA users and admins.';
+  }, [user]);
 
   const navigateResult = useCallback(
     (direction: -1 | 1) => {
@@ -236,7 +226,7 @@ export function TestRunExecutionPage({
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           <button
-            className="inline-flex h-9 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-zinc-900"
+            className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-600 bg-slate-600 px-3 text-sm font-medium text-white hover:bg-slate-700"
             onClick={onBack}
             type="button"
           >
@@ -244,14 +234,14 @@ export function TestRunExecutionPage({
             Back
           </button>
           <div className="mt-4">
-            <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">
+            <p className="text-sm font-medium text-slate-500">
               {run.project?.name ?? 'Test run'}
             </p>
-            <h1 className="mt-1 text-2xl font-semibold tracking-normal text-zinc-950 dark:text-white">
+            <h1 className="mt-1 text-2xl font-semibold tracking-normal text-slate-950">
               {run.name}
             </h1>
             {run.description ? (
-              <p className="mt-2 max-w-3xl text-sm text-zinc-600 dark:text-zinc-300">
+              <p className="mt-2 max-w-3xl text-sm text-slate-600">
                 {run.description}
               </p>
             ) : null}
@@ -259,54 +249,54 @@ export function TestRunExecutionPage({
         </div>
 
         <div className="grid gap-2 sm:grid-cols-2 lg:min-w-80 lg:grid-cols-1">
-          <div className="rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
-            <div className="flex items-center gap-2 text-xs font-medium uppercase text-zinc-500 dark:text-zinc-400">
+          <div className="rounded-lg border border-slate-200 bg-white p-3">
+            <div className="flex items-center gap-2 text-xs font-medium uppercase text-slate-500">
               <UserRound className="h-4 w-4" aria-hidden="true" />
               Assigned
             </div>
             <div className="mt-2 flex items-center justify-between gap-3">
-              <span className="min-w-0 truncate text-sm font-medium text-zinc-950 dark:text-white">
+              <span className="min-w-0 truncate text-sm font-medium text-slate-950">
                 {run.assignedTo?.name ?? 'Unassigned'}
               </span>
               {run.assignedTo?.role ? <UserRoleBadge role={run.assignedTo.role} /> : null}
             </div>
           </div>
-          <div className="rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950">
+          <div className="rounded-lg border border-slate-200 bg-white p-3">
             <div className="flex items-center justify-between gap-3">
-              <span className="text-xs font-medium uppercase text-zinc-500 dark:text-zinc-400">
+              <span className="text-xs font-medium uppercase text-slate-500">
                 Run status
               </span>
               <TestRunStatusBadge status={run.status} />
             </div>
             <div className="mt-3 grid grid-cols-4 gap-2 text-center text-sm">
               <div>
-                <p className="font-semibold text-zinc-950 dark:text-white">{countResults(results, 'PASSED')}</p>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">Pass</p>
+                <p className="font-semibold text-slate-950">{countResults(results, 'PASSED')}</p>
+                <p className="text-xs text-slate-500">Pass</p>
               </div>
               <div>
-                <p className="font-semibold text-zinc-950 dark:text-white">{countResults(results, 'FAILED')}</p>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">Fail</p>
+                <p className="font-semibold text-slate-950">{countResults(results, 'FAILED')}</p>
+                <p className="text-xs text-slate-500">Fail</p>
               </div>
               <div>
-                <p className="font-semibold text-zinc-950 dark:text-white">{countResults(results, 'SKIPPED')}</p>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">Skip</p>
+                <p className="font-semibold text-slate-950">{countResults(results, 'SKIPPED')}</p>
+                <p className="text-xs text-slate-500">Skip</p>
               </div>
               <div>
-                <p className="font-semibold text-zinc-950 dark:text-white">{countResults(results, 'PENDING')}</p>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">Open</p>
+                <p className="font-semibold text-slate-950">{countResults(results, 'PENDING')}</p>
+                <p className="text-xs text-slate-500">Open</p>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 rounded-lg border border-zinc-200 bg-white p-3 shadow-sm dark:border-zinc-800 dark:bg-zinc-950 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-wrap items-center gap-2">
           <button
             className={`inline-flex h-9 items-center gap-2 rounded-lg border px-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 ${
               showFailedOnly
-                ? 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-300'
-                : 'border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-zinc-900'
+                ? 'border-red-200 bg-red-100 text-red-800'
+                : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
             }`}
             disabled={failedCount === 0}
             onClick={() => setShowFailedOnly((value) => !value)}
@@ -316,7 +306,7 @@ export function TestRunExecutionPage({
             Failed only
           </button>
           <button
-            className="inline-flex h-9 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-zinc-900"
+            className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-600 bg-slate-600 px-3 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
             disabled={!canExecute || failedCount === 0 || rerunning}
             onClick={() => void handleRerunFailed()}
             type="button"
@@ -327,11 +317,11 @@ export function TestRunExecutionPage({
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-sm text-zinc-500 dark:text-zinc-400">
+          <span className="text-sm text-slate-500">
             {visibleResults.length} tests
           </span>
           <button
-            className="inline-flex h-9 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-zinc-900"
+            className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-600 bg-slate-600 px-3 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
             disabled={visibleResults.length === 0 || visibleResults[0]?.id === effectiveActiveResultId}
             onClick={() => navigateResult(-1)}
             type="button"
@@ -340,7 +330,7 @@ export function TestRunExecutionPage({
             Previous
           </button>
           <button
-            className="inline-flex h-9 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-zinc-900"
+            className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-600 bg-slate-600 px-3 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
             disabled={
               visibleResults.length === 0 ||
               visibleResults[visibleResults.length - 1]?.id === effectiveActiveResultId
@@ -355,13 +345,13 @@ export function TestRunExecutionPage({
       </div>
 
       {error ? (
-        <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-200">
+        <p className="rounded-lg border border-red-200 bg-red-100 px-3 py-2 text-sm text-red-800">
           {error}
         </p>
       ) : null}
 
       {success ? (
-        <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200">
+        <p className="rounded-lg border border-emerald-200 bg-emerald-100 px-3 py-2 text-sm text-emerald-800">
           {success}
         </p>
       ) : null}
@@ -370,11 +360,11 @@ export function TestRunExecutionPage({
         <section className="space-y-5">
           {groupedResults.map((group) => (
             <section className="space-y-3" key={group.suiteId}>
-              <div className="flex items-center justify-between gap-3 border-b border-zinc-200 pb-2 dark:border-zinc-800">
-                <h2 className="text-sm font-semibold text-zinc-950 dark:text-white">
+              <div className="flex items-center justify-between gap-3 border-b border-slate-200 pb-2">
+                <h2 className="text-sm font-semibold text-slate-950">
                   {group.suiteName}
                 </h2>
-                <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                <span className="text-xs font-medium text-slate-500">
                   {group.results.length} tests
                 </span>
               </div>
@@ -396,18 +386,18 @@ export function TestRunExecutionPage({
           ))}
         </section>
       ) : (
-        <div className="rounded-lg border border-zinc-200 bg-white p-8 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
-          <ClipboardCheck className="mx-auto h-8 w-8 text-zinc-400" aria-hidden="true" />
-          <h2 className="mt-3 text-sm font-semibold text-zinc-950 dark:text-white">
+        <div className="rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
+          <ClipboardCheck className="mx-auto h-8 w-8 text-slate-400" aria-hidden="true" />
+          <h2 className="mt-3 text-sm font-semibold text-slate-950">
             {showFailedOnly ? 'No failed tests' : 'No results yet'}
           </h2>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+          <p className="mt-1 text-sm text-slate-500">
             {showFailedOnly
               ? 'Clear the failed filter to see the full run.'
               : 'This run has no test cases queued for execution.'}
           </p>
           <button
-            className="mt-4 inline-flex h-9 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-zinc-900"
+            className="mt-4 inline-flex h-9 items-center gap-2 rounded-lg border border-slate-600 bg-slate-600 px-3 text-sm font-medium text-white hover:bg-slate-700"
             onClick={onBack}
             type="button"
           >

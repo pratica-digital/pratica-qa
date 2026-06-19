@@ -153,10 +153,10 @@ export function TestPlanCreator({ onCreated }: Props) {
 
   return (
     <div className="space-y-3">
-      {error ? <div className="text-sm text-rose-600">{error}</div> : null}
-      <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Project</label>
+      {error ? <div className="text-sm text-red-600">{error}</div> : null}
+      <label className="block text-sm font-medium text-slate-700">Project</label>
       <select
-        className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-950 outline-none transition focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200 disabled:cursor-not-allowed disabled:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white dark:focus:border-zinc-600 dark:focus:ring-zinc-800"
+        className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50"
         disabled={isLoading}
         value={projectId}
         onChange={(e) => setProjectId(e.target.value)}
@@ -169,17 +169,17 @@ export function TestPlanCreator({ onCreated }: Props) {
         ))}
       </select>
 
-      <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Name</label>
+      <label className="block text-sm font-medium text-slate-700">Name</label>
       <input
-        className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-950 outline-none transition focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200 disabled:cursor-not-allowed disabled:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white dark:focus:border-zinc-600 dark:focus:ring-zinc-800"
+        className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50"
         disabled={isLoading}
         value={name}
         onChange={(e) => setName(e.target.value)}
       />
 
-      <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Version</label>
+      <label className="block text-sm font-medium text-slate-700">Version</label>
       <input
-        className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-950 outline-none transition focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200 disabled:cursor-not-allowed disabled:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white dark:focus:border-zinc-600 dark:focus:ring-zinc-800"
+        className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50"
         disabled={isLoading}
         value={version}
         onChange={(e) => setVersion(e.target.value)}
@@ -187,9 +187,9 @@ export function TestPlanCreator({ onCreated }: Props) {
 
       <section className="pt-2">
         <div className="flex items-center justify-between gap-3">
-          <h3 className="text-sm font-semibold text-zinc-950 dark:text-white">Sections</h3>
+          <h3 className="text-sm font-semibold text-slate-950">Sections</h3>
           <button
-            className="inline-flex h-9 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200 dark:hover:bg-zinc-900"
+            className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-600 bg-slate-600 px-3 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
             disabled={isLoading}
             onClick={() => setSections((current) => [...current, createBlankSection()])}
             type="button"
@@ -201,30 +201,30 @@ export function TestPlanCreator({ onCreated }: Props) {
 
         <div className="mt-3 space-y-3">
           {sections.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-zinc-300 px-3 py-4 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
+            <p className="rounded-lg border border-dashed border-slate-300 px-3 py-4 text-sm text-slate-500">
               No sections defined.
             </p>
           ) : null}
 
           {sections.map((section, index) => (
             <div
-              className="grid gap-3 rounded-lg border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900/60 lg:grid-cols-[2.5rem_1fr_7.5rem]"
+              className="grid gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3 lg:grid-cols-[2.5rem_1fr_7.5rem]"
               key={section.clientId}
             >
-              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-sm font-semibold text-zinc-600 dark:bg-zinc-950 dark:text-zinc-300">
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-sm font-semibold text-slate-600">
                 {index + 1}
               </span>
 
               <div className="space-y-2">
                 <input
-                  className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-950 outline-none transition focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200 disabled:cursor-not-allowed disabled:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-white dark:focus:border-zinc-600 dark:focus:ring-zinc-800"
+                  className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50"
                   disabled={isLoading}
                   onChange={(event) => updateSection(index, 'title', event.target.value)}
                   placeholder="Section title"
                   value={section.title}
                 />
                 <textarea
-                  className="min-h-24 w-full resize-y rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-950 outline-none transition focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200 disabled:cursor-not-allowed disabled:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-white dark:focus:border-zinc-600 dark:focus:ring-zinc-800"
+                  className="min-h-24 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50"
                   disabled={isLoading}
                   onChange={(event) => updateSection(index, 'content', event.target.value)}
                   placeholder="Section description"
@@ -234,7 +234,7 @@ export function TestPlanCreator({ onCreated }: Props) {
 
               <div className="flex h-10 items-center justify-end gap-1">
                 <button
-                  className="rounded-lg p-2 text-zinc-400 hover:bg-white hover:text-zinc-700 disabled:cursor-not-allowed disabled:opacity-30 dark:hover:bg-zinc-950 dark:hover:text-zinc-200"
+                  className="rounded-lg p-2 text-slate-400 hover:bg-white hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
                   disabled={isLoading || index === 0}
                   onClick={() => moveSection(index, -1)}
                   title="Move up"
@@ -243,7 +243,7 @@ export function TestPlanCreator({ onCreated }: Props) {
                   <ArrowUp className="h-4 w-4" aria-hidden="true" />
                 </button>
                 <button
-                  className="rounded-lg p-2 text-zinc-400 hover:bg-white hover:text-zinc-700 disabled:cursor-not-allowed disabled:opacity-30 dark:hover:bg-zinc-950 dark:hover:text-zinc-200"
+                  className="rounded-lg p-2 text-slate-400 hover:bg-white hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
                   disabled={isLoading || index === sections.length - 1}
                   onClick={() => moveSection(index, 1)}
                   title="Move down"
@@ -252,7 +252,7 @@ export function TestPlanCreator({ onCreated }: Props) {
                   <ArrowDown className="h-4 w-4" aria-hidden="true" />
                 </button>
                 <button
-                  className="rounded-lg p-2 text-zinc-400 hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-30 dark:hover:bg-rose-950 dark:hover:text-rose-300"
+                  className="rounded-lg p-2 text-slate-400 hover:bg-red-100 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-30"
                   disabled={isLoading}
                   onClick={() => removeSection(index)}
                   title="Remove section"
@@ -268,7 +268,7 @@ export function TestPlanCreator({ onCreated }: Props) {
 
       <div className="flex justify-end">
         <button
-          className="inline-flex items-center rounded bg-emerald-600 px-3 py-2 text-white disabled:opacity-60"
+          className="inline-flex items-center rounded-lg bg-blue-700 px-3 py-2 text-sm font-medium text-white hover:bg-blue-800 disabled:opacity-60"
           onClick={handleCreate}
           type="button"
           disabled={isLoading}

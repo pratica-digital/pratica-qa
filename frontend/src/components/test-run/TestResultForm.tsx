@@ -17,6 +17,7 @@ const actionConfig: Array<{
   label: string;
   title: string;
   className: string;
+  activeClassName: string;
   icon: typeof CheckCircle2;
 }> = [
   {
@@ -24,7 +25,8 @@ const actionConfig: Array<{
     label: 'Passed',
     title: 'Mark as passed',
     className:
-      'border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950',
+      'border-emerald-200 text-emerald-800 hover:bg-emerald-100',
+    activeClassName: 'border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700',
     icon: CheckCircle2,
   },
   {
@@ -32,7 +34,8 @@ const actionConfig: Array<{
     label: 'Failed',
     title: 'Mark as failed',
     className:
-      'border-rose-200 text-rose-700 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950',
+      'border-red-200 text-red-800 hover:bg-red-100',
+    activeClassName: 'border-red-600 bg-red-600 text-white hover:bg-red-700',
     icon: XCircle,
   },
   {
@@ -40,7 +43,8 @@ const actionConfig: Array<{
     label: 'Skipped',
     title: 'Mark as skipped',
     className:
-      'border-amber-200 text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-300 dark:hover:bg-amber-950',
+      'border-amber-200 text-amber-800 hover:bg-amber-100',
+    activeClassName: 'border-amber-200 bg-amber-100 text-amber-800 hover:bg-amber-100',
     icon: SkipForward,
   },
 ];
@@ -123,10 +127,10 @@ export function TestResultForm({
 
   return (
     <div className="space-y-3">
-      <label className="block text-xs font-medium uppercase text-zinc-500 dark:text-zinc-400">
+      <label className="block text-xs font-medium uppercase text-slate-500">
         Comment
         <textarea
-          className="mt-2 min-h-20 w-full resize-y rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm normal-case text-zinc-950 outline-none transition focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200 disabled:cursor-not-allowed disabled:bg-zinc-50 disabled:text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white dark:focus:border-zinc-600 dark:focus:ring-zinc-800 dark:disabled:bg-zinc-900/60"
+          className="mt-2 min-h-20 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm normal-case text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500"
           disabled={disabled || isSubmitting}
           onChange={(event) => setDraftComment(event.target.value)}
           placeholder="Notes, observed behavior, or failure detail"
@@ -134,7 +138,7 @@ export function TestResultForm({
         />
       </label>
 
-      <label className="flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-dashed border-zinc-300 bg-zinc-50 px-3 text-sm text-zinc-600 hover:bg-zinc-100 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800">
+      <label className="flex min-h-10 cursor-pointer items-center gap-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 text-sm text-slate-600 hover:bg-slate-100 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60">
         <Paperclip className="h-4 w-4" aria-hidden="true" />
         <span className="truncate">
           {selectedFiles.length > 0
@@ -154,7 +158,7 @@ export function TestResultForm({
         <div className="flex flex-wrap gap-1.5">
           {selectedAttachmentLabels.map((attachment) => (
             <span
-              className="rounded-md border border-zinc-200 px-2 py-1 text-xs text-zinc-600 dark:border-zinc-800 dark:text-zinc-300"
+              className="rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-600"
               key={attachment}
             >
               {attachment}
@@ -171,8 +175,8 @@ export function TestResultForm({
             <button
               className={`inline-flex h-9 items-center justify-center gap-2 rounded-lg border px-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 ${
                 currentStatus === action.status
-                  ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950'
-                  : `bg-white dark:bg-zinc-950 ${action.className}`
+                  ? action.activeClassName
+                  : `bg-white ${action.className}`
               }`}
               disabled={disabled || isSubmitting}
               key={action.status}

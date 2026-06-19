@@ -55,17 +55,17 @@ type NewTestCaseModalProps = {
 };
 
 const priorityStyles: Record<Priority, string> = {
-  low: 'border-zinc-200 bg-white text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400',
+  low: 'border-slate-200 bg-white text-slate-500',
   medium:
-    'border-amber-400 bg-amber-50 text-amber-700 dark:border-amber-500 dark:bg-amber-950 dark:text-amber-300',
-  high: 'border-rose-400 bg-rose-50 text-rose-700 dark:border-rose-500 dark:bg-rose-950 dark:text-rose-300',
+    'border-amber-400 bg-amber-100 text-amber-800',
+  high: 'border-red-400 bg-red-100 text-red-800',
 };
 
 const prioritySelected: Record<Priority, string> = {
-  low: 'border-sky-500 bg-sky-50 text-sky-700 dark:border-sky-500 dark:bg-sky-950 dark:text-sky-300',
+  low: 'border-blue-500 bg-blue-100 text-blue-800',
   medium:
-    'border-amber-500 bg-amber-50 text-amber-700 dark:border-amber-500 dark:bg-amber-950 dark:text-amber-300',
-  high: 'border-rose-500 bg-rose-50 text-rose-700 dark:border-rose-500 dark:bg-rose-950 dark:text-rose-300',
+    'border-amber-500 bg-amber-100 text-amber-800',
+  high: 'border-red-500 bg-red-100 text-red-800',
 };
 
 const priorityLabels: Record<Priority, TestCase['priority']> = {
@@ -85,12 +85,12 @@ const initialForm: TestCaseForm = {
 function Field({ label, required = false, children, hint }: FieldProps) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+      <label className="text-sm font-medium text-slate-700">
         {label}
-        {required ? <span className="ml-1 text-sky-500">*</span> : null}
+        {required ? <span className="ml-1 text-blue-500">*</span> : null}
       </label>
       {children}
-      {hint ? <p className="text-xs text-zinc-400">{hint}</p> : null}
+      {hint ? <p className="text-xs text-slate-400">{hint}</p> : null}
     </div>
   );
 }
@@ -98,7 +98,7 @@ function Field({ label, required = false, children, hint }: FieldProps) {
 function Input(props: InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
-      className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:placeholder:text-zinc-500 dark:focus:border-sky-400"
+      className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
       {...props}
     />
   );
@@ -107,7 +107,7 @@ function Input(props: InputHTMLAttributes<HTMLInputElement>) {
 function Textarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return (
     <textarea
-      className="w-full resize-none rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:placeholder:text-zinc-500 dark:focus:border-sky-400"
+      className="w-full resize-none rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
       rows={3}
       {...props}
     />
@@ -118,12 +118,12 @@ function SelectField({ children, ...props }: SelectHTMLAttributes<HTMLSelectElem
   return (
     <div className="relative">
       <select
-        className="h-10 w-full appearance-none rounded-lg border border-zinc-200 bg-white px-3 pr-9 text-sm text-zinc-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white"
+        className="h-10 w-full appearance-none rounded-lg border border-slate-300 bg-white px-3 pr-9 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
         {...props}
       >
         {children}
       </select>
-      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
     </div>
   );
 }
@@ -132,23 +132,23 @@ function StepRow({ step, index, total, onChange, onRemove }: StepRowProps) {
   return (
     <div className="flex items-start gap-2">
       <button
-        className="mt-2.5 cursor-grab text-zinc-300 hover:text-zinc-500 dark:text-zinc-700 dark:hover:text-zinc-400"
+        className="mt-2.5 cursor-grab text-slate-300 hover:text-slate-500"
         tabIndex={-1}
         type="button"
       >
         <GripVertical className="h-4 w-4" aria-hidden="true" />
       </button>
-      <span className="mt-2.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-xs font-semibold text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+      <span className="mt-2.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500">
         {index + 1}
       </span>
       <input
-        className="h-10 flex-1 rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 dark:border-zinc-700 dark:bg-zinc-900 dark:text-white dark:placeholder:text-zinc-500 dark:focus:border-sky-400"
+        className="h-10 flex-1 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
         onChange={(event) => onChange(index, event.target.value)}
         placeholder={`Step ${index + 1} description`}
         value={step.description}
       />
       <button
-        className="mt-2 rounded-lg p-1.5 text-zinc-400 transition hover:bg-rose-50 hover:text-rose-500 disabled:cursor-not-allowed disabled:opacity-30 dark:hover:bg-rose-950 dark:hover:text-rose-400"
+        className="mt-2 rounded-lg p-1.5 text-slate-400 transition hover:bg-red-100 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-30"
         disabled={total === 1}
         onClick={() => onRemove(index)}
         tabIndex={-1}
@@ -299,19 +299,19 @@ export function NewTestCaseModal({
   ];
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] h-dvh w-screen overflow-hidden bg-white dark:bg-zinc-950">
+    <div className="fixed inset-0 z-[9999] h-dvh w-screen overflow-hidden bg-slate-50">
       <div className="flex h-dvh w-full flex-col overflow-hidden p-6">
       <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
-        <div className="flex items-center gap-3 border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-400">
+        <div className="flex items-center gap-3 border-b border-slate-200 px-5 py-4">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
             <ListChecks className="h-4 w-4" aria-hidden="true" />
           </span>
           <div className="min-w-0 flex-1">
-            <h2 className="text-sm font-semibold text-zinc-950 dark:text-white">New test case</h2>
-            <p className="truncate text-xs text-zinc-400">Define the scenario and execution steps</p>
+            <h2 className="text-sm font-semibold text-slate-950">New test case</h2>
+            <p className="truncate text-xs text-slate-400">Define the scenario and execution steps</p>
           </div>
           <button
-            className="rounded-lg p-1.5 text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+            className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
             onClick={onClose}
             title="Close modal"
             type="button"
@@ -320,13 +320,13 @@ export function NewTestCaseModal({
           </button>
         </div>
 
-        <div className="flex border-b border-zinc-200 px-5 dark:border-zinc-800">
+        <div className="flex border-b border-slate-200 px-5">
           {tabs.map((tab) => (
             <button
               className={`-mb-px mr-5 border-b-2 py-3 text-xs font-medium transition ${
                 activeTab === tab.id
-                  ? 'border-sky-500 text-sky-600 dark:border-sky-400 dark:text-sky-400'
-                  : 'border-transparent text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-slate-500 hover:text-slate-700'
               }`}
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
@@ -334,7 +334,7 @@ export function NewTestCaseModal({
             >
               {tab.label}
               {tab.id === 'steps' && errors.steps ? (
-                <span className="ml-1.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] text-white">
+                <span className="ml-1.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[10px] text-white">
                   !
                 </span>
               ) : null}
@@ -422,7 +422,7 @@ export function NewTestCaseModal({
           {activeTab === 'steps' ? (
             <div className="space-y-3">
               {errors.steps ? (
-                <p className="flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-600 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-400">
+                <p className="flex items-center gap-1 rounded-lg border border-red-200 bg-red-100 px-3 py-2 text-xs text-red-600">
                   <AlertCircle className="h-3 w-3 shrink-0" aria-hidden="true" /> {errors.steps}
                 </p>
               ) : null}
@@ -439,7 +439,7 @@ export function NewTestCaseModal({
                 ))}
               </div>
               <button
-                className="mt-1 inline-flex h-9 items-center gap-2 rounded-lg border border-dashed border-zinc-300 px-3 text-xs font-medium text-zinc-500 transition hover:border-sky-400 hover:bg-sky-50 hover:text-sky-600 dark:border-zinc-700 dark:hover:border-sky-600 dark:hover:bg-sky-950 dark:hover:text-sky-400"
+                className="mt-1 inline-flex h-9 items-center gap-2 rounded-lg border border-dashed border-slate-300 px-3 text-xs font-medium text-slate-500 transition hover:border-blue-400 hover:bg-blue-100 hover:text-blue-600"
                 onClick={addStep}
                 type="button"
               >
@@ -450,27 +450,27 @@ export function NewTestCaseModal({
           ) : null}
         </div>
 
-        <div className="flex shrink-0 items-center justify-between gap-2 border-t border-zinc-200 px-5 py-4 dark:border-zinc-800">
-          <p className="text-xs text-zinc-400">
+        <div className="flex shrink-0 items-center justify-between gap-2 border-t border-slate-200 px-5 py-4">
+          <p className="text-xs text-slate-400">
             {submitError || `${steps.length} ${steps.length === 1 ? 'step' : 'steps'} defined`}
           </p>
           <div className="flex gap-2">
             <button
-              className="h-9 rounded-lg px-4 text-sm font-medium text-zinc-600 transition hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+              className="h-9 rounded-lg bg-slate-600 px-4 text-sm font-medium text-white transition hover:bg-slate-700"
               onClick={onClose}
               type="button"
             >
               Cancel
             </button>
             <button
-              className="inline-flex h-9 items-center gap-2 rounded-lg bg-zinc-950 px-4 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
+              className="inline-flex h-9 items-center gap-2 rounded-lg bg-blue-700 px-4 text-sm font-medium text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
               disabled={submitting || (apiMode && !hasSuiteOptions)}
               onClick={handleSubmit}
               type="button"
             >
               {submitting ? (
                 <>
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white dark:border-zinc-950/30 dark:border-t-zinc-950" />
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                   Creating
                 </>
               ) : (
