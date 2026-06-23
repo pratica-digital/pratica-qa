@@ -65,14 +65,22 @@ enum UserRole {
   VIEWER
 }
 
+enum ProjectCategory {
+  BAKERY_OVENS
+  COMBI_OVENS
+  SPEED_OVENS
+}
+
 model Project {
-  id          String        @id @default(uuid()) @db.Uuid
+  id          String            @id @default(uuid()) @db.Uuid
   name        String
-  key         String        @unique
-  description String        @default("")
-  status      ProjectStatus @default(ACTIVE)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  key         String            @unique
+  description String            @default("")
+  status      ProjectStatus     @default(ACTIVE)
+  category    ProjectCategory   @default(BAKERY_OVENS)
+  imageUrl    String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
   deletedAt   DateTime?
 
   suites       TestSuite[]

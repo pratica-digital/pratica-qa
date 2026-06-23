@@ -8,13 +8,21 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { UserRole } from '@prisma/client';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { QueryProjectsDto } from './dto/query-projects.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
+import { getProjectImageUrl, projectImageUploadOptions } from './project-image-upload';
 import { ProjectsService } from './projects.service';
+
+type UploadedProjectImage = {
+  filename: string;
+};
 
 @Controller('projects')
 export class ProjectsController {
@@ -22,8 +30,12 @@ export class ProjectsController {
 
   @Roles(UserRole.ADMIN, UserRole.QA)
   @Post()
-  create(@Body() dto: CreateProjectDto) {
-    return this.projectsService.create(dto);
+  @UseInterceptors(FileInterceptor('image', projectImageUploadOptions))
+  create(@Body() dto: CreateProjectDto, @UploadedFile() image?: UploadedProjectImage) {
+    return this.projectsService.create({
+      ...dto,
+      imageUrl: getProjectImageUrl(image) ?? dto.imageUrl,
+    });
   }
 
   @Get()
@@ -38,8 +50,17 @@ export class ProjectsController {
 
   @Roles(UserRole.ADMIN, UserRole.QA)
   @Patch(':id')
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateProjectDto) {
-    return this.projectsService.update(id, dto);
+  @UseInterceptors(FileInterceptor('image', projectImageUploadOptions))
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateProjectDto,
+    @UploadedFile() image?: UploadedProjectImage,
+  ) {
+    return this.projectsService.update(id, {
+      ...dto,
+      imageUrl: getProjectImageUrl(image) ?? dto.imageUrl,
+      removeImage: image ? false : dto.removeImage,
+    });
   }
 
   @Roles(UserRole.ADMIN, UserRole.QA)

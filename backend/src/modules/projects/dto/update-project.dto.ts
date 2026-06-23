@@ -1,6 +1,6 @@
-import { ProjectStatus } from '@prisma/client';
+import { ProjectStatus, ProjectCategory } from '@prisma/client';
 import { Transform } from 'class-transformer';
-import { IsEnum, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import { IsBoolean, IsEnum, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
 
 export class UpdateProjectDto {
   @IsOptional()
@@ -23,4 +23,18 @@ export class UpdateProjectDto {
   @IsOptional()
   @IsEnum(ProjectStatus)
   status?: ProjectStatus;
+
+  @IsOptional()
+  @IsEnum(ProjectCategory)
+  category?: ProjectCategory;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  imageUrl?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => value === true || value === 'true')
+  removeImage?: boolean;
 }

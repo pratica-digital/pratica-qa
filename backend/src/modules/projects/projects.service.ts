@@ -9,8 +9,9 @@ import { ProjectsRepository } from './repositories/projects.repository';
 export class ProjectsService {
   constructor(private readonly projectsRepository: ProjectsRepository) {}
 
-  create(dto: CreateProjectDto) {
-    return this.projectsRepository.create(dto);
+  async create(dto: CreateProjectDto) {
+    const key = dto.key ?? await this.createUniqueProjectKey(dto.name);
+    return this.projectsRepository.create({ ...dto, key });
   }
 
   async findAll(query: QueryProjectsDto) {
@@ -53,5 +54,34 @@ export class ProjectsService {
   async remove(id: string) {
     await this.findOne(id);
     return this.projectsRepository.delete(id);
+  }
+
+  private async createUniqueProjectKey(name: string) {
+    const baseKey = this.normalizeProjectKey(name);
+
+    for (let index = 0; index < 100; index += 1) {
+      const suffix = index === 0 ? '' : `_${index + 1}`;
+      const candidate = `${baseKey.slice(0, 24 - suffix.length)}${suffix}`;
+      const existingProject = await this.projectsRepository.findByKey(candidate);
+
+      if (!existingProject) {
+        return candidate;
+      }
+    }
+
+    return `${baseKey.slice(0, 15)}_${Date.now().toString(36).toUpperCase()}`.slice(0, 24);
+  }
+
+  private normalizeProjectKey(value: string) {
+    const normalized = value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9_-]+/g, '_')
+      .replace(/^[^A-Z0-9]+/, '')
+      .replace(/[^A-Z0-9]+$/, '');
+
+    return normalized.length > 0 ? normalized.slice(0, 24) : 'PROJECT';
   }
 }

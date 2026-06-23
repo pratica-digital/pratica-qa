@@ -48,6 +48,24 @@ export type TestCaseStatus = 'ACTIVE' | 'ARCHIVED';
 
 export type TestSuiteStatus = 'ACTIVE' | 'ARCHIVED';
 
+export type ProjectStatus = 'ACTIVE' | 'ARCHIVED';
+
+export type ProjectCategory = 'BAKERY_OVENS' | 'COMBI_OVENS' | 'SPEED_OVENS';
+
+export type ProjectCategoryLabel = 'Fornos de Panificação' | 'Fornos Combinados' | 'Speed Ovens';
+
+export const PROJECT_CATEGORY_MAP: Record<ProjectCategory, ProjectCategoryLabel> = {
+  BAKERY_OVENS: 'Fornos de Panificação',
+  COMBI_OVENS: 'Fornos Combinados',
+  SPEED_OVENS: 'Speed Ovens',
+};
+
+export const PROJECT_CATEGORY_ORDER: ProjectCategory[] = [
+  'BAKERY_OVENS',
+  'COMBI_OVENS',
+  'SPEED_OVENS',
+];
+
 export type TestStep = {
   id: string;
   order: number;
@@ -71,7 +89,9 @@ export type ProjectSummary = {
   key?: string;
   name: string;
   description?: string;
-  status?: 'ACTIVE' | 'ARCHIVED';
+  status?: ProjectStatus;
+  category?: ProjectCategory;
+  imageUrl?: string | null;
   createdAt?: string;
   updatedAt?: string;
   _count?: {
@@ -363,6 +383,17 @@ export type UpdateTestPlanPayload = Partial<{
 
 export type CreateProjectPayload = {
   name: string;
-  key: string;
+  key?: string;
   description?: string;
+  category: ProjectCategory;
+  imageFile?: File | null;
 };
+
+export type UpdateProjectPayload = Partial<{
+  name: string;
+  description: string;
+  status: ProjectStatus;
+  category: ProjectCategory;
+  imageFile: File | null;
+  removeImage: boolean;
+}>;
