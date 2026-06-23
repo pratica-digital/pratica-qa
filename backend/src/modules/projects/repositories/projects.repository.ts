@@ -19,8 +19,11 @@ export class ProjectsRepository {
     return this.prisma.project.create({
       data: {
         name: dto.name,
-        key: dto.key,
+        key: dto.key ?? '',
         description: dto.description ?? '',
+        status: dto.status,
+        category: dto.category,
+        imageUrl: dto.imageUrl,
       },
     });
   }
@@ -82,10 +85,47 @@ export class ProjectsRepository {
     });
   }
 
+  findByKey(key: string) {
+    return this.prisma.project.findUnique({
+      where: { key },
+      select: { id: true },
+    });
+  }
+
   update(id: string, dto: UpdateProjectDto) {
+    const data: Prisma.ProjectUpdateInput = {};
+
+    if (dto.name !== undefined) {
+      data.name = dto.name;
+    }
+
+    if (dto.key !== undefined) {
+      data.key = dto.key;
+    }
+
+    if (dto.description !== undefined) {
+      data.description = dto.description;
+    }
+
+    if (dto.status !== undefined) {
+      data.status = dto.status;
+    }
+
+    if (dto.category !== undefined) {
+      data.category = dto.category;
+    }
+
+    if (dto.imageUrl !== undefined) {
+      data.imageUrl = dto.imageUrl;
+    }
+
+    if (dto.removeImage) {
+      data.imageUrl = null;
+    }
+
     return this.prisma.project.update({
       where: { id },
-      data: dto,
+      data,
     });
   }
 

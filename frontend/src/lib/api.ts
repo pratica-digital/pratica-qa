@@ -20,6 +20,7 @@ import type {
   UserEmailNotificationResponse,
   UpdateTestCasePayload,
   UpdateTestPlanPayload,
+  UpdateProjectPayload,
   UpdateTestSuitePayload,
   UpdateUserPayload,
 } from '../types/testRun';
@@ -92,10 +93,17 @@ async function readErrorMessage(response: Response) {
   }
 }
 
+function isFormData(body: unknown): body is FormData {
+  return typeof FormData !== 'undefined' && body instanceof FormData;
+}
+
 export async function apiRequest<T>(path: string, options: RequestOptions = {}) {
   const headers = new Headers();
+  const body = options.body;
+  const formDataBody = isFormData(body);
+  let requestBody: BodyInit | undefined;
 
-  if (options.body !== undefined) {
+  if (body !== undefined && !formDataBody) {
     headers.set('Content-Type', 'application/json');
   }
 
@@ -103,10 +111,16 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}) 
     headers.set('Authorization', `Bearer ${options.token}`);
   }
 
+  if (formDataBody) {
+    requestBody = body;
+  } else if (body !== undefined) {
+    requestBody = JSON.stringify(body);
+  }
+
   const response = await fetch(buildUrl(path), {
     method: options.method ?? 'GET',
     headers,
-    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    body: requestBody,
     signal: options.signal,
   });
 
@@ -119,6 +133,53 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}) 
   }
 
   return (await response.json()) as T;
+}
+
+export function resolveApiAssetUrl(value?: string | null) {
+  if (!value) {
+    return '';
+  }
+
+  if (/^(https?:|data:|blob:)/.test(value)) {
+    return value;
+  }
+
+  const apiOrigin = new URL(API_BASE_URL, window.location.origin).origin;
+  return `${apiOrigin}${value.startsWith('/') ? value : `/${value}`}`;
+}
+
+function projectPayloadToFormData(payload: CreateProjectPayload | UpdateProjectPayload) {
+  const formData = new FormData();
+
+  if ('name' in payload && payload.name !== undefined) {
+    formData.set('name', payload.name);
+  }
+
+  if ('key' in payload && payload.key !== undefined) {
+    formData.set('key', payload.key);
+  }
+
+  if ('description' in payload && payload.description !== undefined) {
+    formData.set('description', payload.description);
+  }
+
+  if ('status' in payload && payload.status !== undefined) {
+    formData.set('status', payload.status);
+  }
+
+  if ('category' in payload && payload.category !== undefined) {
+    formData.set('category', payload.category);
+  }
+
+  if ('removeImage' in payload && payload.removeImage !== undefined) {
+    formData.set('removeImage', String(payload.removeImage));
+  }
+
+  if ('imageFile' in payload && payload.imageFile) {
+    formData.set('image', payload.imageFile);
+  }
+
+  return formData;
 }
 
 function unwrapList<T>(response: T[] | PaginatedResponse<T>) {
@@ -235,7 +296,13 @@ export const projectsApi = {
     apiRequest<ProjectSummary>('/projects', {
       method: 'POST',
       token,
-      body: payload,
+      body: projectPayloadToFormData(payload),
+    }),
+  update: (token: string, projectId: string, payload: UpdateProjectPayload) =>
+    apiRequest<ProjectSummary>(`/projects/${projectId}`, {
+      method: 'PATCH',
+      token,
+      body: projectPayloadToFormData(payload),
     }),
   remove: (token: string, projectId: string) =>
     apiRequest<void>(`/projects/${projectId}`, {
