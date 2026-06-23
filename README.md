@@ -42,3 +42,9 @@ Health check:
 ```bash
 GET http://localhost:3000/api/health
 ```
+
+Prisma:
+
+```bash
+npx prisma studio
+```
