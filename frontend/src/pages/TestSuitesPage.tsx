@@ -388,69 +388,6 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
         </div>
       ) : visibleSuites.length > 0 ? (
         <>
-          <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            {visibleSuites.map((suite) => {
-              const suiteCases = getSuiteCases(suite, cases, caseOrder);
-
-              return (
-                <article
-                  className="cursor-pointer rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
-                  key={suite.id}
-                  onClick={() => void handleOpenSuite(suite)}
-                  role="button"
-                  tabIndex={0}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex min-w-0 gap-3">
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-800">
-                        <Layers3 className="h-4 w-4" aria-hidden="true" />
-                      </span>
-                      <div className="min-w-0">
-                        <h2 className="truncate text-sm font-semibold text-slate-950">
-                          {suite.name}
-                        </h2>
-                        <p className="truncate text-xs text-slate-500">
-                          {suite.project?.name ?? 'Project'}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  <p className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-                    Project: <span className="font-medium text-slate-800">{suite.project?.name ?? suite.projectId}</span>
-                  </p>
-                  <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <p className="font-semibold text-slate-950">{suiteCases.length}</p>
-                      <p className="text-xs text-slate-500">Cases</p>
-                    </div>
-                    <div>
-                      <p className="font-semibold text-slate-950">{suite.position}</p>
-                      <p className="text-xs text-slate-500">Position</p>
-                    </div>
-                  </div>
-                  <div className="mt-4 flex justify-end">
-                    <ActionMenu
-                      ariaLabel="Test suite actions"
-                      disabled={!canManageTestAssets}
-                      items={[
-                        {
-                          label: 'Edit',
-                          onSelect: () => setEditingSuite(suite),
-                          title: 'Edit test suite',
-                        },
-                        {
-                          label: 'Delete',
-                          onSelect: () => requestSuiteDelete(suite),
-                          title: 'Delete test suite',
-                          tone: 'danger',
-                        },
-                      ]}
-                    />
-                  </div>
-                </article>
-              );
-            })}
-          </section>
 
           <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
             <div className="border-b border-slate-200 px-4 py-3">
@@ -465,7 +402,7 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
                     <th className="px-4 py-3">Position</th>
                     <th className="px-4 py-3">Cases</th>
                     <th className="px-4 py-3">Updated</th>
-                    <th className="px-4 py-3 text-right">Actions</th>
+                    <th className="px-4 py-3 text-right"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
@@ -477,7 +414,7 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
                     >
                       <td className="px-4 py-3">
                         <p className="font-medium text-slate-950">{suite.name}</p>
-                        <p className="text-xs text-slate-500">{suite.id}</p>
+                        
                       </td>
                       <td className="px-4 py-3 text-slate-600">
                         {suite.project?.name ?? suite.projectId}

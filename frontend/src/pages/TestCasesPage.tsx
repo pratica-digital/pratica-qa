@@ -279,56 +279,7 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
         </div>
       ) : visibleCases.length > 0 ? (
         <>
-          <section className="grid gap-3 md:grid-cols-2">
-            {visibleCases.slice(0, 2).map((testCase) => (
-              <article
-                className="cursor-pointer rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
-                key={testCase.id}
-                onClick={() => void handleOpenCase(testCase)}
-                role="button"
-                tabIndex={0}
-              >
-                <div className="flex items-start gap-3">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-800">
-                    <ListChecks className="h-4 w-4" aria-hidden="true" />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-xs font-medium text-slate-500">
-                        {testCase.id}
-                      </span>
-                      <CaseStatusBadge status={testCase.status} />
-                    </div>
-                    <h2 className="mt-2 text-sm font-semibold text-slate-950">
-                      {testCase.title}
-                    </h2>
-                    <p className="mt-1 text-xs text-slate-500">
-                      {getSuitePath(testCase, suites)} - {getStepCount(testCase)} steps
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-1">
-                    <ActionMenu
-                      ariaLabel="Test case actions"
-                      disabled={!canEdit}
-                      items={[
-                        {
-                          label: 'Edit',
-                          onSelect: () => void handleOpenCase(testCase),
-                          title: 'Edit test case',
-                        },
-                        {
-                          label: 'Delete',
-                          onSelect: () => requestCaseDelete(testCase),
-                          title: 'Delete test case',
-                          tone: 'danger',
-                        },
-                      ]}
-                    />
-                  </div>
-                </div>
-              </article>
-            ))}
-          </section>
+          
 
           <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
             <div className="border-b border-slate-200 px-4 py-3">
@@ -342,8 +293,8 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
                     <th className="px-4 py-3">Project / Suite</th>
                     <th className="px-4 py-3">Status</th>
                     <th className="px-4 py-3">Steps</th>
-                    <th className="px-4 py-3">Tags</th>
-                    <th className="px-4 py-3 text-right">Actions</th>
+                    <th className="px-4 py-3"></th>
+                    <th className="px-4 py-3 text-right"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
@@ -355,7 +306,7 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
                     >
                       <td className="px-4 py-3">
                         <p className="font-medium text-slate-950">{testCase.title}</p>
-                        <p className="text-xs text-slate-500">{testCase.id}</p>
+
                       </td>
                       <td className="px-4 py-3 text-slate-600">
                         <p className="font-medium text-slate-700">
