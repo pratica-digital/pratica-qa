@@ -6,12 +6,318 @@ datasource db {
   provider = "postgresql"
 }
 
-enum ProjectStatus {
-  ACTIVE
-  ARCHIVED
+model Project {
+  id           String          @id @default(uuid()) @db.Uuid
+  name         String
+  key          String          @unique
+  description  String          @default("")
+  status       ProjectStatus   @default(ACTIVE)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  deletedAt    DateTime?
+  imageUrl     String?
+  category     ProjectCategory @default(BAKERY_OVENS)
+  requirements Requirement[]
+  testPlans    TestPlan[]
+  testRuns     TestRun[]
+  suites       TestSuite[]
+
+  @@index([deletedAt])
+  @@map("projects")
 }
 
-enum TestSuiteStatus {
+model TestSuite {
+  id        String         @id @default(uuid()) @db.Uuid
+  projectId String         @db.Uuid
+  name      String
+  position  Int            @default(0)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  deletedAt DateTime?
+  testCases TestCase[]
+  testRuns  TestRunSuite[]
+  project   Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, name])
+  @@index([projectId])
+  @@index([deletedAt])
+  @@map("test_suites")
+}
+
+model TestCase {
+  id             String                 @id @default(uuid()) @db.Uuid
+  suiteId        String                 @db.Uuid
+  clonedFromId   String?                @db.Uuid
+  title          String
+  description    String                 @default("")
+  preconditions  String                 @default("")
+  expectedResult String                 @default("")
+  status         TestCaseStatus         @default(ACTIVE)
+  priority       TestPriority           @default(MEDIUM)
+  severity       TestSeverity           @default(MEDIUM)
+  version        Int                    @default(1)
+  tags           String[]               @default([])
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  deletedAt      DateTime?
+  clonedFrom     TestCase?              @relation("ClonedTestCases", fields: [clonedFromId], references: [id])
+  clones         TestCase[]             @relation("ClonedTestCases")
+  attachments    TestResultAttachment[]
+  suite          TestSuite              @relation(fields: [suiteId], references: [id], onDelete: Cascade)
+  results        TestResult[]
+  steps          TestStep[]
+  requirements   Requirement[]          @relation("RequirementToTestCase")
+
+  @@index([suiteId])
+  @@index([status])
+  @@index([priority])
+  @@index([deletedAt])
+  @@map("test_cases")
+}
+
+model TestStep {
+  id             String                 @id @default(uuid()) @db.Uuid
+  testCaseId     String                 @db.Uuid
+  order          Int
+  description    String
+  expectedResult String?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  deletedAt      DateTime?
+  attachments    TestResultAttachment[]
+  testCase       TestCase               @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+
+  @@unique([testCaseId, order])
+  @@index([testCaseId])
+  @@index([deletedAt])
+  @@map("test_steps")
+}
+
+model TestPlan {
+  id          String    @id @default(uuid()) @db.Uuid
+  projectId   String    @db.Uuid
+  name        String
+  version     String
+  description String    @default("")
+  sections    Json      @default("[]")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  testRuns    TestRun[]
+
+  @@unique([projectId, name, version])
+  @@index([projectId])
+  @@index([deletedAt])
+  @@map("test_plans")
+}
+
+model TestRun {
+  id           String                 @id @default(uuid()) @db.Uuid
+  projectId    String                 @db.Uuid
+  testPlanId   String                 @db.Uuid
+  createdById  String?                @db.Uuid
+  assignedToId String                 @db.Uuid
+  name         String
+  description  String                 @default("")
+  status       TestRunStatus          @default(PENDING)
+  startedAt    DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+  deletedAt    DateTime?
+  attachments  TestResultAttachment[]
+  results      TestResult[]
+  suites       TestRunSuite[]
+  assignedTo   User                   @relation("AssignedTestRuns", fields: [assignedToId], references: [id])
+  createdBy    User?                  @relation("CreatedTestRuns", fields: [createdById], references: [id])
+  project      Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  testPlan     TestPlan               @relation(fields: [testPlanId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([testPlanId])
+  @@index([assignedToId])
+  @@index([status])
+  @@index([deletedAt])
+  @@map("test_runs")
+}
+
+model TestRunSuite {
+  id          String          @id @default(uuid()) @db.Uuid
+  testRunId   String          @db.Uuid
+  testSuiteId String          @db.Uuid
+  position    Int             @default(0)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  testType    TestRunTestType @default(FUNCIONAL)
+  testRun     TestRun         @relation(fields: [testRunId], references: [id], onDelete: Cascade)
+  testSuite   TestSuite       @relation(fields: [testSuiteId], references: [id], onDelete: Cascade)
+
+  @@unique([testRunId, testSuiteId])
+  @@index([testType])
+  @@index([testSuiteId])
+  @@map("test_run_suites")
+}
+
+model TestResult {
+  id                String                 @id @default(uuid()) @db.Uuid
+  testRunId         String                 @db.Uuid
+  testCaseId        String                 @db.Uuid
+  executedById      String?                @db.Uuid
+  lastModifiedById  String?                @db.Uuid
+  status            TestResultStatus       @default(PENDING)
+  comment           String                 @default("")
+  legacyAttachments String[]               @default([]) @map("attachments")
+  executedAt        DateTime?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  attachments       TestResultAttachment[]
+  executedBy        User?                  @relation("ExecutedResults", fields: [executedById], references: [id])
+  lastModifiedBy    User?                  @relation("ModifiedResults", fields: [lastModifiedById], references: [id])
+  history           TestResultHistory[]
+  testCase          TestCase               @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+  testRun           TestRun                @relation(fields: [testRunId], references: [id], onDelete: Cascade)
+
+  @@unique([testRunId, testCaseId])
+  @@index([testCaseId])
+  @@index([status])
+  @@index([lastModifiedById])
+  @@map("test_results")
+}
+
+model TestResultAttachment {
+  id           String     @id @default(uuid()) @db.Uuid
+  testResultId String     @db.Uuid
+  testRunId    String     @db.Uuid
+  testCaseId   String     @db.Uuid
+  testStepId   String?    @db.Uuid
+  uploadedById String?    @db.Uuid
+  fileName     String
+  originalName String
+  mimeType     String
+  size         Int        @default(0)
+  url          String
+  createdAt    DateTime   @default(now())
+  testCase     TestCase   @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+  testResult   TestResult @relation(fields: [testResultId], references: [id], onDelete: Cascade)
+  testRun      TestRun    @relation(fields: [testRunId], references: [id], onDelete: Cascade)
+  testStep     TestStep?  @relation(fields: [testStepId], references: [id], onDelete: SetNull)
+  uploadedBy   User?      @relation("UploadedTestResultAttachments", fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([testResultId])
+  @@index([testRunId])
+  @@index([testCaseId])
+  @@index([testStepId])
+  @@index([uploadedById])
+  @@index([createdAt])
+  @@map("test_result_attachments")
+}
+
+model TestResultHistory {
+  id                 String            @id @default(uuid()) @db.Uuid
+  testResultId       String            @db.Uuid
+  actorUserId        String?           @db.Uuid
+  previousStatus     TestResultStatus?
+  newStatus          TestResultStatus?
+  previousComment    String            @default("")
+  newComment         String            @default("")
+  addedAttachments   String[]          @default([])
+  removedAttachments String[]          @default([])
+  createdAt          DateTime          @default(now())
+  actor              User?             @relation("TestResultHistoryActor", fields: [actorUserId], references: [id])
+  testResult         TestResult        @relation(fields: [testResultId], references: [id], onDelete: Cascade)
+
+  @@index([testResultId])
+  @@index([actorUserId])
+  @@index([createdAt])
+  @@map("test_result_history")
+}
+
+model User {
+  id                            String                 @id @default(uuid()) @db.Uuid
+  name                          String
+  email                         String                 @unique
+  password                      String
+  role                          UserRole               @default(QA)
+  status                        UserStatus             @default(ACTIVE)
+  createdAt                     DateTime               @default(now())
+  updatedAt                     DateTime               @updatedAt
+  deletedAt                     DateTime?
+  firstAccess                   Boolean                @default(false)
+  passwordChangedAt             DateTime?
+  passwordResetTokenHash        String?
+  passwordResetTokenExpiresAt   DateTime?
+  auditLogs                     AuditLog[]             @relation("ActorAuditLogs")
+  targetedAuditLogs             AuditLog[]             @relation("TargetUserAuditLogs")
+  loginLogs                     LoginLog[]
+  executedResults               TestResult[]           @relation("ExecutedResults")
+  modifiedResults               TestResult[]           @relation("ModifiedResults")
+  uploadedTestResultAttachments TestResultAttachment[] @relation("UploadedTestResultAttachments")
+  testResultHistory             TestResultHistory[]    @relation("TestResultHistoryActor")
+  assignedTestRuns              TestRun[]              @relation("AssignedTestRuns")
+  createdTestRuns               TestRun[]              @relation("CreatedTestRuns")
+
+  @@index([role])
+  @@index([status])
+  @@index([deletedAt])
+  @@map("users")
+}
+
+model LoginLog {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String?  @db.Uuid
+  email         String
+  success       Boolean
+  failureReason String   @default("")
+  ipAddress     String   @default("")
+  userAgent     String   @default("")
+  createdAt     DateTime @default(now())
+  user          User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([email])
+  @@index([success])
+  @@index([createdAt])
+  @@map("login_logs")
+}
+
+model AuditLog {
+  id           String   @id @default(uuid()) @db.Uuid
+  actorUserId  String?  @db.Uuid
+  targetUserId String?  @db.Uuid
+  action       String
+  details      Json     @default("{}")
+  ipAddress    String   @default("")
+  userAgent    String   @default("")
+  createdAt    DateTime @default(now())
+  actor        User?    @relation("ActorAuditLogs", fields: [actorUserId], references: [id])
+  targetUser   User?    @relation("TargetUserAuditLogs", fields: [targetUserId], references: [id])
+
+  @@index([actorUserId])
+  @@index([targetUserId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model Requirement {
+  id           String     @id @default(uuid()) @db.Uuid
+  projectId    String     @db.Uuid
+  referenceKey String
+  title        String
+  description  String     @default("")
+  status       String     @default("active")
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  project      Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  testCases    TestCase[] @relation("RequirementToTestCase")
+
+  @@unique([projectId, referenceKey])
+  @@index([projectId])
+  @@map("requirements")
+}
+
+enum ProjectStatus {
   ACTIVE
   ARCHIVED
 }
@@ -69,270 +375,4 @@ enum ProjectCategory {
   BAKERY_OVENS
   COMBI_OVENS
   SPEED_OVENS
-}
-
-model Project {
-  id          String            @id @default(uuid()) @db.Uuid
-  name        String
-  key         String            @unique
-  description String            @default("")
-  status      ProjectStatus     @default(ACTIVE)
-  category    ProjectCategory   @default(BAKERY_OVENS)
-  imageUrl    String?
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  deletedAt   DateTime?
-
-  suites       TestSuite[]
-  testPlans    TestPlan[]
-  testRuns     TestRun[]
-  requirements Requirement[]
-
-  @@index([deletedAt])
-  @@map("projects")
-}
-
-model TestSuite {
-  id          String          @id @default(uuid()) @db.Uuid
-  projectId   String          @db.Uuid
-  name        String
-  description String          @default("")
-  status      TestSuiteStatus @default(ACTIVE)
-  position    Int             @default(0)
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-  deletedAt   DateTime?
-
-  project   Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  testCases TestCase[]
-  testRuns  TestRunSuite[]
-
-  @@unique([projectId, name])
-  @@index([projectId])
-  @@index([deletedAt])
-  @@map("test_suites")
-}
-
-model TestCase {
-  id             String         @id @default(uuid()) @db.Uuid
-  suiteId        String         @db.Uuid
-  clonedFromId   String?        @db.Uuid
-  title          String
-  description    String         @default("")
-  preconditions  String         @default("")
-  expectedResult String         @default("")
-  status         TestCaseStatus @default(ACTIVE)
-  priority       TestPriority   @default(MEDIUM)
-  severity       TestSeverity   @default(MEDIUM)
-  version        Int            @default(1)
-  tags           String[]       @default([])
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  deletedAt      DateTime?
-
-  suite        TestSuite     @relation(fields: [suiteId], references: [id], onDelete: Cascade)
-  clonedFrom   TestCase?     @relation("ClonedTestCases", fields: [clonedFromId], references: [id], onDelete: SetNull)
-  clones       TestCase[]    @relation("ClonedTestCases")
-  steps        TestStep[]
-  results      TestResult[]
-  requirements Requirement[]
-
-  @@index([suiteId])
-  @@index([status])
-  @@index([priority])
-  @@index([deletedAt])
-  @@map("test_cases")
-}
-
-model TestStep {
-  id             String    @id @default(uuid()) @db.Uuid
-  testCaseId     String    @db.Uuid
-  order          Int
-  description    String
-  expectedResult String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  deletedAt      DateTime?
-
-  testCase TestCase @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
-
-  @@unique([testCaseId, order])
-  @@index([testCaseId])
-  @@index([deletedAt])
-  @@map("test_steps")
-}
-
-model TestPlan {
-  id          String    @id @default(uuid()) @db.Uuid
-  projectId   String    @db.Uuid
-  name        String
-  version     String
-  description String    @default("")
-  sections    Json      @default("[]")
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
-
-  project  Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  testRuns TestRun[]
-
-  @@unique([projectId, name, version])
-  @@index([projectId])
-  @@index([deletedAt])
-  @@map("test_plans")
-}
-
-model TestRun {
-  id           String        @id @default(uuid()) @db.Uuid
-  projectId    String        @db.Uuid
-  testPlanId   String        @db.Uuid
-  createdById  String?       @db.Uuid
-  assignedToId String        @db.Uuid
-  name         String
-  description  String        @default("")
-  status       TestRunStatus @default(PENDING)
-  startedAt    DateTime?
-  completedAt  DateTime?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  deletedAt    DateTime?
-
-  project    Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  testPlan   TestPlan       @relation(fields: [testPlanId], references: [id], onDelete: Cascade)
-  createdBy  User?          @relation("CreatedTestRuns", fields: [createdById], references: [id], onDelete: SetNull)
-  assignedTo User           @relation("AssignedTestRuns", fields: [assignedToId], references: [id], onDelete: Restrict)
-  suites     TestRunSuite[]
-  results    TestResult[]
-
-  @@index([projectId])
-  @@index([testPlanId])
-  @@index([assignedToId])
-  @@index([status])
-  @@index([deletedAt])
-  @@map("test_runs")
-}
-
-model TestRunSuite {
-  id          String   @id @default(uuid()) @db.Uuid
-  testRunId   String   @db.Uuid
-  testSuiteId String   @db.Uuid
-  testType    TestRunTestType @default(FUNCIONAL)
-  position    Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  testRun   TestRun   @relation(fields: [testRunId], references: [id], onDelete: Cascade)
-  testSuite TestSuite @relation(fields: [testSuiteId], references: [id], onDelete: Cascade)
-
-  @@unique([testRunId, testSuiteId])
-  @@index([testType])
-  @@index([testSuiteId])
-  @@map("test_run_suites")
-}
-
-model TestResult {
-  id           String           @id @default(uuid()) @db.Uuid
-  testRunId    String           @db.Uuid
-  testCaseId   String           @db.Uuid
-  executedById String?          @db.Uuid
-  status       TestResultStatus @default(PENDING)
-  comment      String           @default("")
-  attachments  String[]         @default([])
-  executedAt   DateTime?
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
-
-  testRun    TestRun  @relation(fields: [testRunId], references: [id], onDelete: Cascade)
-  testCase   TestCase @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
-  executedBy User?    @relation("ExecutedResults", fields: [executedById], references: [id], onDelete: SetNull)
-
-  @@unique([testRunId, testCaseId])
-  @@index([testCaseId])
-  @@index([status])
-  @@map("test_results")
-}
-
-model User {
-  id                          String     @id @default(uuid()) @db.Uuid
-  name                        String
-  email                       String     @unique
-  password                    String
-  role                        UserRole   @default(QA)
-  status                      UserStatus @default(ACTIVE)
-  firstAccess                 Boolean    @default(false)
-  passwordChangedAt           DateTime?
-  passwordResetTokenHash      String?
-  passwordResetTokenExpiresAt DateTime?
-  createdAt                   DateTime   @default(now())
-  updatedAt                   DateTime   @updatedAt
-  deletedAt                   DateTime?
-
-  assignedTestRuns TestRun[]    @relation("AssignedTestRuns")
-  createdTestRuns  TestRun[]    @relation("CreatedTestRuns")
-  executedResults  TestResult[] @relation("ExecutedResults")
-  loginLogs        LoginLog[]
-  auditLogs        AuditLog[]   @relation("ActorAuditLogs")
-  targetedAuditLogs AuditLog[]  @relation("TargetUserAuditLogs")
-
-  @@index([role])
-  @@index([status])
-  @@index([deletedAt])
-  @@map("users")
-}
-
-model LoginLog {
-  id            String   @id @default(uuid()) @db.Uuid
-  userId        String?  @db.Uuid
-  email         String
-  success       Boolean
-  failureReason String   @default("")
-  ipAddress     String   @default("")
-  userAgent     String   @default("")
-  createdAt     DateTime @default(now())
-
-  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
-
-  @@index([userId])
-  @@index([email])
-  @@index([success])
-  @@index([createdAt])
-  @@map("login_logs")
-}
-
-model AuditLog {
-  id            String   @id @default(uuid()) @db.Uuid
-  actorUserId   String?  @db.Uuid
-  targetUserId  String?  @db.Uuid
-  action        String
-  details       Json     @default("{}")
-  ipAddress     String   @default("")
-  userAgent     String   @default("")
-  createdAt     DateTime @default(now())
-
-  actor      User? @relation("ActorAuditLogs", fields: [actorUserId], references: [id], onDelete: SetNull)
-  targetUser User? @relation("TargetUserAuditLogs", fields: [targetUserId], references: [id], onDelete: SetNull)
-
-  @@index([actorUserId])
-  @@index([targetUserId])
-  @@index([action])
-  @@index([createdAt])
-  @@map("audit_logs")
-}
-
-model Requirement {
-  id           String   @id @default(uuid()) @db.Uuid
-  projectId    String   @db.Uuid
-  referenceKey String
-  title        String
-  description  String   @default("")
-  status       String   @default("active")
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  testCases TestCase[]
-
-  @@unique([projectId, referenceKey])
-  @@index([projectId])
-  @@map("requirements")
 }

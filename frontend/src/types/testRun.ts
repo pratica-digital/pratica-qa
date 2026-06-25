@@ -80,8 +80,35 @@ export type RunnerTestCase = {
   description?: string;
   expectedResult?: string;
   priority?: 'LOW' | 'MEDIUM' | 'HIGH';
+  severity?: TestSeverity;
   status?: string;
+  suite?: {
+    id: string;
+    name: string;
+    projectId: string;
+    project?: {
+      id: string;
+      name: string;
+    };
+  };
   steps?: TestStep[];
+};
+
+export type TestResultAttachment = {
+  id: string;
+  testResultId: string;
+  testRunId: string;
+  testCaseId: string;
+  testStepId?: string | null;
+  uploadedById?: string | null;
+  fileName: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  url: string;
+  createdAt: string;
+  uploadedBy?: AuthUser | null;
+  testStep?: TestStep | null;
 };
 
 export type ProjectSummary = {
@@ -105,8 +132,6 @@ export type ManagedTestSuite = {
   id: string;
   projectId: string;
   name: string;
-  description: string;
-  status: TestSuiteStatus;
   position: number;
   createdAt?: string;
   updatedAt?: string;
@@ -128,7 +153,6 @@ export type ManagedTestCase = {
   preconditions?: string;
   expectedResult: string;
   status: TestCaseStatus;
-  priority: TestPriority;
   severity?: TestSeverity;
   version?: number;
   tags: string[];
@@ -138,6 +162,10 @@ export type ManagedTestCase = {
     id: string;
     name: string;
     projectId: string;
+    project?: {
+      id: string;
+      name: string;
+    };
   };
   steps: TestStep[];
 };
@@ -148,19 +176,42 @@ export type TestResult = {
   testCaseId: string;
   status: TestResultStatus;
   comment?: string;
-  attachments?: string[];
+  attachments?: TestResultAttachment[];
+  legacyAttachments?: string[];
   executedAt?: string | null;
   executedBy?: AuthUser | null;
+  lastModifiedBy?: AuthUser | null;
+  updatedAt?: string;
+  history?: TestResultHistory[];
   testRun?: {
     id: string;
     name: string;
     status: TestRunStatus;
     testPlanId?: string | null;
+    projectId?: string | null;
     assignedToId?: string | null;
     completedAt?: string | null;
     deletedAt?: string | null;
+    project?: {
+      id: string;
+      name: string;
+    };
   };
   testCase: RunnerTestCase;
+};
+
+export type TestResultHistory = {
+  id: string;
+  testResultId: string;
+  actorUserId?: string | null;
+  previousStatus?: TestResultStatus | null;
+  newStatus?: TestResultStatus | null;
+  previousComment?: string;
+  newComment?: string;
+  addedAttachments?: string[];
+  removedAttachments?: string[];
+  createdAt: string;
+  actor?: AuthUser | null;
 };
 
 export type TestRunSuite = {
@@ -300,15 +351,13 @@ export type DashboardAnalytics = {
 export type ExecuteTestResultPayload = {
   testResultId?: string;
   testCaseId?: string;
-  status: Exclude<TestResultStatus, 'PENDING'>;
+  status: TestResultStatus;
   comment?: string;
-  attachments?: string[];
 };
 
 export type UpdateTestResultPayload = {
-  status: Exclude<TestResultStatus, 'PENDING'>;
+  status: TestResultStatus;
   comment?: string;
-  attachments?: string[];
 };
 
 export type CreateTestResultPayload = UpdateTestResultPayload & {
@@ -322,9 +371,7 @@ export type UpdateTestCasePayload = Partial<{
   description: string;
   expectedResult: string;
   status: TestCaseStatus;
-  priority: TestPriority;
   severity: TestSeverity;
-  tags: string[];
 }>;
 
 export type ReplaceTestStepsPayload = {
@@ -341,23 +388,18 @@ export type CreateTestCasePayload = {
   description?: string;
   expectedResult?: string;
   status?: TestCaseStatus;
-  priority?: TestPriority;
   severity?: TestSeverity;
-  tags?: string[];
   steps?: ReplaceTestStepsPayload['steps'];
 };
 
 export type UpdateTestSuitePayload = Partial<{
   name: string;
-  description: string;
-  status: TestSuiteStatus;
   position: number;
 }>;
 
 export type CreateTestSuitePayload = {
   projectId: string;
   name: string;
-  description?: string;
   position?: number;
 };
 
@@ -385,7 +427,7 @@ export type CreateProjectPayload = {
   name: string;
   key?: string;
   description?: string;
-  category: ProjectCategory;
+  category?: ProjectCategory;
   imageFile?: File | null;
 };
 

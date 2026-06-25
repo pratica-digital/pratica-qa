@@ -1,7 +1,9 @@
 import { X } from 'lucide-react';
+import praticaLogo from '../assets/logo-branca.png';
 import { useAuth } from '../auth/useAuth';
 import type { PageId } from '../data/workspace';
 import { navigationItems } from '../data/workspace';
+import { ShieldCheck } from 'lucide-react';
 
 type SidebarProps = {
   activePage: PageId;
@@ -28,30 +30,39 @@ export function Sidebar({ activePage, isOpen, onClose, onNavigate }: SidebarProp
         onClick={onClose}
       />
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-72 transform flex-col border-r border-blue-900 bg-blue-950 transition-transform duration-200 dark:border-blue-800 dark:bg-blue-950 lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-72 transform flex-col border-r border-blue-900 bg-blue-950 transition-transform duration-200 lg:translate-x-0 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-          <div className="flex h-16 items-center justify-between border-b border-blue-900 px-4 dark:border-blue-800">
+          <div className="flex h-16 items-center justify-between border-b border-blue-900 px-4">
           <button
             className="flex min-w-0 items-center gap-3 text-left"
             onClick={() => onNavigate('dashboard')}
             type="button"
           >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-800 text-sm font-semibold text-white dark:bg-blue-200 dark:text-blue-950">
-              QA
-            </span>
+            <img
+              src={praticaLogo}
+              alt="qa-platform logo"
+              className="h-8 w-35 rounded-lg object-cover"
+            />
+
+            <div className="flex h-10 w-10 items-center justify-center rounded-full border-4 border-[#E0F7FA]">
+                <div className="flex h-6 w-8 items-center justify-center rounded-full bg-[#ADFF2F] text-[white]">
+                    <ShieldCheck className="h-4 w-4" />
+                </div>
+            </div>
+
             <span className="min-w-0">
               <span className="block truncate text-sm font-semibold text-white">
                 qa-platform
               </span>
-              <span className="block truncate text-xs text-blue-200">
+              <span className="block truncate text-xs text-[#84cc16]">
                 Release workspace
               </span>
             </span>
           </button>
           <button
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-white lg:hidden"
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-950 lg:hidden"
             onClick={onClose}
             title="Close sidebar"
             type="button"
@@ -69,8 +80,8 @@ export function Sidebar({ activePage, isOpen, onClose, onNavigate }: SidebarProp
               <button
                 className={`flex h-10 w-full items-center gap-3 rounded-lg px-3 text-left text-sm font-medium transition-colors ${
                   isActive
-                    ? 'bg-blue-800 text-white dark:bg-blue-200 dark:text-blue-950'
-                    : 'text-blue-200 hover:bg-blue-900 hover:text-white dark:text-blue-300 dark:hover:bg-blue-800 dark:hover:text-white'
+                    ? 'bg-blue-800 text-white'
+                    : 'text-blue-200 hover:bg-blue-900 hover:text-white'
                 }`}
                 key={item.id}
                 onClick={() => {
@@ -86,8 +97,8 @@ export function Sidebar({ activePage, isOpen, onClose, onNavigate }: SidebarProp
           })}
         </nav>
 
-        <div className="border-t border-blue-900 p-4 dark:border-blue-800">
-          <div className="rounded-lg border border-blue-900 p-3 dark:border-blue-800">
+        <div className="border-t border-blue-900 p-4">
+          <div className="rounded-lg border border-blue-900 p-3">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-medium uppercase text-blue-200">
@@ -102,7 +113,7 @@ export function Sidebar({ activePage, isOpen, onClose, onNavigate }: SidebarProp
               </div>
               <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
             </div>
-            <div className="mt-3 h-2 rounded-full bg-blue-900/10 dark:bg-blue-900">
+            <div className="mt-3 h-2 rounded-full bg-blue-900/10">
               <div className="h-2 rounded-full bg-emerald-500" style={{ width: `${progress}%` }} />
             </div>
           </div>

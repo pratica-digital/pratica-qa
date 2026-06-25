@@ -4,7 +4,6 @@ import { ArrowDown, ArrowUp, Layers3, ListChecks, Save, X } from 'lucide-react';
 import type {
   ManagedTestCase,
   ManagedTestSuite,
-  TestSuiteStatus,
   UpdateTestSuitePayload,
 } from '../../types/testRun';
 
@@ -20,8 +19,6 @@ type TestSuiteEditPanelProps = {
   ) => Promise<void>;
 };
 
-const statuses: TestSuiteStatus[] = ['ACTIVE', 'ARCHIVED'];
-
 export function TestSuiteEditPanel({
   suite,
   cases,
@@ -30,8 +27,6 @@ export function TestSuiteEditPanel({
   onSave,
 }: TestSuiteEditPanelProps) {
   const [name, setName] = useState(suite.name);
-  const [description, setDescription] = useState(suite.description ?? '');
-  const [status, setStatus] = useState<TestSuiteStatus>(suite.status ?? 'ACTIVE');
   const [position, setPosition] = useState(String(suite.position ?? 0));
   const [orderedCases, setOrderedCases] = useState(cases);
   const [saving, setSaving] = useState(false);
@@ -82,8 +77,6 @@ export function TestSuiteEditPanel({
         suite,
         {
           name: name.trim(),
-          description: description.trim(),
-          status,
           position: parsedPosition,
         },
         orderedCases.map((testCase) => testCase.id),
@@ -123,7 +116,7 @@ export function TestSuiteEditPanel({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
-          <div className="grid gap-4 sm:grid-cols-[1fr_10rem_10rem]">
+          <div className="grid gap-4 sm:grid-cols-[1fr_10rem]">
             <label className="block text-sm font-medium text-slate-700">
               Name
               <input
@@ -132,22 +125,6 @@ export function TestSuiteEditPanel({
                 onChange={(event) => setName(event.target.value)}
                 value={name}
               />
-            </label>
-
-            <label className="block text-sm font-medium text-slate-700">
-              Status
-              <select
-                className="mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50"
-                disabled={readOnly || saving}
-                onChange={(event) => setStatus(event.target.value as TestSuiteStatus)}
-                value={status}
-              >
-                {statuses.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
             </label>
 
             <label className="block text-sm font-medium text-slate-700">
@@ -162,16 +139,6 @@ export function TestSuiteEditPanel({
               />
             </label>
           </div>
-
-          <label className="mt-4 block text-sm font-medium text-slate-700">
-            Description
-            <textarea
-              className="mt-1.5 min-h-28 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50"
-              disabled={readOnly || saving}
-              onChange={(event) => setDescription(event.target.value)}
-              value={description}
-            />
-          </label>
 
           <section className="mt-5">
             <div className="flex items-center justify-between gap-3">

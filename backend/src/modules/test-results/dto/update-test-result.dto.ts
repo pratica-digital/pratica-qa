@@ -1,7 +1,5 @@
 import { TestResultStatus } from '@prisma/client';
 import {
-  ArrayMaxSize,
-  IsArray,
   IsEnum,
   IsOptional,
   IsString,
@@ -22,10 +20,4 @@ export class UpdateTestResultDto {
   @IsString()
   @MaxLength(8000)
   comment?: string;
-
-  @IsOptional()
-  @IsArray()
-  @ArrayMaxSize(20)
-  @IsString({ each: true })
-  attachments?: string[];
 }

@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowDown, ArrowUp, ListChecks, Plus, Save, Trash2, X } from 'lucide-react';
+import { ActionMenu } from '../ActionMenu';
 import type {
   ManagedTestCase,
   ManagedTestSuite,
   ReplaceTestStepsPayload,
   TestCaseStatus,
-  TestPriority,
   UpdateTestCasePayload,
 } from '../../types/testRun';
 
@@ -29,7 +29,6 @@ type TestCaseEditPanelProps = {
   ) => Promise<void>;
 };
 
-const priorities: TestPriority[] = ['LOW', 'MEDIUM', 'HIGH'];
 const statuses: TestCaseStatus[] = ['ACTIVE', 'ARCHIVED'];
 
 function toStepDrafts(testCase: ManagedTestCase): StepDraft[] {
@@ -61,7 +60,6 @@ export function TestCaseEditPanel({
   const [title, setTitle] = useState(testCase.title);
   const [description, setDescription] = useState(testCase.description ?? '');
   const [expectedResult, setExpectedResult] = useState(testCase.expectedResult ?? '');
-  const [priority, setPriority] = useState<TestPriority>(testCase.priority ?? 'MEDIUM');
   const [status, setStatus] = useState<TestCaseStatus>(testCase.status ?? 'ACTIVE');
   const [steps, setSteps] = useState<StepDraft[]>(() => toStepDrafts(testCase));
   const [saving, setSaving] = useState(false);
@@ -76,8 +74,14 @@ export function TestCaseEditPanel({
     };
   }, []);
 
-  const suiteName =
-    suites.find((suite) => suite.id === testCase.suiteId)?.name ?? testCase.suite?.name ?? 'Suite';
+  const suite = suites.find((item) => item.id === testCase.suiteId);
+  const suiteName = suite?.name ?? testCase.suite?.name ?? 'Suite';
+  const projectName =
+    suite?.project?.name ??
+    testCase.suite?.project?.name ??
+    suite?.projectId ??
+    testCase.suite?.projectId ??
+    'Project';
 
   function updateStep(index: number, field: 'description' | 'expectedResult', value: string) {
     setSteps((current) =>
@@ -135,7 +139,6 @@ export function TestCaseEditPanel({
           title: title.trim(),
           description: description.trim(),
           expectedResult: expectedResult.trim(),
-          priority,
           status,
         },
         { steps: normalizedSteps },
@@ -160,19 +163,21 @@ export function TestCaseEditPanel({
             <h2 className="truncate text-sm font-semibold text-slate-950">
               Edit test case
             </h2>
-            <p className="truncate text-xs text-slate-500">{suiteName}</p>
+            <p className="truncate text-xs text-slate-500">{projectName} / {suiteName}</p>
           </div>
           {onDelete ? (
-            <button
-              className="inline-flex h-8 items-center gap-2 rounded-lg border border-red-600 bg-red-600 px-3 text-sm font-medium text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+            <ActionMenu
+              ariaLabel="Test case actions"
               disabled={readOnly || saving}
-              onClick={() => onDelete(testCase)}
-              title="Delete test case"
-              type="button"
-            >
-              <Trash2 className="h-4 w-4" aria-hidden="true" />
-              Delete
-            </button>
+              items={[
+                {
+                  label: 'Delete',
+                  onSelect: () => onDelete(testCase),
+                  title: 'Delete test case',
+                  tone: 'danger',
+                },
+              ]}
+            />
           ) : null}
           <button
             className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
@@ -196,23 +201,7 @@ export function TestCaseEditPanel({
               />
             </label>
 
-            <div className="grid grid-cols-2 gap-3 lg:grid-cols-1">
-              <label className="block text-sm font-medium text-slate-700">
-                Priority
-                <select
-                  className="mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50"
-                  disabled={readOnly || saving}
-                  onChange={(event) => setPriority(event.target.value as TestPriority)}
-                  value={priority}
-                >
-                  {priorities.map((item) => (
-                    <option key={item} value={item}>
-                      {item}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
+            <div>
               <label className="block text-sm font-medium text-slate-700">
                 Status
                 <select
@@ -229,6 +218,12 @@ export function TestCaseEditPanel({
                 </select>
               </label>
             </div>
+          </div>
+
+          <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+            Project: <span className="font-medium text-slate-900">{projectName}</span>
+            <span className="mx-2 text-slate-300">/</span>
+            Suite: <span className="font-medium text-slate-900">{suiteName}</span>
           </div>
 
           <div className="mt-4 grid gap-4 lg:grid-cols-2">

@@ -1,4 +1,4 @@
-import { TestCaseStatus, TestPriority, TestSeverity } from '@prisma/client';
+import { TestCaseStatus, TestSeverity } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
@@ -40,10 +40,6 @@ export class CreateTestCaseDto {
   @IsOptional()
   @IsEnum(TestCaseStatus)
   status?: TestCaseStatus;
-
-  @IsOptional()
-  @IsEnum(TestPriority)
-  priority?: TestPriority;
 
   @IsOptional()
   @IsEnum(TestSeverity)

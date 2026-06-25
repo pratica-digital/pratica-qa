@@ -1,4 +1,4 @@
-import { TestCaseStatus, TestPriority, TestSeverity } from '@prisma/client';
+import { TestCaseStatus, TestSeverity } from '@prisma/client';
 import { ArrayMaxSize, IsArray, IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class UpdateTestCaseDto {
@@ -25,10 +25,6 @@ export class UpdateTestCaseDto {
   @IsOptional()
   @IsEnum(TestCaseStatus)
   status?: TestCaseStatus;
-
-  @IsOptional()
-  @IsEnum(TestPriority)
-  priority?: TestPriority;
 
   @IsOptional()
   @IsEnum(TestSeverity)

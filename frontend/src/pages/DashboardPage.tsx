@@ -1,4 +1,4 @@
-import type { MouseEvent, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Activity,
@@ -16,7 +16,6 @@ import {
   PlaySquare,
   PieChart,
   RefreshCw,
-  Trash2,
   TrendingUp,
   XCircle,
   type LucideIcon,
@@ -234,10 +233,6 @@ function getSuiteName(suiteId: string | undefined, suites: ManagedTestSuite[]) {
   return suites.find((suite) => suite.id === suiteId)?.name ?? 'Suite';
 }
 
-function stopPropagation(event: MouseEvent) {
-  event.stopPropagation();
-}
-
 function SectionHeader({
   actionLabel,
   children,
@@ -279,37 +274,6 @@ function EmptyBlock({ label }: { label: string }) {
   );
 }
 
-function DetailButton({ children, onClick }: { children: string; onClick: () => void }) {
-  return (
-    <button
-      className="inline-flex h-9 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-      onClick={(event) => {
-        stopPropagation(event);
-        onClick();
-      }}
-      type="button"
-    >
-      {children}
-    </button>
-  );
-}
-
-function DeleteActionButton({ onClick, title }: { onClick: () => void; title: string }) {
-  return (
-    <button
-      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-600 bg-red-600 text-white transition hover:bg-red-700"
-      onClick={(event) => {
-        stopPropagation(event);
-        onClick();
-      }}
-      title={title}
-      type="button"
-    >
-      <Trash2 className="h-4 w-4" aria-hidden="true" />
-    </button>
-  );
-}
-
 function DashboardMetricCard({
   active,
   delta,
@@ -324,6 +288,7 @@ function DashboardMetricCard({
 }: {
   active?: boolean;
   delta?: DashboardMetricDelta;
+  description?: string;
   icon: LucideIcon;
   inverseDelta?: boolean;
   label: string;
@@ -464,6 +429,44 @@ function ChartEmptyState({ label }: { label: string }) {
   );
 }
 
+type ChartTooltipRow = {
+  label: string;
+  value: ReactNode;
+};
+
+function ChartHoverTooltip({
+  className = '',
+  note,
+  rows,
+  title,
+}: {
+  className?: string;
+  note?: string;
+  rows: ChartTooltipRow[];
+  title: string;
+}) {
+  return (
+    <div
+      className={`pointer-events-none absolute z-30 min-w-44 rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-xs text-slate-600 opacity-0 shadow-lg ring-1 ring-slate-900/5 transition duration-150 group-hover:translate-y-0 group-hover:opacity-100 group-focus:translate-y-0 group-focus:opacity-100 ${className}`}
+    >
+      <p className="font-semibold text-slate-950">{title}</p>
+      <dl className="mt-2 space-y-1">
+        {rows.map((row) => (
+          <div className="flex items-center justify-between gap-4" key={row.label}>
+            <dt className="text-slate-500">{row.label}</dt>
+            <dd className="font-semibold text-slate-900">{row.value}</dd>
+          </div>
+        ))}
+      </dl>
+      {note ? <p className="mt-2 border-t border-slate-100 pt-2 text-slate-500">{note}</p> : null}
+    </div>
+  );
+}
+
+function formatChartPercent(value: number) {
+  return `${Math.round(value)}%`;
+}
+
 function AnalyticsSkeleton() {
   return (
     <section className="grid gap-6 lg:grid-cols-2">
@@ -478,6 +481,7 @@ function AnalyticsSkeleton() {
 }
 
 function ApprovalRateChart({ data }: { data: DashboardAnalytics['monthlyQuality'] }) {
+  const [activeMonth, setActiveMonth] = useState<string | null>(null);
   const hasData = data.some((item) => item.executed > 0);
 
   if (!hasData) {
@@ -497,6 +501,17 @@ function ApprovalRateChart({ data }: { data: DashboardAnalytics['monthlyQuality'
   });
   const linePath = points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ');
   const areaPath = `${linePath} L ${points[points.length - 1].x} ${padding.top + innerHeight} L ${points[0].x} ${padding.top + innerHeight} Z`;
+  const activePoint = points.find((point) => point.month === activeMonth);
+  const tooltipWidth = 190;
+  const tooltipHeight = 68;
+  const tooltipX = activePoint
+    ? Math.min(Math.max(activePoint.x - tooltipWidth / 2, padding.left), width - padding.right - tooltipWidth)
+    : 0;
+  const tooltipY = activePoint
+    ? activePoint.y > 92
+      ? activePoint.y - tooltipHeight - 18
+      : activePoint.y + 18
+    : 0;
 
   return (
     <div className="overflow-hidden rounded-lg bg-slate-50">
@@ -517,12 +532,36 @@ function ApprovalRateChart({ data }: { data: DashboardAnalytics['monthlyQuality'
         <path d={areaPath} fill="#dbeafe" opacity="0.9" />
         <path d={linePath} fill="none" stroke="#1d4ed8" strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" />
         {points.map((point, index) => (
-          <g key={point.month}>
-            <circle cx={point.x} cy={point.y} fill="#ffffff" r="5" stroke="#1d4ed8" strokeWidth="3">
-              <title>
-                {point.label}: {point.approvalRate}% ({point.passed}/{point.executed})
-              </title>
-            </circle>
+          <g
+            aria-label={`${point.label}: ${point.approvalRate}% de aprovacao, ${point.passed} aprovados de ${point.executed} executados`}
+            className="cursor-pointer outline-none"
+            key={point.month}
+            onBlur={() => setActiveMonth(null)}
+            onFocus={() => setActiveMonth(point.month)}
+            onMouseEnter={() => setActiveMonth(point.month)}
+            onMouseLeave={() => setActiveMonth(null)}
+            role="button"
+            tabIndex={0}
+          >
+            <line
+              opacity={activeMonth === point.month ? 1 : 0}
+              stroke="#93c5fd"
+              strokeDasharray="3 5"
+              strokeWidth="2"
+              x1={point.x}
+              x2={point.x}
+              y1={padding.top}
+              y2={padding.top + innerHeight}
+            />
+            <circle cx={point.x} cy={point.y} fill="transparent" r="16" />
+            <circle
+              cx={point.x}
+              cy={point.y}
+              fill={activeMonth === point.month ? '#1d4ed8' : '#ffffff'}
+              r={activeMonth === point.month ? 7 : 5}
+              stroke="#1d4ed8"
+              strokeWidth="3"
+            />
             {index % Math.ceil(points.length / 6) === 0 || index === points.length - 1 ? (
               <text fill="#64748b" fontSize="11" textAnchor="middle" x={point.x} y={height - 16}>
                 {point.label}
@@ -530,6 +569,28 @@ function ApprovalRateChart({ data }: { data: DashboardAnalytics['monthlyQuality'
             ) : null}
           </g>
         ))}
+        {activePoint ? (
+          <g pointerEvents="none">
+            <rect
+              fill="#ffffff"
+              height={tooltipHeight}
+              rx="8"
+              stroke="#e2e8f0"
+              width={tooltipWidth}
+              x={tooltipX}
+              y={tooltipY}
+            />
+            <text fill="#0f172a" fontSize="12" fontWeight="700" x={tooltipX + 12} y={tooltipY + 20}>
+              {activePoint.label}
+            </text>
+            <text fill="#475569" fontSize="11" x={tooltipX + 12} y={tooltipY + 40}>
+              Taxa: {formatChartPercent(activePoint.approvalRate)}
+            </text>
+            <text fill="#475569" fontSize="11" x={tooltipX + 12} y={tooltipY + 56}>
+              Aprovados: {activePoint.passed} de {activePoint.executed}
+            </text>
+          </g>
+        ) : null}
       </svg>
     </div>
   );
@@ -537,25 +598,40 @@ function ApprovalRateChart({ data }: { data: DashboardAnalytics['monthlyQuality'
 
 function MonthlyExecutionsChart({ data }: { data: DashboardAnalytics['monthlyExecutions'] }) {
   const max = Math.max(...data.map((item) => item.executions), 0);
+  const total = data.reduce((sum, item) => sum + item.executions, 0);
 
   if (max === 0) {
     return <ChartEmptyState label="Nenhum dado disponível para o período selecionado." />;
   }
 
   return (
-    <div className="flex min-h-72 items-end gap-2 rounded-lg bg-slate-50 px-3 py-4">
+    <div className="flex min-h-72 items-end gap-2 rounded-lg bg-slate-50 px-3 py-4" role="list">
       {data.map((item) => {
-        const height = Math.max(12, Math.round((item.executions / max) * 190));
+        const height = item.executions === 0 ? 8 : Math.max(14, Math.round((item.executions / max) * 190));
+        const share = total === 0 ? 0 : (item.executions / total) * 100;
 
         return (
-          <div className="flex min-w-0 flex-1 flex-col items-center justify-end gap-2" key={item.month}>
+          <div
+            aria-label={`${item.label}: ${item.executions} execucoes, ${formatChartPercent(share)} do periodo`}
+            className="group relative flex min-w-0 flex-1 flex-col items-center justify-end gap-2 rounded-lg px-1 py-2 outline-none transition hover:bg-white/80 focus:bg-white focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+            key={item.month}
+            role="listitem"
+            tabIndex={0}
+          >
             <div className="text-xs font-medium text-slate-600">{item.executions}</div>
             <div
-              className="w-full max-w-10 rounded-t-lg bg-blue-700 transition hover:bg-blue-800"
+              className="w-full max-w-10 rounded-t-lg bg-blue-600 shadow-sm transition group-hover:bg-blue-700 group-focus:bg-blue-700"
               style={{ height }}
-              title={`${item.label}: ${item.executions} executions`}
             />
             <div className="w-full truncate text-center text-[11px] text-slate-500">{item.label}</div>
+            <ChartHoverTooltip
+              className="bottom-full left-1/2 mb-2 -translate-x-1/2 translate-y-1"
+              rows={[
+                { label: 'Execucoes', value: item.executions },
+                { label: 'Participacao', value: formatChartPercent(share) },
+              ]}
+              title={item.label}
+            />
           </div>
         );
       })}
@@ -564,47 +640,117 @@ function MonthlyExecutionsChart({ data }: { data: DashboardAnalytics['monthlyExe
 }
 
 function ResultDistributionChart({ data }: { data: DashboardAnalytics['resultDistribution'] }) {
+  const [activeLabel, setActiveLabel] = useState<string | null>(null);
   const segments = [
-    { color: '#059669', label: 'Passou', value: data.passed },
-    { color: '#dc2626', label: 'Falhou', value: data.failed },
-    { color: '#d97706', label: 'Bloqueado', value: data.blocked },
-    { color: '#475569', label: 'Não executado', value: data.notExecuted },
+    { color: '#059669', label: 'Passou', tone: 'bg-emerald-100 text-emerald-800', value: data.passed },
+    { color: '#dc2626', label: 'Falhou', tone: 'bg-red-100 text-red-800', value: data.failed },
+    { color: '#d97706', label: 'Bloqueado', tone: 'bg-amber-100 text-amber-800', value: data.blocked },
+    { color: '#475569', label: 'Nao executado', tone: 'bg-slate-100 text-slate-700', value: data.notExecuted },
   ];
   const total = segments.reduce((sum, segment) => sum + segment.value, 0);
-  let cursor = 0;
+  const radius = 72;
+  const circumference = 2 * Math.PI * radius;
+  let strokeOffset = 0;
+  const visibleSegments = segments
+    .filter((segment) => segment.value > 0)
+    .map((segment) => {
+      const dash = (segment.value / total) * circumference;
+      const nextSegment = {
+        ...segment,
+        dash,
+        offset: strokeOffset,
+        percent: (segment.value / total) * 100,
+      };
+
+      strokeOffset += dash;
+      return nextSegment;
+    });
+  const activeSegment = segments.find((segment) => segment.label === activeLabel) ?? null;
 
   if (total === 0) {
     return <ChartEmptyState label="Nenhum dado disponível para o período selecionado." />;
   }
 
-  const gradient = segments
-    .map((segment) => {
-      const start = cursor;
-      const end = cursor + (segment.value / total) * 100;
-      cursor = end;
-
-      return `${segment.color} ${start}% ${end}%`;
-    })
-    .join(', ');
-
   return (
     <div className="grid min-h-72 gap-5 rounded-lg bg-slate-50 p-4 sm:grid-cols-[12rem_1fr] sm:items-center">
-      <div className="relative mx-auto h-44 w-44 rounded-full" style={{ background: `conic-gradient(${gradient})` }}>
-        <div className="absolute inset-10 flex flex-col items-center justify-center rounded-full bg-white text-center">
-          <span className="text-2xl font-semibold text-slate-950">{total}</span>
-          <span className="text-xs text-slate-500">resultados</span>
+      <div className="relative mx-auto h-48 w-48">
+        <svg className="h-full w-full" role="img" viewBox="0 0 200 200">
+          <title>Distribuicao dos resultados no periodo</title>
+          <circle cx="100" cy="100" fill="none" r={radius} stroke="#e2e8f0" strokeWidth="24" />
+          {visibleSegments.map((segment) => {
+            const isActive = activeLabel === segment.label;
+
+            return (
+              <circle
+                aria-label={`${segment.label}: ${segment.value} resultados, ${formatChartPercent(segment.percent)}`}
+                className="cursor-pointer outline-none transition"
+                cx="100"
+                cy="100"
+                fill="none"
+                key={segment.label}
+                onBlur={() => setActiveLabel(null)}
+                onFocus={() => setActiveLabel(segment.label)}
+                onMouseEnter={() => setActiveLabel(segment.label)}
+                onMouseLeave={() => setActiveLabel(null)}
+                opacity={activeLabel && !isActive ? 0.45 : 1}
+                r={radius}
+                role="button"
+                stroke={segment.color}
+                strokeDasharray={`${Math.max(segment.dash - 3, 1)} ${circumference}`}
+                strokeDashoffset={-segment.offset}
+                strokeLinecap="round"
+                strokeWidth={isActive ? 30 : 24}
+                tabIndex={0}
+                transform="rotate(-90 100 100)"
+              />
+            );
+          })}
+        </svg>
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center rounded-full text-center">
+          <span className="text-2xl font-semibold text-slate-950">{activeSegment?.value ?? total}</span>
+          <span className="text-xs text-slate-500">{activeSegment?.label ?? 'resultados'}</span>
+          {activeSegment ? (
+            <span className="mt-1 rounded-md bg-white px-2 py-0.5 text-xs font-medium text-slate-600 shadow-sm">
+              {formatChartPercent((activeSegment.value / total) * 100)}
+            </span>
+          ) : null}
         </div>
       </div>
-      <div className="grid gap-2">
-        {segments.map((segment) => (
-          <div className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm" key={segment.label}>
+      <div className="grid gap-2" role="list">
+        {segments.map((segment) => {
+          const percent = total === 0 ? 0 : (segment.value / total) * 100;
+          const isActive = activeLabel === segment.label;
+
+          return (
+          <div
+            aria-label={`${segment.label}: ${segment.value} resultados, ${formatChartPercent(percent)}`}
+            className={`group relative flex items-center justify-between gap-3 rounded-lg border bg-white px-3 py-2 text-sm outline-none transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${
+              isActive ? 'border-blue-300 shadow-sm' : 'border-slate-200'
+            }`}
+            key={segment.label}
+            onBlur={() => setActiveLabel(null)}
+            onFocus={() => setActiveLabel(segment.label)}
+            onMouseEnter={() => setActiveLabel(segment.label)}
+            onMouseLeave={() => setActiveLabel(null)}
+            role="listitem"
+            tabIndex={0}
+          >
             <span className="flex items-center gap-2 text-slate-600">
               <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: segment.color }} />
               {segment.label}
             </span>
-            <span className="font-semibold text-slate-950">{segment.value}</span>
+            <span className={`rounded-md px-2 py-1 font-semibold ${segment.tone}`}>{segment.value}</span>
+            <ChartHoverTooltip
+              className="bottom-full right-0 mb-2 translate-y-1"
+              rows={[
+                { label: 'Resultados', value: segment.value },
+                { label: 'Participacao', value: formatChartPercent(percent) },
+              ]}
+              title={segment.label}
+            />
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -612,51 +758,118 @@ function ResultDistributionChart({ data }: { data: DashboardAnalytics['resultDis
 
 function TopProjectsChart({ data }: { data: DashboardAnalytics['topProjects'] }) {
   const max = Math.max(...data.map((item) => item.executions), 0);
+  const total = data.reduce((sum, item) => sum + item.executions, 0);
 
   if (data.length === 0 || max === 0) {
     return <ChartEmptyState label="Nenhum dado disponível para o período selecionado." />;
   }
 
   return (
-    <div className="space-y-3 rounded-lg bg-slate-50 p-4">
-      {data.map((project, index) => (
-        <div className="grid gap-2" key={project.projectId}>
+    <div className="space-y-3 rounded-lg bg-slate-50 p-4" role="list">
+      {data.map((project, index) => {
+        const percentOfMax = (project.executions / max) * 100;
+        const share = total === 0 ? 0 : (project.executions / total) * 100;
+
+        return (
+        <div
+          aria-label={`${project.name}: ${project.executions} execucoes, posicao ${index + 1}, ${formatChartPercent(share)} do ranking`}
+          className="group relative grid gap-2 rounded-lg border border-transparent px-2 py-2 outline-none transition hover:-translate-y-0.5 hover:border-emerald-200 hover:bg-white hover:shadow-sm focus:bg-white focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
+          key={project.projectId}
+          role="listitem"
+          tabIndex={0}
+        >
           <div className="flex items-center justify-between gap-3 text-sm">
             <span className="min-w-0 truncate font-medium text-slate-700">
               {index + 1}. {project.name}
             </span>
-            <span className="text-slate-500">{project.executions}</span>
+            <span className="rounded-md bg-white px-2 py-1 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 transition group-hover:bg-emerald-50 group-hover:text-emerald-800">
+              {project.executions}
+            </span>
           </div>
-          <div className="h-3 rounded-full bg-white">
+          <div className="h-3 overflow-hidden rounded-full bg-white ring-1 ring-slate-200">
             <div
-              className="h-3 rounded-full bg-emerald-600"
-              style={{ width: `${Math.max(8, (project.executions / max) * 100)}%` }}
+              className="h-3 rounded-full bg-emerald-600 transition group-hover:bg-emerald-700 group-focus:bg-emerald-700"
+              style={{ width: `${Math.max(8, percentOfMax)}%` }}
             />
           </div>
+          <ChartHoverTooltip
+            className="bottom-full right-2 mb-2 translate-y-1"
+            rows={[
+              { label: 'Execucoes', value: project.executions },
+              { label: 'Participacao', value: formatChartPercent(share) },
+              { label: 'Posicao', value: `#${index + 1}` },
+            ]}
+            title={project.name}
+          />
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
 
 function RecentActivityPanel({ data }: { data: DashboardAnalytics['recentActivity'] }) {
   const items = [
-    { label: 'Execuções realizadas', value: data.executions, tone: 'bg-blue-100 text-blue-800' },
-    { label: 'Casos executados', value: data.casesExecuted, tone: 'bg-slate-100 text-slate-700' },
-    { label: 'Falhas encontradas', value: data.failures, tone: 'bg-red-100 text-red-800' },
-    { label: 'Aprovações', value: data.approvals, tone: 'bg-emerald-100 text-emerald-800' },
+    {
+      accent: 'bg-blue-600',
+      label: 'Execucoes realizadas',
+      note: 'Test runs com atividade nos ultimos 30 dias.',
+      tone: 'bg-blue-100 text-blue-800',
+      value: data.executions,
+    },
+    {
+      accent: 'bg-slate-600',
+      label: 'Casos executados',
+      note: 'Resultados de casos registrados no recorte recente.',
+      tone: 'bg-slate-100 text-slate-700',
+      value: data.casesExecuted,
+    },
+    {
+      accent: 'bg-red-600',
+      label: 'Falhas encontradas',
+      note: 'Resultados marcados como falha nos ultimos 30 dias.',
+      tone: 'bg-red-100 text-red-800',
+      value: data.failures,
+    },
+    {
+      accent: 'bg-emerald-600',
+      label: 'Aprovacoes',
+      note: 'Resultados aprovados no periodo recente.',
+      tone: 'bg-emerald-100 text-emerald-800',
+      value: data.approvals,
+    },
   ];
+  const max = Math.max(...items.map((item) => item.value), 1);
 
   return (
-    <div className="grid gap-3 rounded-lg bg-slate-50 p-4 sm:grid-cols-2">
-      {items.map((item) => (
-        <div className="rounded-lg border border-slate-200 bg-white p-3" key={item.label}>
+    <div className="grid gap-3 rounded-lg bg-slate-50 p-4 sm:grid-cols-2" role="list">
+      {items.map((item) => {
+        const width = item.value === 0 ? 4 : Math.max(12, (item.value / max) * 100);
+
+        return (
+        <div
+          aria-label={`${item.label}: ${item.value}`}
+          className="group relative rounded-lg border border-slate-200 bg-white p-3 outline-none transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+          key={item.label}
+          role="listitem"
+          tabIndex={0}
+        >
           <span className={`inline-flex rounded-md px-2 py-1 text-xs font-medium ${item.tone}`}>
             {item.label}
           </span>
           <p className="mt-3 text-2xl font-semibold text-slate-950">{item.value}</p>
+          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100">
+            <div className={`h-full rounded-full ${item.accent}`} style={{ width: `${width}%` }} />
+          </div>
+          <ChartHoverTooltip
+            className="bottom-full left-3 mb-2 translate-y-1"
+            note={item.note}
+            rows={[{ label: 'Total', value: item.value }]}
+            title={item.label}
+          />
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -1261,7 +1474,7 @@ export function DashboardPage({ onNavigate, onOpenRun }: DashboardPageProps) {
             type="button"
           >
             <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} aria-hidden="true" />
-            Refresh
+            
           </button>
         </div>
       </div>

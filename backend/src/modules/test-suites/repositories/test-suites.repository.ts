@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, TestSuiteStatus } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { CreateTestSuiteDto } from '../dto/create-test-suite.dto';
 import { UpdateTestSuiteDto } from '../dto/update-test-suite.dto';
@@ -7,7 +7,6 @@ import { UpdateTestSuiteDto } from '../dto/update-test-suite.dto';
 type FindTestSuitesParams = {
   projectId?: string;
   search?: string;
-  status?: TestSuiteStatus;
   skip: number;
   take: number;
 };
@@ -21,7 +20,6 @@ export class TestSuitesRepository {
       data: {
         projectId: dto.projectId,
         name: dto.name,
-        description: dto.description ?? '',
         position: dto.position ?? 0,
       },
       include: {
@@ -41,8 +39,8 @@ export class TestSuitesRepository {
     });
   }
 
-  findMany({ projectId, search, status, skip, take }: FindTestSuitesParams) {
-    const where = this.buildWhere({ projectId, search, status });
+  findMany({ projectId, search, skip, take }: FindTestSuitesParams) {
+    const where = this.buildWhere({ projectId, search });
 
     return this.prisma.testSuite.findMany({
       where,
@@ -66,9 +64,9 @@ export class TestSuitesRepository {
     });
   }
 
-  count(projectId?: string, search?: string, status?: TestSuiteStatus) {
+  count(projectId?: string, search?: string) {
     return this.prisma.testSuite.count({
-      where: this.buildWhere({ projectId, search, status }),
+      where: this.buildWhere({ projectId, search }),
     });
   }
 
@@ -118,16 +116,11 @@ export class TestSuitesRepository {
   private buildWhere(params: {
     projectId?: string;
     search?: string;
-    status?: TestSuiteStatus;
   }): Prisma.TestSuiteWhereInput {
     return {
       projectId: params.projectId,
-      status: params.status,
       OR: params.search
-        ? [
-            { name: { contains: params.search, mode: 'insensitive' } },
-            { description: { contains: params.search, mode: 'insensitive' } },
-          ]
+        ? [{ name: { contains: params.search, mode: 'insensitive' } }]
         : undefined,
     };
   }

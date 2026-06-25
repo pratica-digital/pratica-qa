@@ -321,7 +321,7 @@ export const reportsApi = {
 export const testSuitesApi = {
   listPage: async (
     token: string,
-    params: { projectId?: string; search?: string; status?: string; limit?: number } = {},
+    params: { projectId?: string; search?: string; limit?: number } = {},
   ) => {
     const response = await apiRequest<ManagedTestSuite[] | PaginatedResponse<ManagedTestSuite>>(
       withQuery('/test-suites', { ...params, limit: params.limit ?? 100 }),
@@ -334,7 +334,7 @@ export const testSuitesApi = {
   },
   list: async (
     token: string,
-    params: { projectId?: string; search?: string; status?: string; limit?: number } = {},
+    params: { projectId?: string; search?: string; limit?: number } = {},
   ) => {
     const response = await apiRequest<ManagedTestSuite[] | PaginatedResponse<ManagedTestSuite>>(
       withQuery('/test-suites', { ...params, limit: params.limit ?? 100 }),
@@ -423,7 +423,6 @@ export const testCasesApi = {
       search?: string;
       tag?: string;
       status?: string;
-      priority?: string;
       severity?: string;
       limit?: number;
     } = {},
@@ -445,7 +444,6 @@ export const testCasesApi = {
       search?: string;
       tag?: string;
       status?: string;
-      priority?: string;
       severity?: string;
       limit?: number;
     } = {},
@@ -580,6 +578,25 @@ export const testResultsApi = {
     token,
     body: payload,
   }),
+  uploadAttachments: (token: string, resultId: string, files: File[], testStepId?: string) => {
+    const formData = new FormData();
+
+    files.forEach((file) => formData.append('attachments', file));
+    if (testStepId) {
+      formData.set('testStepId', testStepId);
+    }
+
+    return apiRequest<TestResult>(`/test-results/${resultId}/attachments`, {
+      method: 'POST',
+      token,
+      body: formData,
+    });
+  },
+  removeAttachment: (token: string, resultId: string, attachmentId: string) =>
+    apiRequest<TestResult>(`/test-results/${resultId}/attachments/${attachmentId}`, {
+      method: 'DELETE',
+      token,
+    }),
 
   rerunFailed: (token: string, testRunId: string, payload: Record<string, never>) =>
     apiRequest<{ testRun: TestRun; failedCount: number }>(`/test-runs/${testRunId}/rerun-failed`,{

@@ -29,11 +29,10 @@ export class TestSuitesService {
       this.testSuitesRepository.findMany({
         projectId: query.projectId,
         search: query.search,
-        status: query.status,
         skip: pagination.skip,
         take: pagination.take,
       }),
-      this.testSuitesRepository.count(query.projectId, query.search, query.status),
+      this.testSuitesRepository.count(query.projectId, query.search),
     ]);
 
     return {

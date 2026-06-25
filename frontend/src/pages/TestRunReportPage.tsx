@@ -7,7 +7,9 @@ import {
   ChevronUp,
   Clock,
   Download,
+  ExternalLink,
   FileText,
+  FileVideo,
   Loader2,
   MinusCircle,
   RefreshCw,
@@ -16,8 +18,9 @@ import {
   XCircle,
 } from 'lucide-react';
 import { useCallback, useState } from 'react';
-import type { TestResult, TestRun } from '../types/testRun';
+import type { TestResult, TestResultAttachment, TestRun } from '../types/testRun';
 import { useTestRunReport } from "../hooks/useTestRunReport";
+import { resolveApiAssetUrl } from '../lib/api';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -53,6 +56,161 @@ function testTypeLabel(type?: string) {
 }
 
 // ─── Status config ────────────────────────────────────────────────────────────
+
+function getAttachmentUrl(attachment: TestResultAttachment) {
+  return attachment.url;
+}
+
+function getAttachmentName(attachment: TestResultAttachment) {
+  return (
+    attachment.originalName ||
+    attachment.fileName ||
+    decodeURIComponent(getAttachmentUrl(attachment).split('/').pop() ?? 'Evidencia')
+  );
+}
+
+function isImageAttachment(attachment: TestResultAttachment) {
+  return (
+    attachment.mimeType.startsWith('image/') ||
+    /\.(gif|jpe?g|png|webp)$/i.test(getAttachmentUrl(attachment).split('?')[0] ?? '')
+  );
+}
+
+function isVideoAttachment(attachment: TestResultAttachment) {
+  return (
+    attachment.mimeType.startsWith('video/') ||
+    /\.(mp4|mov|webm)$/i.test(getAttachmentUrl(attachment).split('?')[0] ?? '')
+  );
+}
+
+function attachmentMeta(attachment: TestResultAttachment) {
+  const parts = [fmt(attachment.createdAt)];
+
+  if (attachment.uploadedBy?.name) {
+    parts.push(attachment.uploadedBy.name);
+  }
+
+  return parts.join(' - ');
+}
+
+function statusLabel(status?: string | null) {
+  return status === 'PENDING' ? 'Not Run' : status ?? 'Not Run';
+}
+
+function EvidenceAttachmentCard({ attachment }: { attachment: TestResultAttachment }) {
+  const assetUrl = resolveApiAssetUrl(getAttachmentUrl(attachment));
+  const name = getAttachmentName(attachment);
+
+  return (
+    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+      {isImageAttachment(attachment) ? (
+        <a
+          className="block aspect-video bg-slate-100"
+          href={assetUrl}
+          rel="noreferrer"
+          target="_blank"
+        >
+          <img
+            alt={name}
+            className="h-full w-full object-contain"
+            src={assetUrl}
+          />
+        </a>
+      ) : isVideoAttachment(attachment) ? (
+        <div className="bg-slate-950">
+          <video
+            className="aspect-video w-full bg-slate-950"
+            controls
+            preload="metadata"
+            src={assetUrl}
+          >
+            <a className="text-white underline" href={assetUrl}>
+              {name}
+            </a>
+          </video>
+        </div>
+      ) : (
+        <div className="flex aspect-video items-center justify-center bg-slate-100 text-slate-400">
+          <FileText className="h-6 w-6" aria-hidden="true" />
+        </div>
+      )}
+
+      <div className="flex items-center justify-between gap-2 px-3 py-2">
+        <span className="min-w-0">
+          <span className="block truncate text-xs font-medium text-slate-600">
+            {name}
+          </span>
+          <span className="block truncate text-[11px] text-slate-400">
+            {attachmentMeta(attachment)}
+          </span>
+        </span>
+        <span className="flex shrink-0 items-center gap-1">
+          {isVideoAttachment(attachment) ? (
+            <FileVideo className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
+          ) : null}
+          <a
+            className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+            href={assetUrl}
+            rel="noreferrer"
+            target="_blank"
+            title="Abrir evidencia"
+          >
+            <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+          </a>
+          <a
+            className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+            download={name}
+            href={assetUrl}
+            title="Baixar evidencia"
+          >
+            <Download className="h-3.5 w-3.5" aria-hidden="true" />
+          </a>
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function getPdfImageFormat(attachment: TestResultAttachment) {
+  const mimeType = attachment.mimeType.toLowerCase();
+  const url = getAttachmentUrl(attachment).toLowerCase();
+
+  if (mimeType.includes('png') || url.endsWith('.png')) {
+    return 'PNG';
+  }
+
+  if (mimeType.includes('webp') || url.endsWith('.webp')) {
+    return 'WEBP';
+  }
+
+  return 'JPEG';
+}
+
+async function loadAttachmentImageDataUrl(attachment: TestResultAttachment) {
+  if (!isImageAttachment(attachment)) {
+    return null;
+  }
+
+  try {
+    const response = await fetch(resolveApiAssetUrl(getAttachmentUrl(attachment)));
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const blob = await response.blob();
+
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
 
 const STATUS_CONFIG: Record<
   StatusGroup,
@@ -250,6 +408,51 @@ function TestCaseAccordion({ result }: { result: TestResult }) {
                 Observações
               </p>
               <p className="text-sm text-slate-700">{result.comment}</p>
+            </div>
+          )}
+
+          {result.attachments && result.attachments.length > 0 && (
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                Evidencias
+              </p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {result.attachments.map((attachment) => (
+                  <EvidenceAttachmentCard attachment={attachment} key={attachment.id} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {result.history && result.history.length > 0 && (
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                Historico de alteracoes
+              </p>
+              <div className="space-y-2">
+                {result.history.map((entry) => (
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2" key={entry.id}>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-xs font-medium text-slate-700">
+                        {statusLabel(entry.previousStatus)} {'->'} {statusLabel(entry.newStatus)}
+                      </span>
+                      <span className="text-xs text-slate-500">{fmt(entry.createdAt)}</span>
+                    </div>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {entry.actor?.name ?? 'Sistema'}
+                      {entry.addedAttachments?.length
+                        ? ` adicionou ${entry.addedAttachments.length} evidencia(s)`
+                        : ''}
+                      {entry.removedAttachments?.length
+                        ? ` removeu ${entry.removedAttachments.length} evidencia(s)`
+                        : ''}
+                    </p>
+                    {entry.newComment && entry.newComment !== entry.previousComment ? (
+                      <p className="mt-1 text-xs text-slate-600">{entry.newComment}</p>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -508,7 +711,20 @@ async function generatePDF(testRun: TestRun, results: TestResult[]) {
       const hasDesc = Boolean(tc.description);
       const hasExpected = Boolean(tc.expectedResult);
       const hasComment = Boolean(result.comment);
-      const estimatedH = 14 + (hasDesc ? 8 : 0) + stepsCount * 7 + (hasExpected ? 8 : 0) + (hasComment ? 8 : 0);
+      const attachments = result.attachments ?? [];
+      const attachmentsHeight = attachments.reduce(
+        (height, attachment) => height + (isImageAttachment(attachment) ? 30 : 5),
+        0,
+      );
+      const historyCount = result.history?.length ?? 0;
+      const estimatedH =
+        18 +
+        (hasDesc ? 8 : 0) +
+        stepsCount * 7 +
+        (hasExpected ? 8 : 0) +
+        (hasComment ? 10 : 0) +
+        attachmentsHeight +
+        Math.min(historyCount, 3) * 7;
 
       checkPageBreak(estimatedH);
 
@@ -596,6 +812,64 @@ async function generatePDF(testRun: TestRun, results: TestResult[]) {
         doc.setTextColor(...colors.text);
         const commentLines = doc.splitTextToSize(result.comment ?? '', contentW - 14);
         doc.text(commentLines.slice(0, 2), cx, cy);
+        cy += Math.min(commentLines.length, 2) * 4 + 1;
+      }
+
+      if (attachments.length > 0) {
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...colors.muted);
+        doc.text('Evidencias:', cx, cy);
+        cy += 4;
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...colors.text);
+        for (const attachment of attachments) {
+          if (isImageAttachment(attachment)) {
+            const imageDataUrl = await loadAttachmentImageDataUrl(attachment);
+
+            if (imageDataUrl) {
+              try {
+                doc.addImage(
+                  imageDataUrl,
+                  getPdfImageFormat(attachment),
+                  cx + 2,
+                  cy,
+                  42,
+                  24,
+                );
+                cy += 26;
+              } catch {
+                doc.setTextColor(...colors.muted);
+                doc.text('[preview indisponivel]', cx + 2, cy);
+                doc.setTextColor(...colors.text);
+                cy += 4;
+              }
+            }
+          }
+
+          const attachmentLines = doc.splitTextToSize(
+            `${getAttachmentName(attachment)} - ${attachmentMeta(attachment)}`,
+            contentW - 18,
+          );
+          doc.text(attachmentLines.slice(0, 1), cx + 2, cy);
+          cy += 4;
+        }
+      }
+
+      if (historyCount > 0) {
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...colors.muted);
+        doc.text('Historico:', cx, cy);
+        cy += 4;
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...colors.text);
+        result.history?.slice(0, 3).forEach((entry) => {
+          const historyLine = `${fmt(entry.createdAt)} - ${entry.actor?.name ?? 'Sistema'}: ${statusLabel(entry.previousStatus)} -> ${statusLabel(entry.newStatus)}`;
+          const historyLines = doc.splitTextToSize(historyLine, contentW - 18);
+          doc.text(historyLines.slice(0, 1), cx + 2, cy);
+          cy += 4;
+        });
       }
 
       y += estimatedH + 2;

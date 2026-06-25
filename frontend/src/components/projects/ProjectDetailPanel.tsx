@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ClipboardList, FolderOpen, Layers3, PlaySquare, Trash2, X } from 'lucide-react';
+import { ClipboardList, FolderOpen, Layers3, PlaySquare, X } from 'lucide-react';
 import { useAuth } from '../../auth/useAuth';
+import { ActionMenu } from '../ActionMenu';
 import { projectsApi, testPlansApi, testRunsApi, testSuitesApi } from '../../lib/api';
 import type { ManagedTestSuite, ProjectSummary, TestPlan, TestRun } from '../../types/testRun';
 
@@ -100,15 +101,17 @@ export function ProjectDetailPanel({ project, onClose, onDelete }: ProjectDetail
             </p>
           </div>
           {onDelete ? (
-            <button
-              className="inline-flex h-8 items-center gap-2 rounded-lg border border-red-600 bg-red-600 px-3 text-sm font-medium text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
-              onClick={() => onDelete(projectDetail)}
-              title="Delete project"
-              type="button"
-            >
-              <Trash2 className="h-4 w-4" aria-hidden="true" />
-              Delete
-            </button>
+            <ActionMenu
+              ariaLabel="Project actions"
+              items={[
+                {
+                  label: 'Delete',
+                  onSelect: () => onDelete(projectDetail),
+                  title: 'Delete project',
+                  tone: 'danger',
+                },
+              ]}
+            />
           ) : null}
           <button
             className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
