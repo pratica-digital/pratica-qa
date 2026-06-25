@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { ClipboardList, Pencil, Trash2, X } from 'lucide-react';
+import { ClipboardList, X } from 'lucide-react';
+import { ActionMenu } from '../ActionMenu';
 import type { TestPlan } from '../../types/testRun';
 
 type TestPlanDetailPanelProps = {
@@ -49,25 +50,26 @@ export function TestPlanDetailPanel({ testPlan, onClose, onDelete, onEdit }: Tes
               v{testPlan.version} - {testPlan.project?.name ?? 'Project'}
             </p>
           </div>
-          {onDelete ? (
-            <button
-              className="inline-flex h-8 items-center gap-2 rounded-lg border border-red-600 bg-red-600 px-3 text-sm font-medium text-white transition hover:bg-red-700"
-              onClick={onDelete}
-              title="Delete test plan"
-              type="button"
-            >
-              <Trash2 className="h-4 w-4" aria-hidden="true" />
-              Delete
-            </button>
-          ) : null}
-          <button
-            className="inline-flex h-8 items-center gap-2 rounded-lg border border-slate-600 bg-slate-600 px-3 text-sm font-medium text-white hover:bg-slate-700"
-            onClick={onEdit}
-            type="button"
-          >
-            <Pencil className="h-4 w-4" aria-hidden="true" />
-            Edit
-          </button>
+          <ActionMenu
+            ariaLabel="Test plan actions"
+            items={[
+              {
+                label: 'Edit',
+                onSelect: onEdit,
+                title: 'Edit test plan',
+              },
+              ...(onDelete
+                ? [
+                    {
+                      label: 'Delete',
+                      onSelect: onDelete,
+                      title: 'Delete test plan',
+                      tone: 'danger' as const,
+                    },
+                  ]
+                : []),
+            ]}
+          />
           <button
             className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
             onClick={onClose}

@@ -8,23 +8,18 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertCircle, ChevronDown, GripVertical, ListChecks, Plus, Trash2, X } from 'lucide-react';
-import type { TestCase } from '../data/workspace';
 import type { CreateTestCasePayload, ManagedTestSuite } from '../types/testRun';
 
-const SUITES = ['Authentication', 'Checkout', 'Reporting', 'Rate limits', 'Mobile Checkout'];
-const PRIORITIES = ['low', 'medium', 'high'] as const;
-
-type Priority = (typeof PRIORITIES)[number];
 type TabId = 'basic' | 'steps';
 
 type StepDraft = {
+  clientId: string;
   description: string;
 };
 
 type TestCaseForm = {
   title: string;
   suiteId: string;
-  priority: Priority;
   description: string;
   expectedResult: string;
 };
@@ -49,38 +44,23 @@ type StepRowProps = {
 type NewTestCaseModalProps = {
   open: boolean;
   onClose: () => void;
-  onCreate?: (testCase: TestCase) => void;
   onCreateFromApi?: (payload: CreateTestCasePayload) => Promise<void>;
   suites?: ManagedTestSuite[];
-};
-
-const priorityStyles: Record<Priority, string> = {
-  low: 'border-slate-200 bg-white text-slate-500',
-  medium:
-    'border-amber-400 bg-amber-100 text-amber-800',
-  high: 'border-red-400 bg-red-100 text-red-800',
-};
-
-const prioritySelected: Record<Priority, string> = {
-  low: 'border-blue-500 bg-blue-100 text-blue-800',
-  medium:
-    'border-amber-500 bg-amber-100 text-amber-800',
-  high: 'border-red-500 bg-red-100 text-red-800',
-};
-
-const priorityLabels: Record<Priority, TestCase['priority']> = {
-  low: 'Low',
-  medium: 'Medium',
-  high: 'High',
 };
 
 const initialForm: TestCaseForm = {
   title: '',
   suiteId: '',
-  priority: 'medium',
   description: '',
   expectedResult: '',
 };
+
+function createBlankStep(): StepDraft {
+  return {
+    clientId: `step-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    description: '',
+  };
+}
 
 function Field({ label, required = false, children, hint }: FieldProps) {
   return (
@@ -164,12 +144,11 @@ function StepRow({ step, index, total, onChange, onRemove }: StepRowProps) {
 export function NewTestCaseModal({
   open,
   onClose,
-  onCreate,
   onCreateFromApi,
   suites,
 }: NewTestCaseModalProps) {
   const [form, setForm] = useState<TestCaseForm>(initialForm);
-  const [steps, setSteps] = useState<StepDraft[]>([{ description: '' }]);
+  const [steps, setSteps] = useState<StepDraft[]>(() => [createBlankStep()]);
   const [errors, setErrors] = useState<TestCaseFormErrors>({});
   const [submitError, setSubmitError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -190,12 +169,13 @@ export function NewTestCaseModal({
     return null;
   }
 
-  const apiMode = Boolean(onCreateFromApi);
-  const suiteOptions =
-    apiMode
-      ? (suites ?? []).map((suite) => ({ id: suite.id, name: suite.name }))
-      : SUITES.map((suite) => ({ id: suite, name: suite }));
+  const suiteOptions = (suites ?? []).map((suite) => ({
+    id: suite.id,
+    name: suite.name,
+    projectName: suite.project?.name ?? suite.projectId,
+  }));
   const hasSuiteOptions = suiteOptions.length > 0;
+  const selectedSuite = suiteOptions.find((suite) => suite.id === form.suiteId);
 
   function setField<Field extends keyof TestCaseForm>(field: Field, value: TestCaseForm[Field]) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -203,7 +183,7 @@ export function NewTestCaseModal({
   }
 
   function addStep() {
-    setSteps((current) => [...current, { description: '' }]);
+    setSteps((current) => [...current, createBlankStep()]);
   }
 
   function updateStep(index: number, value: string) {
@@ -226,8 +206,7 @@ export function NewTestCaseModal({
     }
 
     if (!form.suiteId) {
-      nextErrors.suiteId =
-        apiMode && !hasSuiteOptions ? 'Create a suite before creating a test case' : 'Select a suite';
+      nextErrors.suiteId = !hasSuiteOptions ? 'Create a suite before creating a test case' : 'Select a suite';
     }
 
     if (!form.expectedResult.trim()) {
@@ -254,36 +233,21 @@ export function NewTestCaseModal({
     setSubmitError('');
 
     try {
-      if (onCreateFromApi) {
-        await onCreateFromApi({
-          suiteId: form.suiteId,
-          title: form.title.trim(),
-          priority: form.priority.toUpperCase() as CreateTestCasePayload['priority'],
-          status: 'ACTIVE',
-          description: form.description.trim(),
-          expectedResult: form.expectedResult.trim(),
-          steps: steps.map((step, index) => ({
-            order: index + 1,
-            description: step.description.trim(),
-          })),
-        });
-      } else {
-        await new Promise((resolve) => window.setTimeout(resolve, 300));
-
-        onCreate?.({
-          id: `TC-${Date.now()}`,
-          title: form.title.trim(),
-          suite: form.suiteId,
-          priority: priorityLabels[form.priority],
-          status: 'Draft',
-          steps: steps.length,
-          tags: [],
-        });
-      }
+      await onCreateFromApi?.({
+        suiteId: form.suiteId,
+        title: form.title.trim(),
+        status: 'ACTIVE',
+        description: form.description.trim(),
+        expectedResult: form.expectedResult.trim(),
+        steps: steps.map((step, index) => ({
+          order: index + 1,
+          description: step.description.trim(),
+        })),
+      });
 
       onClose();
       setForm(initialForm);
-      setSteps([{ description: '' }]);
+      setSteps([createBlankStep()]);
       setErrors({});
       setActiveTab('basic');
     } catch (createError) {
@@ -364,11 +328,11 @@ export function NewTestCaseModal({
                   value={form.suiteId}
                 >
                   <option value="">
-                    {apiMode && !hasSuiteOptions ? 'No suites available' : 'Select suite...'}
+                    {!hasSuiteOptions ? 'No suites available' : 'Select suite...'}
                   </option>
                   {suiteOptions.map((suite) => (
                     <option key={suite.id} value={suite.id}>
-                      {suite.name}
+                      {suite.projectName} / {suite.name}
                     </option>
                   ))}
                 </SelectField>
@@ -379,22 +343,13 @@ export function NewTestCaseModal({
                 ) : null}
               </Field>
 
-              <Field label="Priority">
-                <div className="flex gap-2">
-                  {PRIORITIES.map((priority) => (
-                    <button
-                      className={`flex-1 rounded-lg border py-2 text-xs font-medium capitalize transition ${
-                        form.priority === priority ? prioritySelected[priority] : priorityStyles[priority]
-                      }`}
-                      key={priority}
-                      onClick={() => setField('priority', priority)}
-                      type="button"
-                    >
-                      {priority}
-                    </button>
-                  ))}
+              {selectedSuite ? (
+                <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                  Project: <span className="font-medium text-slate-900">{selectedSuite.projectName}</span>
+                  <span className="mx-2 text-slate-300">/</span>
+                  Suite: <span className="font-medium text-slate-900">{selectedSuite.name}</span>
                 </div>
-              </Field>
+              ) : null}
 
               <Field label="Description" hint="Context and preconditions for this case">
                 <Textarea
@@ -430,7 +385,7 @@ export function NewTestCaseModal({
                 {steps.map((step, index) => (
                   <StepRow
                     index={index}
-                    key={`${index}-${step.description}`}
+                    key={step.clientId}
                     onChange={updateStep}
                     onRemove={removeStep}
                     step={step}
@@ -464,7 +419,7 @@ export function NewTestCaseModal({
             </button>
             <button
               className="inline-flex h-9 items-center gap-2 rounded-lg bg-blue-700 px-4 text-sm font-medium text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={submitting || (apiMode && !hasSuiteOptions)}
+              disabled={submitting || !hasSuiteOptions}
               onClick={handleSubmit}
               type="button"
             >

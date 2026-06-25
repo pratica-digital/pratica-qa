@@ -1,7 +1,8 @@
-import { Filter, ListChecks, Pencil, Plus, RefreshCw, Search, Tag, Trash2 } from 'lucide-react';
+import { Filter, ListChecks, Plus, RefreshCw, Search, Tag } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../auth/useAuth';
-import { CaseStatusBadge, PriorityBadge } from '../components/badges';
+import { ActionMenu } from '../components/ActionMenu';
+import { CaseStatusBadge } from '../components/badges';
 import { DeleteConfirmationModal } from '../components/DeleteConfirmationModal';
 import { TestCaseEditPanel } from '../components/test-cases/TestCaseEditPanel';
 import { ApiError, testCasesApi, testSuitesApi } from '../lib/api';
@@ -22,12 +23,32 @@ function getStepCount(testCase: ManagedTestCase) {
   return testCase.steps?.length ?? 0;
 }
 
+function getSuite(testCase: ManagedTestCase, suites: ManagedTestSuite[]) {
+  return suites.find((suite) => suite.id === testCase.suiteId);
+}
+
 function getSuiteName(testCase: ManagedTestCase, suites: ManagedTestSuite[]) {
   return (
-    suites.find((suite) => suite.id === testCase.suiteId)?.name ??
+    getSuite(testCase, suites)?.name ??
     testCase.suite?.name ??
     'Unassigned suite'
   );
+}
+
+function getProjectName(testCase: ManagedTestCase, suites: ManagedTestSuite[]) {
+  const suite = getSuite(testCase, suites);
+
+  return (
+    suite?.project?.name ??
+    testCase.suite?.project?.name ??
+    suite?.projectId ??
+    testCase.suite?.projectId ??
+    'Unassigned project'
+  );
+}
+
+function getSuitePath(testCase: ManagedTestCase, suites: ManagedTestSuite[]) {
+  return `${getProjectName(testCase, suites)} / ${getSuiteName(testCase, suites)}`;
 }
 
 export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
@@ -104,6 +125,7 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
         testCase.title,
         testCase.description,
         testCase.expectedResult,
+        getProjectName(testCase, suites),
         getSuiteName(testCase, suites),
         ...(testCase.tags ?? []),
       ]
@@ -208,7 +230,6 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
             type="button"
           >
             <RefreshCw className="h-4 w-4" aria-hidden="true" />
-            Refresh
           </button>
           <button
             className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-blue-700 px-3 text-sm font-medium text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
@@ -276,41 +297,33 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
                       <span className="text-xs font-medium text-slate-500">
                         {testCase.id}
                       </span>
-                      <PriorityBadge priority={testCase.priority} />
                       <CaseStatusBadge status={testCase.status} />
                     </div>
                     <h2 className="mt-2 text-sm font-semibold text-slate-950">
                       {testCase.title}
                     </h2>
                     <p className="mt-1 text-xs text-slate-500">
-                      {getSuiteName(testCase, suites)} - {getStepCount(testCase)} steps
+                      {getSuitePath(testCase, suites)} - {getStepCount(testCase)} steps
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
-                    <button
-                      className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+                    <ActionMenu
+                      ariaLabel="Test case actions"
                       disabled={!canEdit}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        void handleOpenCase(testCase);
-                      }}
-                      title="Edit test case"
-                      type="button"
-                    >
-                      <Pencil className="h-4 w-4" aria-hidden="true" />
-                    </button>
-                    <button
-                      className="rounded-lg p-2 text-slate-400 hover:bg-red-100 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
-                      disabled={!canEdit}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        requestCaseDelete(testCase);
-                      }}
-                      title="Delete test case"
-                      type="button"
-                    >
-                      <Trash2 className="h-4 w-4" aria-hidden="true" />
-                    </button>
+                      items={[
+                        {
+                          label: 'Edit',
+                          onSelect: () => void handleOpenCase(testCase),
+                          title: 'Edit test case',
+                        },
+                        {
+                          label: 'Delete',
+                          onSelect: () => requestCaseDelete(testCase),
+                          title: 'Delete test case',
+                          tone: 'danger',
+                        },
+                      ]}
+                    />
                   </div>
                 </div>
               </article>
@@ -326,8 +339,7 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
                 <thead className="bg-slate-100 text-xs font-medium uppercase text-slate-700">
                   <tr>
                     <th className="px-4 py-3">Case</th>
-                    <th className="px-4 py-3">Suite</th>
-                    <th className="px-4 py-3">Priority</th>
+                    <th className="px-4 py-3">Project / Suite</th>
                     <th className="px-4 py-3">Status</th>
                     <th className="px-4 py-3">Steps</th>
                     <th className="px-4 py-3">Tags</th>
@@ -346,10 +358,12 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
                         <p className="text-xs text-slate-500">{testCase.id}</p>
                       </td>
                       <td className="px-4 py-3 text-slate-600">
-                        {getSuiteName(testCase, suites)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <PriorityBadge priority={testCase.priority} />
+                        <p className="font-medium text-slate-700">
+                          {getProjectName(testCase, suites)}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {getSuiteName(testCase, suites)}
+                        </p>
                       </td>
                       <td className="px-4 py-3">
                         <CaseStatusBadge status={testCase.status} />
@@ -372,30 +386,23 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <button
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+                        <ActionMenu
+                          ariaLabel="Test case actions"
                           disabled={!canEdit}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            void handleOpenCase(testCase);
-                          }}
-                          title="Edit test case"
-                          type="button"
-                        >
-                          <Pencil className="h-4 w-4" aria-hidden="true" />
-                        </button>
-                        <button
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-100 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
-                          disabled={!canEdit}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            requestCaseDelete(testCase);
-                          }}
-                          title="Delete test case"
-                          type="button"
-                        >
-                          <Trash2 className="h-4 w-4" aria-hidden="true" />
-                        </button>
+                          items={[
+                            {
+                              label: 'Edit',
+                              onSelect: () => void handleOpenCase(testCase),
+                              title: 'Edit test case',
+                            },
+                            {
+                              label: 'Delete',
+                              onSelect: () => requestCaseDelete(testCase),
+                              title: 'Delete test case',
+                              tone: 'danger',
+                            },
+                          ]}
+                        />
                       </td>
                     </tr>
                   ))}

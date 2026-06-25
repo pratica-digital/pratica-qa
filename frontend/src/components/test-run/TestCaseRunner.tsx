@@ -1,6 +1,20 @@
-import { Clock3, FileText, ListChecks, UserCheck } from 'lucide-react';
+import { useState } from 'react';
+import {
+  Clock3,
+  Download,
+  ExternalLink,
+  FileText,
+  FileVideo,
+  History,
+  Image,
+  ListChecks,
+  ShieldAlert,
+  UserCheck,
+  X,
+} from 'lucide-react';
 import { TestResultStatusBadge } from '../badges';
-import type { ExecuteTestResultPayload, TestResult } from '../../types/testRun';
+import { resolveApiAssetUrl } from '../../lib/api';
+import type { ExecuteTestResultPayload, TestResult, TestResultAttachment } from '../../types/testRun';
 import { TestResultForm } from './TestResultForm';
 
 type TestCaseRunnerProps = {
@@ -10,7 +24,9 @@ type TestCaseRunnerProps = {
   isActive: boolean;
   isSubmitting: boolean;
   onActivate: () => void;
+  onRemoveAttachment: (result: TestResult, attachment: TestResultAttachment) => Promise<void>;
   onSubmit: (result: TestResult, payload: ExecuteTestResultPayload) => Promise<void>;
+  onUploadAttachments: (result: TestResult, files: File[]) => Promise<void>;
 };
 
 function formatDate(value?: string | null) {
@@ -24,6 +40,47 @@ function formatDate(value?: string | null) {
   }).format(new Date(value));
 }
 
+function getAttachmentUrl(attachment: TestResultAttachment) {
+  return attachment.url;
+}
+
+function getAttachmentName(attachment: TestResultAttachment) {
+  return (
+    attachment.originalName ||
+    attachment.fileName ||
+    decodeURIComponent(getAttachmentUrl(attachment).split('/').pop() ?? 'Evidence')
+  );
+}
+
+function isImageAttachment(attachment: TestResultAttachment) {
+  return (
+    attachment.mimeType.startsWith('image/') ||
+    /\.(gif|jpe?g|png|webp)$/i.test(getAttachmentUrl(attachment).split('?')[0] ?? '')
+  );
+}
+
+function isVideoAttachment(attachment: TestResultAttachment) {
+  return (
+    attachment.mimeType.startsWith('video/') ||
+    /\.(mp4|mov|webm)$/i.test(getAttachmentUrl(attachment).split('?')[0] ?? '')
+  );
+}
+
+function formatUploadDate(value?: string | null) {
+  if (!value) {
+    return 'Pending date';
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value));
+}
+
+function getStatusLabel(status?: string | null) {
+  return status === 'PENDING' ? 'Not Run' : status ?? 'Not Run';
+}
+
 export function TestCaseRunner({
   result,
   disabled,
@@ -31,10 +88,23 @@ export function TestCaseRunner({
   isActive,
   isSubmitting,
   onActivate,
+  onRemoveAttachment,
   onSubmit,
+  onUploadAttachments,
 }: TestCaseRunnerProps) {
+  const [previewAttachment, setPreviewAttachment] = useState<TestResultAttachment | null>(null);
   const { testCase } = result;
   const steps = testCase.steps ?? [];
+  const attachments = result.attachments ?? [];
+  const history = result.history ?? [];
+  const projectName =
+    testCase.suite?.project?.name ??
+    result.testRun?.project?.name ??
+    result.testRun?.projectId ??
+    'Project';
+  const suiteName = testCase.suite?.name ?? 'Unassigned suite';
+  const isCriticalFailure =
+    result.status === 'FAILED' && (testCase.severity === 'CRITICAL' || testCase.severity === 'HIGH');
 
   return (
     <article
@@ -53,9 +123,15 @@ export function TestCaseRunner({
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-2 py-1 text-xs font-medium text-slate-500">
                 <ListChecks className="h-3 w-3" aria-hidden="true" />
-                {testCase.priority ?? 'MEDIUM'}
+                {projectName} / {suiteName}
               </span>
               <TestResultStatusBadge status={result.status} />
+              {isCriticalFailure ? (
+                <span className="inline-flex items-center gap-1 rounded-md border border-red-300 bg-red-100 px-2 py-1 text-xs font-medium text-red-800">
+                  <ShieldAlert className="h-3 w-3" aria-hidden="true" />
+                  Critical failure
+                </span>
+              ) : null}
             </div>
             <h2 className="mt-3 text-base font-semibold tracking-normal text-slate-950">
               {testCase.title}
@@ -73,6 +149,14 @@ export function TestCaseRunner({
             <div className="flex items-center gap-2">
               <Clock3 className="h-4 w-4 text-slate-400" aria-hidden="true" />
               <span>{formatDate(result.executedAt)}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <History className="h-4 w-4 text-slate-400" aria-hidden="true" />
+              <span>
+                {result.lastModifiedBy?.name
+                  ? `Edited by ${result.lastModifiedBy.name}`
+                  : `Updated ${formatDate(result.updatedAt)}`}
+              </span>
             </div>
           </div>
         </div>
@@ -128,19 +212,121 @@ export function TestCaseRunner({
             </section>
           ) : null}
 
-          {result.attachments && result.attachments.length > 0 ? (
+          {attachments.length > 0 ? (
             <section>
               <h3 className="text-xs font-medium uppercase text-slate-500">
-                Attachments
+                Evidence
               </h3>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {result.attachments.map((attachment) => (
-                  <span
-                    className="rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-600"
-                    key={attachment}
+              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                {attachments.map((attachment) => (
+                  <div
+                    className="overflow-hidden rounded-lg border border-slate-200 bg-white"
+                    key={attachment.id}
                   >
-                    {attachment}
-                  </span>
+                    {isImageAttachment(attachment) ? (
+                      <button
+                        className="block aspect-video w-full bg-slate-100"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setPreviewAttachment(attachment);
+                        }}
+                        type="button"
+                      >
+                        <img
+                          alt={getAttachmentName(attachment)}
+                          className="h-full w-full object-cover"
+                          src={resolveApiAssetUrl(getAttachmentUrl(attachment))}
+                        />
+                      </button>
+                    ) : isVideoAttachment(attachment) ? (
+                      <div className="bg-slate-950" onClick={(event) => event.stopPropagation()}>
+                        <video
+                          className="aspect-video w-full bg-slate-950"
+                          controls
+                          preload="metadata"
+                          src={resolveApiAssetUrl(getAttachmentUrl(attachment))}
+                        >
+                          <a
+                            className="text-white underline"
+                            href={resolveApiAssetUrl(getAttachmentUrl(attachment))}
+                          >
+                            {getAttachmentName(attachment)}
+                          </a>
+                        </video>
+                      </div>
+                    ) : (
+                      <div className="flex aspect-video items-center justify-center bg-slate-100 text-slate-400">
+                        <FileText className="h-6 w-6" aria-hidden="true" />
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between gap-2 px-3 py-2">
+                      <span className="min-w-0">
+                        <span className="block truncate text-xs font-medium text-slate-600">
+                          {getAttachmentName(attachment)}
+                        </span>
+                        <span className="block truncate text-[11px] text-slate-400">
+                          {formatUploadDate(attachment.createdAt)}
+                          {attachment.uploadedBy?.name ? ` by ${attachment.uploadedBy.name}` : ''}
+                        </span>
+                      </span>
+                      <span className="flex shrink-0 items-center gap-1">
+                        {isVideoAttachment(attachment) ? (
+                          <FileVideo className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
+                        ) : null}
+                        <a
+                          className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                          href={resolveApiAssetUrl(getAttachmentUrl(attachment))}
+                          onClick={(event) => event.stopPropagation()}
+                          rel="noreferrer"
+                          target="_blank"
+                          title="Open evidence"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                        </a>
+                        <a
+                          className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                          download={getAttachmentName(attachment)}
+                          href={resolveApiAssetUrl(getAttachmentUrl(attachment))}
+                          onClick={(event) => event.stopPropagation()}
+                          title="Download evidence"
+                        >
+                          <Download className="h-3.5 w-3.5" aria-hidden="true" />
+                        </a>
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          {history.length > 0 ? (
+            <section>
+              <h3 className="text-xs font-medium uppercase text-slate-500">
+                Change history
+              </h3>
+              <div className="mt-2 space-y-2">
+                {history.slice(0, 5).map((entry) => (
+                  <div className="rounded-lg border border-slate-200 bg-white px-3 py-2" key={entry.id}>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-xs font-medium text-slate-700">
+                        {getStatusLabel(entry.previousStatus)} {'->'} {getStatusLabel(entry.newStatus)}
+                      </span>
+                      <span className="text-xs text-slate-500">{formatDate(entry.createdAt)}</span>
+                    </div>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {entry.actor?.name ?? 'System'}
+                      {entry.addedAttachments?.length
+                        ? ` added ${entry.addedAttachments.length} evidence file(s)`
+                        : ''}
+                      {entry.removedAttachments?.length
+                        ? ` removed ${entry.removedAttachments.length} evidence file(s)`
+                        : ''}
+                    </p>
+                    {entry.newComment && entry.newComment !== entry.previousComment ? (
+                      <p className="mt-1 line-clamp-2 text-xs text-slate-600">{entry.newComment}</p>
+                    ) : null}
+                  </div>
                 ))}
               </div>
             </section>
@@ -160,10 +346,45 @@ export function TestCaseRunner({
             disabled={disabled}
             isActive={isActive}
             isSubmitting={isSubmitting}
+            key={`${result.id}-${result.comment ?? ''}`}
+            onRemoveAttachment={(attachment) => onRemoveAttachment(result, attachment)}
             onSubmit={(payload) => onSubmit(result, payload)}
+            onUploadAttachments={(files) => onUploadAttachments(result, files)}
           />
         </aside>
       </div>
+
+      {previewAttachment ? (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/80 p-4"
+          onClick={(event) => {
+            event.stopPropagation();
+            setPreviewAttachment(null);
+          }}
+        >
+          <div className="max-h-full max-w-5xl overflow-hidden rounded-lg bg-white shadow-2xl">
+            <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-3 py-2">
+              <span className="inline-flex min-w-0 items-center gap-2 text-sm font-medium text-slate-700">
+                <Image className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <span className="truncate">{getAttachmentName(previewAttachment)}</span>
+              </span>
+              <button
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                onClick={() => setPreviewAttachment(null)}
+                title="Close preview"
+                type="button"
+              >
+                <X className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
+            <img
+              alt={getAttachmentName(previewAttachment)}
+              className="max-h-[80vh] max-w-full object-contain"
+              src={resolveApiAssetUrl(getAttachmentUrl(previewAttachment))}
+            />
+          </div>
+        </div>
+      ) : null}
     </article>
   );
 }

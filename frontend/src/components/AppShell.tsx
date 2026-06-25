@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useAuth } from '../auth/useAuth';
 import type { PageId } from '../data/workspace';
 import { DashboardPage } from '../pages/DashboardPage';
@@ -19,20 +19,6 @@ const createActionLabels: Partial<Record<PageId, string>> = {};
 
 const hideTopNavPageTitle: PageId[] = ['projects', 'test-plans', 'test-suites', 'test-cases', 'test-runs'];
 
-const getInitialTheme = () => {
-  if (typeof window === 'undefined') {
-    return false;
-  }
-
-  const stored = window.localStorage.getItem('qa-platform-theme');
-
-  if (stored) {
-    return stored === 'dark';
-  }
-
-  return window.matchMedia('(prefers-color-scheme: dark)').matches;
-};
-
 export function AppShell() {
   const { user } = useAuth();
   const [activePage, setActivePage] = useState<PageId>('dashboard');
@@ -40,12 +26,6 @@ export function AppShell() {
   const [reportRunId, setReportRunId] = useState<string | null>(null);
   const [createActionEventId, setCreateActionEventId] = useState(0);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isDark, setIsDark] = useState(getInitialTheme);
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', isDark);
-    window.localStorage.setItem('qa-platform-theme', isDark ? 'dark' : 'light');
-  }, [isDark]);
 
   const canAccessPage = useCallback(
     (pageId: PageId) => pageId !== 'users' || user?.role === 'ADMIN',
@@ -135,14 +115,14 @@ export function AppShell() {
           activePage={effectiveActivePage}
           createActionLabel={createActionLabel}
           showPageTitle={!hideTopNavPageTitle.includes(effectiveActivePage)}
-          isDark={isDark}
           onCreateAction={
             createActionLabel
               ? () => setCreateActionEventId((current) => current + 1)
               : undefined
           }
+          onNavigate={handleNavigate}
+          onOpenRun={handleOpenRun}
           onOpenSidebar={() => setIsSidebarOpen(true)}
-          onToggleTheme={() => setIsDark((value) => !value)}
         />
         <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">{page}</main>
       </div>

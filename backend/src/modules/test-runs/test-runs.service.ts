@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { TestResultStatus, TestRunTestType, UserRole, UserStatus } from '@prisma/client';
+import { TestRunTestType, UserRole, UserStatus } from '@prisma/client';
 import { AuthenticatedUser } from '../../auth/types/authenticated-user';
 import { getPagination } from '../../common/dto/pagination-query.dto';
 import { TestPlansRepository } from '../test-plans/repositories/test-plans.repository';
@@ -133,10 +133,6 @@ export class TestRunsService {
   async execute(id: string, dto: ExecuteTestRunDto, user: AuthenticatedUser) {
     if (!dto.testResultId && !dto.testCaseId) {
       throw new BadRequestException('testResultId or testCaseId is required');
-    }
-
-    if (dto.status === TestResultStatus.PENDING) {
-      throw new BadRequestException('Execution status must be PASSED, FAILED, or SKIPPED');
     }
 
     const testRun = await this.findOne(id);

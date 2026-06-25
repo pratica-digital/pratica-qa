@@ -11,11 +11,6 @@ export class CreateTestSuiteDto {
   name: string;
 
   @IsOptional()
-  @IsString()
-  @MaxLength(1000)
-  description?: string;
-
-  @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(0)

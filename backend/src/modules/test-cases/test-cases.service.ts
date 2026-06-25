@@ -29,7 +29,6 @@ export class TestCasesService {
       search: query.search,
       tag: query.tag,
       status: query.status,
-      priority: query.priority,
       severity: query.severity,
     };
     const [data, total] = await Promise.all([

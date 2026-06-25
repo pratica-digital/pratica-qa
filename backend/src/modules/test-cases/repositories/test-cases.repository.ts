@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, TestCaseStatus, TestPriority, TestSeverity } from '@prisma/client';
+import { Prisma, TestCaseStatus, TestSeverity } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { BulkUpdateTestCasesDto } from '../dto/bulk-update-test-cases.dto';
 import { CloneTestCaseDto } from '../dto/clone-test-case.dto';
@@ -14,6 +14,12 @@ const TEST_CASE_INCLUDE = {
       id: true,
       name: true,
       projectId: true,
+      project: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
     },
   },
   steps: {
@@ -29,7 +35,6 @@ type FindTestCasesParams = {
   search?: string;
   tag?: string;
   status?: TestCaseStatus;
-  priority?: TestPriority;
   severity?: TestSeverity;
   skip: number;
   take: number;
@@ -48,7 +53,6 @@ export class TestCasesRepository {
         preconditions: dto.preconditions ?? '',
         expectedResult: dto.expectedResult ?? '',
         status: dto.status,
-        priority: dto.priority,
         severity: dto.severity,
         tags: dto.tags ?? [],
         steps: this.toNestedSteps(dto.steps),
@@ -91,7 +95,6 @@ export class TestCasesRepository {
         preconditions: dto.preconditions,
         expectedResult: dto.expectedResult,
         status: dto.status,
-        priority: dto.priority,
         severity: dto.severity,
         tags: dto.tags,
         version: shouldIncrementVersion ? { increment: 1 } : undefined,
@@ -188,7 +191,6 @@ export class TestCasesRepository {
       suiteId: params.suiteId,
       suite: params.projectId ? { projectId: params.projectId } : undefined,
       status: params.status,
-      priority: params.priority,
       severity: params.severity,
       tags: params.tag ? { has: params.tag } : undefined,
       OR: params.search

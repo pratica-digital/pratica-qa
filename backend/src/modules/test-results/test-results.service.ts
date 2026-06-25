@@ -12,8 +12,13 @@ import { TestRunsRepository } from '../test-runs/repositories/test-runs.reposito
 import { AddTestResultAttachmentsDto } from './dto/add-test-result-attachments.dto';
 import { CreateTestResultDto } from './dto/create-test-result.dto';
 import { QueryTestResultsDto } from './dto/query-test-results.dto';
+import { PersistedTestResultAttachmentInput } from './test-result-attachment-upload';
 import { UpdateTestResultDto } from './dto/update-test-result.dto';
 import { TestResultsRepository } from './repositories/test-results.repository';
+
+type AddPersistedTestResultAttachmentsDto = AddTestResultAttachmentsDto & {
+  attachments?: PersistedTestResultAttachmentInput[];
+};
 
 @Injectable()
 export class TestResultsService {
@@ -75,24 +80,63 @@ export class TestResultsService {
     const testResult = await this.findOne(id);
     this.ensureCanExecuteResult(testResult.testRun.assignedToId, user);
 
-    if (dto.status === TestResultStatus.PENDING) {
-      throw new BadRequestException('Execution status must be PASSED, FAILED, or SKIPPED');
-    }
-
     const updatedResult = await this.testResultsRepository.update(id, {
       ...dto,
       executedById: user.id,
+      lastModifiedById: user.id,
     });
+
+    if (!updatedResult) {
+      throw new NotFoundException('Test result not found');
+    }
 
     await this.testRunsRepository.refreshExecutionStatus(updatedResult.testRunId);
 
     return this.testResultsRepository.findById(updatedResult.id);
   }
 
-  async addAttachments(id: string, dto: AddTestResultAttachmentsDto, user: AuthenticatedUser) {
+  async addAttachments(
+    id: string,
+    dto: AddPersistedTestResultAttachmentsDto,
+    user: AuthenticatedUser,
+  ) {
     const testResult = await this.findOne(id);
     this.ensureCanExecuteResult(testResult.testRun.assignedToId, user);
-    return this.testResultsRepository.addAttachments(id, dto.attachments);
+
+    if (!dto.attachments?.length) {
+      throw new BadRequestException('At least one attachment is required');
+    }
+
+    if (
+      dto.testStepId &&
+      !testResult.testCase.steps?.some((step) => step.id === dto.testStepId)
+    ) {
+      throw new BadRequestException('Test step does not belong to this test case');
+    }
+
+    return this.testResultsRepository.addAttachments(
+      id,
+      dto.attachments,
+      user.id,
+      dto.testStepId,
+    );
+  }
+
+  async removeAttachment(id: string, attachmentId: string, user: AuthenticatedUser) {
+    const testResult = await this.findOne(id);
+    this.ensureCanExecuteResult(testResult.testRun.assignedToId, user);
+
+    const updatedResult = await this.testResultsRepository.removeAttachment(
+      id,
+      attachmentId,
+      user.id,
+    );
+
+    if (!updatedResult) {
+      throw new NotFoundException('Attachment not found');
+    }
+
+    return updatedResult;
   }
 
   async remove(id: string) {

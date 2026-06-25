@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Filter, Layers3, Pencil, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
+import { Filter, Layers3, Plus, RefreshCw, Search } from 'lucide-react';
 import { canManageTests } from '../auth/permissions';
 import { useAuth } from '../auth/useAuth';
-import { SuiteStatusBadge } from '../components/badges';
+import { ActionMenu } from '../components/ActionMenu';
 import { DeleteConfirmationModal } from '../components/DeleteConfirmationModal';
 import { TestCaseEditPanel } from '../components/test-cases/TestCaseEditPanel';
 import { TestSuiteDetailPanel } from '../components/test-suites/TestSuiteDetailPanel';
@@ -157,10 +157,8 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
     return suites.filter((suite) => {
       const searchable = [
         suite.name,
-        suite.description,
         suite.project?.name,
         suite.project?.key,
-        suite.status,
       ]
         .filter(Boolean)
         .join(' ')
@@ -341,7 +339,6 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
             type="button"
           >
             <RefreshCw className="h-4 w-4" aria-hidden="true" />
-            Refresh
           </button>
           <button
             className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-blue-700 px-3 text-sm font-medium text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
@@ -417,10 +414,9 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
                         </p>
                       </div>
                     </div>
-                    <SuiteStatusBadge status={suite.status} />
                   </div>
-                  <p className="mt-4 line-clamp-2 min-h-10 text-sm text-slate-600">
-                    {suite.description || 'No description'}
+                  <p className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                    Project: <span className="font-medium text-slate-800">{suite.project?.name ?? suite.projectId}</span>
                   </p>
                   <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
                     <div>
@@ -432,31 +428,24 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
                       <p className="text-xs text-slate-500">Position</p>
                     </div>
                   </div>
-                  <div className="mt-4 grid grid-cols-2 gap-2">
-                    <button
-                      className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-slate-600 bg-slate-600 px-3 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  <div className="mt-4 flex justify-end">
+                    <ActionMenu
+                      ariaLabel="Test suite actions"
                       disabled={!canManageTestAssets}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        setEditingSuite(suite);
-                      }}
-                      type="button"
-                    >
-                      <Pencil className="h-4 w-4" aria-hidden="true" />
-                      Edit
-                    </button>
-                    <button
-                      className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-red-600 bg-red-600 px-3 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
-                      disabled={!canManageTestAssets}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        requestSuiteDelete(suite);
-                      }}
-                      type="button"
-                    >
-                      <Trash2 className="h-4 w-4" aria-hidden="true" />
-                      Delete
-                    </button>
+                      items={[
+                        {
+                          label: 'Edit',
+                          onSelect: () => setEditingSuite(suite),
+                          title: 'Edit test suite',
+                        },
+                        {
+                          label: 'Delete',
+                          onSelect: () => requestSuiteDelete(suite),
+                          title: 'Delete test suite',
+                          tone: 'danger',
+                        },
+                      ]}
+                    />
                   </div>
                 </article>
               );
@@ -473,7 +462,6 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
                   <tr>
                     <th className="px-4 py-3">Suite</th>
                     <th className="px-4 py-3">Project</th>
-                    <th className="px-4 py-3">Status</th>
                     <th className="px-4 py-3">Position</th>
                     <th className="px-4 py-3">Cases</th>
                     <th className="px-4 py-3">Updated</th>
@@ -494,9 +482,6 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
                       <td className="px-4 py-3 text-slate-600">
                         {suite.project?.name ?? suite.projectId}
                       </td>
-                      <td className="px-4 py-3">
-                        <SuiteStatusBadge status={suite.status} />
-                      </td>
                       <td className="px-4 py-3 text-slate-600">{suite.position}</td>
                       <td className="px-4 py-3 text-slate-600">
                         {getSuiteCases(suite, cases, caseOrder).length}
@@ -505,30 +490,23 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
                         {getUpdatedAt(suite)}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <button
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+                        <ActionMenu
+                          ariaLabel="Test suite actions"
                           disabled={!canManageTestAssets}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            setEditingSuite(suite);
-                          }}
-                          title="Edit test suite"
-                          type="button"
-                        >
-                          <Pencil className="h-4 w-4" aria-hidden="true" />
-                        </button>
-                        <button
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-100 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
-                          disabled={!canManageTestAssets}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            requestSuiteDelete(suite);
-                          }}
-                          title="Delete test suite"
-                          type="button"
-                        >
-                          <Trash2 className="h-4 w-4" aria-hidden="true" />
-                        </button>
+                          items={[
+                            {
+                              label: 'Edit',
+                              onSelect: () => setEditingSuite(suite),
+                              title: 'Edit test suite',
+                            },
+                            {
+                              label: 'Delete',
+                              onSelect: () => requestSuiteDelete(suite),
+                              title: 'Delete test suite',
+                              tone: 'danger',
+                            },
+                          ]}
+                        />
                       </td>
                     </tr>
                   ))}

@@ -6,7 +6,6 @@ import {
   Filter,
   FolderOpen,
   Image as ImageIcon,
-  Pencil,
   Plus,
   RefreshCw,
   Search,
@@ -16,6 +15,7 @@ import {
 } from 'lucide-react';
 import { canManageTests } from '../auth/permissions';
 import { useAuth } from '../auth/useAuth';
+import { ActionMenu } from '../components/ActionMenu';
 import { ProjectStatusBadge } from '../components/badges';
 import { DeleteConfirmationModal } from '../components/DeleteConfirmationModal';
 import { ApiError, projectsApi, resolveApiAssetUrl } from '../lib/api';
@@ -25,7 +25,6 @@ import type {
   ProjectSummary,
   UpdateProjectPayload,
   ProjectCategory,
-  ProjectCategoryLabel,
 } from '../types/testRun';
 import { PROJECT_CATEGORY_MAP, PROJECT_CATEGORY_ORDER } from '../types/testRun';
 
@@ -136,16 +135,6 @@ function ProjectFormModal({
   const isEditing = Boolean(project);
   const existingImageUrl = form.removeImage ? '' : resolveApiAssetUrl(project?.imageUrl);
   const previewUrl = objectPreviewUrl || existingImageUrl;
-
-  useEffect(() => {
-    setForm(getInitialForm(project));
-    setObjectPreviewUrl('');
-    setErrors({});
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  }, [project]);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -452,26 +441,22 @@ function ProjectDetailsPanel({
               </p>
             </div>
             {canManage ? (
-              <>
-                <button
-                  className="inline-flex h-8 items-center gap-2 rounded-lg border border-slate-600 bg-slate-600 px-3 text-sm font-medium text-white transition hover:bg-slate-700"
-                  onClick={() => onEdit(project)}
-                  title="Edit project"
-                  type="button"
-                >
-                  <Pencil className="h-4 w-4" aria-hidden="true" />
-                  Edit
-                </button>
-                <button
-                  className="inline-flex h-8 items-center gap-2 rounded-lg border border-red-600 bg-red-600 px-3 text-sm font-medium text-white transition hover:bg-red-700"
-                  onClick={() => onDelete(project)}
-                  title="Delete project"
-                  type="button"
-                >
-                  <Trash2 className="h-4 w-4" aria-hidden="true" />
-                  Delete
-                </button>
-              </>
+              <ActionMenu
+                ariaLabel="Project actions"
+                items={[
+                  {
+                    label: 'Edit',
+                    onSelect: () => onEdit(project),
+                    title: 'Edit project',
+                  },
+                  {
+                    label: 'Delete',
+                    onSelect: () => onDelete(project),
+                    title: 'Delete project',
+                    tone: 'danger',
+                  },
+                ]}
+              />
             ) : null}
             <button
               className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
@@ -774,30 +759,23 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
                           </p>
                         </div>
                         <div className="flex shrink-0 items-center gap-1">
-                          <button
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-blue-100 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+                          <ActionMenu
+                            ariaLabel="Project actions"
                             disabled={!canManageTestAssets}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              requestProjectEdit(project);
-                            }}
-                            title={canManageTestAssets ? 'Edit project' : 'Requires test management permission'}
-                            type="button"
-                          >
-                            <Pencil className="h-4 w-4" aria-hidden="true" />
-                          </button>
-                          <button
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-red-100 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
-                            disabled={!canManageTestAssets}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              requestProjectDelete(project);
-                            }}
-                            title={canManageTestAssets ? 'Delete project' : 'Requires test management permission'}
-                            type="button"
-                          >
-                            <Trash2 className="h-4 w-4" aria-hidden="true" />
-                          </button>
+                            items={[
+                              {
+                                label: 'Edit',
+                                onSelect: () => requestProjectEdit(project),
+                                title: 'Edit project',
+                              },
+                              {
+                                label: 'Delete',
+                                onSelect: () => requestProjectDelete(project),
+                                title: 'Delete project',
+                                tone: 'danger',
+                              },
+                            ]}
+                          />
                           <ChevronRight className="h-4 w-4 text-slate-400" aria-hidden="true" />
                         </div>
                       </div>
@@ -879,30 +857,23 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
                         {getUpdatedAt(project)}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <button
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-blue-100 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+                        <ActionMenu
+                          ariaLabel="Project actions"
                           disabled={!canManageTestAssets}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            requestProjectEdit(project);
-                          }}
-                          title={canManageTestAssets ? 'Edit project' : 'Requires test management permission'}
-                          type="button"
-                        >
-                          <Pencil className="h-4 w-4" aria-hidden="true" />
-                        </button>
-                        <button
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-red-100 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
-                          disabled={!canManageTestAssets}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            requestProjectDelete(project);
-                          }}
-                          title={canManageTestAssets ? 'Delete project' : 'Requires test management permission'}
-                          type="button"
-                        >
-                          <Trash2 className="h-4 w-4" aria-hidden="true" />
-                        </button>
+                          items={[
+                            {
+                              label: 'Edit',
+                              onSelect: () => requestProjectEdit(project),
+                              title: 'Edit project',
+                            },
+                            {
+                              label: 'Delete',
+                              onSelect: () => requestProjectDelete(project),
+                              title: 'Delete project',
+                              tone: 'danger',
+                            },
+                          ]}
+                        />
                       </td>
                     </tr>
                   ))}

@@ -12,6 +12,14 @@ import { ExecuteTestRunDto } from '../dto/execute-test-run.dto';
 import { RerunFailedTestsDto } from '../dto/rerun-failed-tests.dto';
 import { UpdateTestRunDto } from '../dto/update-test-run.dto';
 
+const USER_PUBLIC_SELECT = {
+  id: true,
+  name: true,
+  email: true,
+  role: true,
+  status: true,
+} satisfies Prisma.UserSelect;
+
 const TEST_RUN_INCLUDE = {
   project: {
     select: {
@@ -45,6 +53,12 @@ const TEST_RUN_INCLUDE = {
           id: true,
           name: true,
           projectId: true,
+          project: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
         },
       },
     },
@@ -56,12 +70,62 @@ const TEST_RUN_INCLUDE = {
           id: true,
           title: true,
           suiteId: true,
+          description: true,
+          expectedResult: true,
           priority: true,
+          severity: true,
           status: true,
           steps: {
             orderBy: {
               order: 'asc',
             },
+          },
+          suite: {
+            select: {
+              id: true,
+              name: true,
+              projectId: true,
+              project: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+      },
+      executedBy: {
+        select: USER_PUBLIC_SELECT,
+      },
+      lastModifiedBy: {
+        select: USER_PUBLIC_SELECT,
+      },
+      attachments: {
+        orderBy: {
+          createdAt: 'asc',
+        },
+        include: {
+          uploadedBy: {
+            select: USER_PUBLIC_SELECT,
+          },
+          testStep: {
+            select: {
+              id: true,
+              order: true,
+              description: true,
+              expectedResult: true,
+            },
+          },
+        },
+      },
+      history: {
+        orderBy: {
+          createdAt: 'desc',
+        },
+        include: {
+          actor: {
+            select: USER_PUBLIC_SELECT,
           },
         },
       },
@@ -222,7 +286,7 @@ export class TestRunsRepository {
           executedById: null,
           executedAt: null,
           comment: '',
-          attachments: [],
+          lastModifiedById: null,
         },
       });
 
@@ -256,16 +320,34 @@ export class TestRunsRepository {
       return null;
     }
 
+    const nextComment = dto.comment ?? testResult.comment;
+    const changed =
+      testResult.status !== dto.status ||
+      testResult.comment !== nextComment;
+
     const updatedResult = await this.prisma.testResult.update({
       where: { id: testResult.id },
       data: {
         status: dto.status,
         comment: dto.comment,
-        attachments: dto.attachments,
-        executedById,
-        executedAt: new Date(),
+        executedById: dto.status === TestResultStatus.PENDING ? null : executedById,
+        lastModifiedById: executedById,
+        executedAt: dto.status === TestResultStatus.PENDING ? null : new Date(),
       },
     });
+
+    if (changed) {
+      await this.prisma.testResultHistory.create({
+        data: {
+          testResultId: testResult.id,
+          actorUserId: executedById,
+          previousStatus: testResult.status,
+          newStatus: dto.status,
+          previousComment: testResult.comment,
+          newComment: nextComment,
+        },
+      });
+    }
 
     await this.refreshExecutionStatus(testRunId);
 
@@ -286,15 +368,63 @@ export class TestRunsRepository {
             id: true,
             title: true,
             suiteId: true,
+            description: true,
+            expectedResult: true,
             priority: true,
+            severity: true,
+            status: true,
+            steps: {
+              orderBy: {
+                order: 'asc',
+              },
+            },
+            suite: {
+              select: {
+                id: true,
+                name: true,
+                projectId: true,
+                project: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
           },
         },
         executedBy: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
+          select: USER_PUBLIC_SELECT,
+        },
+        lastModifiedBy: {
+          select: USER_PUBLIC_SELECT,
+        },
+        attachments: {
+          orderBy: {
+            createdAt: 'asc',
+          },
+          include: {
+            uploadedBy: {
+              select: USER_PUBLIC_SELECT,
+            },
+            testStep: {
+              select: {
+                id: true,
+                order: true,
+                description: true,
+                expectedResult: true,
+              },
+            },
+          },
+        },
+        history: {
+          orderBy: {
+            createdAt: 'desc',
+          },
+          include: {
+            actor: {
+              select: USER_PUBLIC_SELECT,
+            },
           },
         },
       },

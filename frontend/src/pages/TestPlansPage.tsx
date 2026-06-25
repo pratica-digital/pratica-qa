@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { Plus, RefreshCw } from 'lucide-react';
 import { canManageTests } from '../auth/permissions';
 import { useAuth } from '../auth/useAuth';
+import { ActionMenu } from '../components/ActionMenu';
 import { DeleteConfirmationModal } from '../components/DeleteConfirmationModal';
 import { TestPlanDetailPanel } from '../components/test-plan/TestPlanDetailPanel';
 import { TestPlanEditPanel } from '../components/test-plan/TestPlanEditPanel';
@@ -134,7 +135,7 @@ export function TestPlansPage() {
             onClick={() => void fetchData()}
             disabled={isLoading}
           >
-            <RefreshCw className="h-4 w-4" /> Refresh
+            <RefreshCw className="h-4 w-4" /> 
           </button>
           <button
             className="inline-flex h-9 items-center gap-2 rounded-lg bg-blue-700 px-3 text-sm text-white"
@@ -181,29 +182,25 @@ export function TestPlansPage() {
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <div className="hidden text-xs text-slate-400 sm:block">{formatCreatedAt(plan.createdAt)}</div>
-                  <button
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setEditingPlan(plan);
-                    }}
-                    title={canManageTestAssets ? 'Edit test plan' : 'View test plan'}
-                    type="button"
-                  >
-                    <Pencil className="h-4 w-4" aria-hidden="true" />
-                  </button>
-                  <button
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-100 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
-                    disabled={!canManageTestAssets}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      requestPlanDelete(plan);
-                    }}
-                    title={canManageTestAssets ? 'Delete test plan' : 'Requires test management permission'}
-                    type="button"
-                  >
-                    <Trash2 className="h-4 w-4" aria-hidden="true" />
-                  </button>
+                  <ActionMenu
+                    ariaLabel="Test plan actions"
+                    items={[
+                      {
+                        label: canManageTestAssets ? 'Edit' : 'View',
+                        onSelect: () => setEditingPlan(plan),
+                        title: canManageTestAssets ? 'Edit test plan' : 'View test plan',
+                      },
+                      {
+                        disabled: !canManageTestAssets,
+                        label: 'Delete',
+                        onSelect: () => requestPlanDelete(plan),
+                        title: canManageTestAssets
+                          ? 'Delete test plan'
+                          : 'Requires test management permission',
+                        tone: 'danger',
+                      },
+                    ]}
+                  />
                 </div>
               </div>
             </article>

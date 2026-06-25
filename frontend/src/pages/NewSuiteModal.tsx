@@ -1,22 +1,11 @@
 import { useEffect, useState, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertCircle, ChevronDown, Layers3, X } from 'lucide-react';
-import type { TestSuite } from '../data/workspace';
 import type { CreateTestSuitePayload, ProjectSummary } from '../types/testRun';
-
-const PROJECTS = ['Frontend', 'Backend', 'Mobile', 'API', 'Infrastructure'];
-const OWNERS = ['Alice Chen', 'Bob Lima', 'Carlos Souza', 'Diana Park', 'Eduardo Melo'];
-const STATUSES = ['active', 'draft', 'archived'] as const;
-
-type SuiteFormStatus = (typeof STATUSES)[number];
 
 type SuiteForm = {
   name: string;
   project: string;
-  owner: string;
-  status: SuiteFormStatus;
-  description: string;
-  tags: string;
 };
 
 type SuiteFormErrors = Partial<Record<keyof SuiteForm, string>>;
@@ -31,24 +20,13 @@ type FieldProps = {
 type NewSuiteModalProps = {
   open: boolean;
   onClose: () => void;
-  onCreate?: (suite: TestSuite) => void;
   onCreateFromApi?: (payload: CreateTestSuitePayload) => Promise<void>;
   projects?: ProjectSummary[];
-};
-
-const statusLabels: Record<SuiteFormStatus, TestSuite['status']> = {
-  active: 'Active',
-  draft: 'Draft',
-  archived: 'Archived',
 };
 
 const initialForm: SuiteForm = {
   name: '',
   project: '',
-  owner: '',
-  status: 'draft',
-  description: '',
-  tags: '',
 };
 
 function Field({ label, required = false, children, hint }: FieldProps) {
@@ -90,7 +68,6 @@ function Select({ children, ...props }: SelectHTMLAttributes<HTMLSelectElement>)
 export function NewSuiteModal({
   open,
   onClose,
-  onCreate,
   onCreateFromApi,
   projects,
 }: NewSuiteModalProps) {
@@ -114,12 +91,7 @@ export function NewSuiteModal({
     return null;
   }
 
-  const apiMode = Boolean(onCreateFromApi);
-  const projectOptions =
-    apiMode
-      ? (projects ?? []).map((project) => ({ id: project.id, name: project.name }))
-      : PROJECTS.map((project) => ({ id: project, name: project }));
-
+  const projectOptions = (projects ?? []).map((project) => ({ id: project.id, name: project.name }));
   const hasProjectOptions = projectOptions.length > 0;
 
   function setField<Field extends keyof SuiteForm>(field: Field, value: SuiteForm[Field]) {
@@ -135,12 +107,7 @@ export function NewSuiteModal({
     }
 
     if (!form.project) {
-      nextErrors.project =
-        apiMode && !hasProjectOptions ? 'Create a project before creating a suite' : 'Select a project';
-    }
-
-    if (!apiMode && !form.owner) {
-      nextErrors.owner = 'Select an owner';
+      nextErrors.project = !hasProjectOptions ? 'Create a project before creating a suite' : 'Select a project';
     }
 
     return nextErrors;
@@ -158,25 +125,10 @@ export function NewSuiteModal({
     setSubmitError('');
 
     try {
-      if (onCreateFromApi) {
-        await onCreateFromApi({
-          projectId: form.project,
-          name: form.name.trim(),
-          description: form.description.trim(),
-        });
-      } else {
-        await new Promise((resolve) => window.setTimeout(resolve, 300));
-
-        onCreate?.({
-          name: form.name.trim(),
-          project: form.project,
-          owner: form.owner,
-          status: statusLabels[form.status],
-          coverage: 0,
-          cases: 0,
-          failures: 0,
-        });
-      }
+      await onCreateFromApi?.({
+        projectId: form.project,
+        name: form.name.trim(),
+      });
 
       onClose();
       setForm(initialForm);
@@ -224,77 +176,22 @@ export function NewSuiteModal({
             ) : null}
           </Field>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Project" required>
-              <Select value={form.project} onChange={(event) => setField('project', event.target.value)}>
-                <option value="">
-                  {apiMode && !hasProjectOptions ? 'No projects available' : 'Select...'}
+          <Field label="Project" required>
+            <Select value={form.project} onChange={(event) => setField('project', event.target.value)}>
+              <option value="">
+                {!hasProjectOptions ? 'No projects available' : 'Select...'}
+              </option>
+              {projectOptions.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.name}
                 </option>
-                {projectOptions.map((project) => (
-                  <option key={project.id} value={project.id}>
-                    {project.name}
-                  </option>
-                ))}
-              </Select>
-              {errors.project ? (
-                <p className="flex items-center gap-1 text-xs text-red-500">
-                  <AlertCircle className="h-3 w-3" aria-hidden="true" /> {errors.project}
-                </p>
-              ) : null}
-            </Field>
-
-            <Field label="Owner" required={!apiMode}>
-              <Select value={form.owner} onChange={(event) => setField('owner', event.target.value)}>
-                <option value="">Select...</option>
-                {OWNERS.map((owner) => (
-                  <option key={owner} value={owner}>
-                    {owner}
-                  </option>
-                ))}
-              </Select>
-              {errors.owner ? (
-                <p className="flex items-center gap-1 text-xs text-red-500">
-                  <AlertCircle className="h-3 w-3" aria-hidden="true" /> {errors.owner}
-                </p>
-              ) : null}
-            </Field>
-          </div>
-
-          <Field label="Initial status">
-            <div className="flex gap-2">
-              {STATUSES.map((status) => (
-                <button
-                  className={`flex-1 rounded-lg border py-2 text-xs font-medium capitalize transition ${
-                    form.status === status
-                      ? 'border-blue-500 bg-blue-100 text-blue-800'
-                      : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:bg-slate-50'
-                  }`}
-                  key={status}
-                  onClick={() => setField('status', status)}
-                  type="button"
-                >
-                  {status}
-                </button>
               ))}
-            </div>
-          </Field>
-
-          <Field label="Description" hint="Optional context for this suite">
-            <textarea
-              className="w-full resize-none rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
-              onChange={(event) => setField('description', event.target.value)}
-              placeholder="Describe the scope or goal of this suite"
-              rows={3}
-              value={form.description}
-            />
-          </Field>
-
-          <Field label="Tags" hint="Separate tags with commas">
-            <Input
-              onChange={(event) => setField('tags', event.target.value)}
-              placeholder="smoke, regression, critical"
-              value={form.tags}
-            />
+            </Select>
+            {errors.project ? (
+              <p className="flex items-center gap-1 text-xs text-red-500">
+                <AlertCircle className="h-3 w-3" aria-hidden="true" /> {errors.project}
+              </p>
+            ) : null}
           </Field>
         </div>
 
@@ -310,7 +207,7 @@ export function NewSuiteModal({
           </button>
           <button
             className="inline-flex h-9 items-center gap-2 rounded-lg bg-blue-700 px-4 text-sm font-medium text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={submitting || (apiMode && !hasProjectOptions)}
+            disabled={submitting || !hasProjectOptions}
             onClick={handleSubmit}
             type="button"
           >

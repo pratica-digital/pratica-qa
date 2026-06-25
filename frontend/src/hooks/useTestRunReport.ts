@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../auth/useAuth';
-import { ApiError, testResultsApi, testRunsApi } from '../lib/api';
+import { ApiError, testRunsApi } from '../lib/api';
 import type { TestResult, TestRun } from '../types/testRun';
 
 export type TestRunReport = {
@@ -28,10 +28,8 @@ export function useTestRunReport(testRunId: string) {
     setError('');
 
     try {
-      const [testRun, results] = await Promise.all([
-        testRunsApi.get(token, testRunId),
-        testResultsApi.list(token, { testRunId, limit: 100 }),
-      ]);
+      const testRun = await testRunsApi.get(token, testRunId);
+      const results = testRun.results ?? [];
 
       const summary = {
         passed: results.filter((r) => r.status === 'PASSED').length,

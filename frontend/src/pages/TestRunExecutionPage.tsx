@@ -6,15 +6,22 @@ import {
   Filter,
   RefreshCw,
   RotateCcw,
+  Search,
   UserRound,
 } from 'lucide-react';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { canManageTests } from '../auth/permissions';
 import { useAuth } from '../auth/useAuth';
 import { TestCaseRunner } from '../components/test-run/TestCaseRunner';
 import { TestRunStatusBadge, UserRoleBadge } from '../components/badges';
 import { ApiError, testResultsApi, testRunsApi } from '../lib/api';
-import type { ExecuteTestResultPayload, TestResult, TestRun } from '../types/testRun';
+import type {
+  ExecuteTestResultPayload,
+  TestResult,
+  TestResultAttachment,
+  TestResultStatus,
+  TestRun,
+} from '../types/testRun';
 
 type TestRunExecutionPageProps = {
   testRun: TestRun;
@@ -24,6 +31,41 @@ type TestRunExecutionPageProps = {
 
 function countResults(results: TestResult[] | undefined, status: TestResult['status']) {
   return results?.filter((result) => result.status === status).length ?? 0;
+}
+
+type StatusFilter = 'ALL' | TestResultStatus;
+type SortMode = 'suite' | 'status' | 'date' | 'executor';
+
+const statusFilters: Array<{ label: string; value: StatusFilter }> = [
+  { label: 'All', value: 'ALL' },
+  { label: 'Passed', value: 'PASSED' },
+  { label: 'Failed', value: 'FAILED' },
+  { label: 'Skipped', value: 'SKIPPED' },
+  { label: 'Not Run', value: 'PENDING' },
+];
+
+const statusOrder: Record<TestResultStatus, number> = {
+  FAILED: 0,
+  PASSED: 1,
+  SKIPPED: 2,
+  PENDING: 3,
+};
+
+function getResultSuiteName(result: TestResult) {
+  return result.testCase.suite?.name ?? 'Unassigned suite';
+}
+
+function getResultProjectName(result: TestResult) {
+  return (
+    result.testCase.suite?.project?.name ??
+    result.testRun?.project?.name ??
+    result.testRun?.projectId ??
+    'Project'
+  );
+}
+
+function getStatusLabel(status: TestResultStatus) {
+  return status === 'PENDING' ? 'Not Run' : status;
 }
 
 function mergeUpdatedResult(current: TestRun, updatedResult: TestResult) {
@@ -98,17 +140,60 @@ export function TestRunExecutionPage({
   const [run, setRun] = useState(testRun);
   const [submittingResultId, setSubmittingResultId] = useState<string | null>(null);
   const [activeResultId, setActiveResultId] = useState(() => testRun.results?.[0]?.id ?? null);
-  const [showFailedOnly, setShowFailedOnly] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
+  const [search, setSearch] = useState('');
+  const [sortMode, setSortMode] = useState<SortMode>('suite');
+  const [collapsedSuiteIds, setCollapsedSuiteIds] = useState<string[]>([]);
   const [rerunning, setRerunning] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
   const results = useMemo(() => run.results ?? [], [run.results]);
   const failedCount = countResults(results, 'FAILED');
-  const visibleResults = useMemo(
-    () => (showFailedOnly ? results.filter((result) => result.status === 'FAILED') : results),
-    [results, showFailedOnly],
-  );
+  const visibleResults = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase();
+
+    return results
+      .filter((result) => statusFilter === 'ALL' || result.status === statusFilter)
+      .filter((result) => {
+        if (!normalizedSearch) {
+          return true;
+        }
+
+        return [
+          result.testCase.title,
+          result.testCase.description,
+          result.comment,
+          getResultProjectName(result),
+          getResultSuiteName(result),
+          result.executedBy?.name,
+          result.lastModifiedBy?.name,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+          .includes(normalizedSearch);
+      })
+      .sort((left, right) => {
+        if (sortMode === 'status') {
+          return statusOrder[left.status] - statusOrder[right.status];
+        }
+
+        if (sortMode === 'date') {
+          return (
+            new Date(right.updatedAt ?? right.executedAt ?? 0).getTime() -
+            new Date(left.updatedAt ?? left.executedAt ?? 0).getTime()
+          );
+        }
+
+        if (sortMode === 'executor') {
+          return (left.executedBy?.name ?? '').localeCompare(right.executedBy?.name ?? '');
+        }
+
+        return getResultSuiteName(left).localeCompare(getResultSuiteName(right)) ||
+          left.testCase.title.localeCompare(right.testCase.title);
+      });
+  }, [results, search, sortMode, statusFilter]);
   const effectiveActiveResultId = useMemo(() => {
     if (visibleResults.length === 0) {
       return null;
@@ -123,6 +208,52 @@ export function TestRunExecutionPage({
     [run, visibleResults],
   );
   const canExecute = Boolean(user && token && canManageTests(user));
+
+  const applyUpdatedResult = useCallback(
+    (updatedResult: TestResult) => {
+      setRun((current) => {
+        const nextRun = mergeUpdatedResult(current, updatedResult);
+
+        onRunUpdated(nextRun);
+        return nextRun;
+      });
+    },
+    [onRunUpdated],
+  );
+
+  useEffect(() => {
+    const authToken = token ?? '';
+
+    if (!authToken) {
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    async function fetchFreshRun() {
+      try {
+        const freshRun = await testRunsApi.get(authToken, testRun.id);
+
+        if (cancelled) {
+          return;
+        }
+
+        setRun(freshRun);
+        onRunUpdated(freshRun);
+        setActiveResultId((current) => current ?? freshRun.results?.[0]?.id ?? null);
+      } catch (fetchError) {
+        if (!cancelled) {
+          setError(fetchError instanceof Error ? fetchError.message : 'Unable to reload test run.');
+        }
+      }
+    }
+
+    void fetchFreshRun();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [onRunUpdated, testRun.id, token]);
 
   const disabledReason = useMemo(() => {
     if (!user) {
@@ -170,18 +301,69 @@ export function TestRunExecutionPage({
       const updatedResult = await testResultsApi.update(token, result.id, {
         status: payload.status,
         comment: payload.comment,
-        attachments: payload.attachments,
       });
-      const nextRun = mergeUpdatedResult(run, updatedResult);
-
-      setRun(nextRun);
-      onRunUpdated(nextRun);
-      setSuccess(`${result.testCase.title} marked as ${payload.status.toLowerCase()}.`);
+      applyUpdatedResult(updatedResult);
+      setSuccess(`${result.testCase.title} marked as ${getStatusLabel(payload.status)}.`);
     } catch (submitError) {
       if (submitError instanceof ApiError && submitError.status === 403) {
         setError('You do not have permission to update this result.');
       } else {
         setError(submitError instanceof Error ? submitError.message : 'Unable to update result.');
+      }
+    } finally {
+      setSubmittingResultId(null);
+    }
+  };
+
+  const handleUploadAttachments = async (result: TestResult, files: File[]) => {
+    if (!token || files.length === 0) {
+      return;
+    }
+
+    setError('');
+    setSuccess('');
+    setSubmittingResultId(result.id);
+
+    try {
+      const updatedResult = await testResultsApi.uploadAttachments(token, result.id, files);
+
+      applyUpdatedResult(updatedResult);
+      setSuccess(
+        `${files.length} evidence file${files.length > 1 ? 's' : ''} uploaded for ${result.testCase.title}.`,
+      );
+    } catch (uploadError) {
+      if (uploadError instanceof ApiError && uploadError.status === 403) {
+        setError('You do not have permission to upload evidence.');
+      } else {
+        setError(uploadError instanceof Error ? uploadError.message : 'Unable to upload evidence.');
+      }
+    } finally {
+      setSubmittingResultId(null);
+    }
+  };
+
+  const handleRemoveAttachment = async (
+    result: TestResult,
+    attachment: TestResultAttachment,
+  ) => {
+    if (!token) {
+      return;
+    }
+
+    setError('');
+    setSuccess('');
+    setSubmittingResultId(result.id);
+
+    try {
+      const updatedResult = await testResultsApi.removeAttachment(token, result.id, attachment.id);
+
+      applyUpdatedResult(updatedResult);
+      setSuccess('Evidence removed.');
+    } catch (removeError) {
+      if (removeError instanceof ApiError && removeError.status === 403) {
+        setError('You do not have permission to remove evidence.');
+      } else {
+        setError(removeError instanceof Error ? removeError.message : 'Unable to remove evidence.');
       }
     } finally {
       setSubmittingResultId(null);
@@ -207,7 +389,7 @@ export function TestRunExecutionPage({
 
       setRun(response.testRun);
       onRunUpdated(response.testRun);
-      setShowFailedOnly(false);
+      setStatusFilter('ALL');
       setActiveResultId(response.testRun.results?.[0]?.id ?? null);
       setSuccess(`${response.failedCount} failed tests queued for re-execution.`);
     } catch (rerunError) {
@@ -219,6 +401,14 @@ export function TestRunExecutionPage({
     } finally {
       setRerunning(false);
     }
+  };
+
+  const toggleSuiteGroup = (suiteId: string) => {
+    setCollapsedSuiteIds((current) =>
+      current.includes(suiteId)
+        ? current.filter((item) => item !== suiteId)
+        : [...current, suiteId],
+    );
   };
 
   return (
@@ -291,20 +481,51 @@ export function TestRunExecutionPage({
       </div>
 
       <div className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            className={`inline-flex h-9 items-center gap-2 rounded-lg border px-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 ${
-              showFailedOnly
-                ? 'border-red-200 bg-red-100 text-red-800'
-                : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-            }`}
-            disabled={failedCount === 0}
-            onClick={() => setShowFailedOnly((value) => !value)}
-            type="button"
-          >
-            <Filter className="h-4 w-4" aria-hidden="true" />
-            Failed only
-          </button>
+        <div className="flex flex-1 flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {statusFilters.map((filter) => (
+              <button
+                className={`inline-flex h-9 items-center gap-2 rounded-lg border px-3 text-sm font-medium ${
+                  statusFilter === filter.value
+                    ? 'border-slate-950 bg-slate-950 text-white'
+                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                }`}
+                key={filter.value}
+                onClick={() => setStatusFilter(filter.value)}
+                type="button"
+              >
+                <Filter className="h-4 w-4" aria-hidden="true" />
+                {filter.label}
+                {filter.value !== 'ALL' ? (
+                  <span className="rounded bg-white/20 px-1.5 text-xs">
+                    {countResults(results, filter.value)}
+                  </span>
+                ) : null}
+              </button>
+            ))}
+          </div>
+          <div className="grid gap-2 md:grid-cols-[1fr_14rem]">
+            <label className="flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-500">
+              <Search className="h-4 w-4" aria-hidden="true" />
+              <input
+                className="w-full border-0 bg-transparent p-0 text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search test case, suite, executor, comment"
+                type="search"
+                value={search}
+              />
+            </label>
+            <select
+              className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+              onChange={(event) => setSortMode(event.target.value as SortMode)}
+              value={sortMode}
+            >
+              <option value="suite">Sort by suite</option>
+              <option value="status">Sort by status</option>
+              <option value="date">Sort by last update</option>
+              <option value="executor">Sort by executor</option>
+            </select>
+          </div>
           <button
             className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-600 bg-slate-600 px-3 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
             disabled={!canExecute || failedCount === 0 || rerunning}
@@ -360,15 +581,20 @@ export function TestRunExecutionPage({
         <section className="space-y-5">
           {groupedResults.map((group) => (
             <section className="space-y-3" key={group.suiteId}>
-              <div className="flex items-center justify-between gap-3 border-b border-slate-200 pb-2">
+              <button
+                className="flex w-full items-center justify-between gap-3 border-b border-slate-200 pb-2 text-left"
+                onClick={() => toggleSuiteGroup(group.suiteId)}
+                type="button"
+              >
                 <h2 className="text-sm font-semibold text-slate-950">
                   {group.suiteName}
                 </h2>
                 <span className="text-xs font-medium text-slate-500">
                   {group.results.length} tests
+                  {collapsedSuiteIds.includes(group.suiteId) ? ' - collapsed' : ''}
                 </span>
-              </div>
-              <div className="space-y-4">
+              </button>
+              <div className={`space-y-4 ${collapsedSuiteIds.includes(group.suiteId) ? 'hidden' : ''}`}>
                 {group.results.map((result) => (
                   <TestCaseRunner
                     disabled={!canExecute}
@@ -377,7 +603,9 @@ export function TestRunExecutionPage({
                     isSubmitting={submittingResultId === result.id}
                     key={result.id}
                     onActivate={() => setActiveResultId(result.id)}
+                    onRemoveAttachment={handleRemoveAttachment}
                     onSubmit={handleSubmit}
+                    onUploadAttachments={handleUploadAttachments}
                     result={result}
                   />
                 ))}
@@ -389,12 +617,12 @@ export function TestRunExecutionPage({
         <div className="rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
           <ClipboardCheck className="mx-auto h-8 w-8 text-slate-400" aria-hidden="true" />
           <h2 className="mt-3 text-sm font-semibold text-slate-950">
-            {showFailedOnly ? 'No failed tests' : 'No results yet'}
+            {statusFilter === 'ALL' && !search.trim() ? 'No results yet' : 'No matching results'}
           </h2>
           <p className="mt-1 text-sm text-slate-500">
-            {showFailedOnly
-              ? 'Clear the failed filter to see the full run.'
-              : 'This run has no test cases queued for execution.'}
+            {statusFilter === 'ALL' && !search.trim()
+              ? 'This run has no test cases queued for execution.'
+              : 'Adjust the status filter or search to see more tests.'}
           </p>
           <button
             className="mt-4 inline-flex h-9 items-center gap-2 rounded-lg border border-slate-600 bg-slate-600 px-3 text-sm font-medium text-white hover:bg-slate-700"

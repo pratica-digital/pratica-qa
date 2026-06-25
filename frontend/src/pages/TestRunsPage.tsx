@@ -1,7 +1,8 @@
-import { Eye, Filter, Play, Plus, RefreshCw, Search, Trash2, UserPlus } from 'lucide-react';
+import { Eye, Filter, Play, Plus, RefreshCw, Search, UserPlus } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { canManageTests } from '../auth/permissions';
 import { useAuth } from '../auth/useAuth';
+import { ActionMenu } from '../components/ActionMenu';
 import { TestRunStatusBadge, UserRoleBadge } from '../components/badges';
 import { DeleteConfirmationModal } from '../components/DeleteConfirmationModal';
 import { ApiError, testRunsApi } from '../lib/api';
@@ -243,7 +244,7 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
             type="button"
           >
             <RefreshCw className="h-4 w-4" aria-hidden="true" />
-            Refresh
+            
           </button>
         </div>
       </div>
@@ -322,10 +323,10 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
                 role="button"
                 tabIndex={0}
               >
-                <div className="grid gap-4 xl:grid-cols-[1fr_16rem_13rem] xl:items-center">
+                <div className="grid gap-40 xl:grid-cols-[1fr_16rem_13rem] xl:items-center">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <TestRunStatusBadge status={testRun.status} />
+                      
                       {testRun.project?.key ? (
                         <span className="rounded-md border border-slate-200 px-2 py-1 text-xs font-medium text-slate-500">
                           {testRun.project.key}
@@ -335,9 +336,7 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
                     <h2 className="mt-2 truncate text-base font-semibold tracking-normal text-slate-950">
                       {testRun.name}
                     </h2>
-                    <p className="mt-1 line-clamp-2 text-sm text-slate-600">
-                      {testRun.description || testRun.testPlan?.name || 'No description'}
-                    </p>
+                    
                     <p className="mt-2 text-xs text-slate-500">
                       Updated {getUpdatedAt(testRun)}
                     </p>
@@ -361,15 +360,13 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
                         <p className="truncate text-sm font-medium text-slate-950">
                           {testRun.assignedTo?.name ?? 'Unassigned'}
                         </p>
-                        <p className="truncate text-xs text-slate-500">
-                          {testRun.assignedTo?.email ?? 'No user'}
-                        </p>
+                        
                       </div>
                       {testRun.assignedTo?.role ? <UserRoleBadge role={testRun.assignedTo.role} /> : null}
                     </div>
                   </div>
 
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-row gap-2 justify-end items-center">
                     {canManageTestAssets ? (
                       <label
                         className="flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-600"
@@ -413,20 +410,21 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
                       ) : (
                         <Eye className="h-4 w-4" aria-hidden="true" />
                       )}
-                      {openingRunId === testRun.id ? 'Opening' : canExecute ? 'Execute' : 'View'}
+                      {openingRunId === testRun.id ? 'Opening' : canExecute ? ' ' : 'View'}
                     </button>
+
                     {canManageTestAssets ? (
-                      <button
-                        className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-red-600 bg-red-600 px-3 text-sm font-medium text-white hover:bg-red-700"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          requestRunDelete(testRun);
-                        }}
-                        type="button"
-                      >
-                        <Trash2 className="h-4 w-4" aria-hidden="true" />
-                        Delete
-                      </button>
+                      <ActionMenu
+                        ariaLabel="Test run actions"
+                        items={[
+                          {
+                            label: 'Delete',
+                            onSelect: () => requestRunDelete(testRun),
+                            title: 'Delete test run',
+                            tone: 'danger',
+                          },
+                        ]}
+                      />
                     ) : null}
                   </div>
                 </div>

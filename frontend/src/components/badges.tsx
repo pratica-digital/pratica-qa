@@ -71,7 +71,7 @@ export function TestResultStatusBadge({ status }: { status: TestResultStatus }) 
           ? 'amber'
           : 'slate';
 
-  return <Badge tone={tone}>{status}</Badge>;
+  return <Badge tone={tone}>{status === 'PENDING' ? 'Not Run' : status}</Badge>;
 }
 
 export function UserRoleBadge({ role }: { role: UserRole }) {
