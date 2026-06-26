@@ -1,5 +1,9 @@
 import { X } from 'lucide-react';
 import praticaLogo from '../assets/logo-branca.png';
+import simquality1 from '../assets/quality.png';
+import simquality2 from '../assets/quality-green-l.png';
+import qalogo from '../assets/qa-logo.png';
+import simquality3 from '../assets/high-quality.png';
 import { useAuth } from '../auth/useAuth';
 import type { PageId } from '../data/workspace';
 import { navigationItems } from '../data/workspace';
@@ -40,27 +44,22 @@ export function Sidebar({ activePage, isOpen, onClose, onNavigate }: SidebarProp
             onClick={() => onNavigate('dashboard')}
             type="button"
           >
+            
+          <span className="min-w-0">
+              <img
+              src={simquality2}
+              alt="simquality logo"
+              className="h-6 w-35 rounded-lg object-cover"
+            />
+            </span>  
+
             <img
               src={praticaLogo}
               alt="qa-platform logo"
-              className="h-8 w-35 rounded-lg object-cover"
+              className="h-6 w-35 -ml-1 object-contain"
             />
-
-            <div className="flex h-10 w-10 items-center justify-center rounded-full border-4 border-[#E0F7FA]">
-                <div className="flex h-6 w-8 items-center justify-center rounded-full bg-[#ADFF2F] text-[white]">
-                    <ShieldCheck className="h-4 w-4" />
-                </div>
-            </div>
-
-            <span className="min-w-0">
-              <span className="block truncate text-sm font-semibold text-white">
-                qa-platform
-              </span>
-              <span className="block truncate text-xs text-[#84cc16]">
-                Release workspace
-              </span>
-            </span>
           </button>
+
           <button
             className="flex h-9 w-9 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-950 lg:hidden"
             onClick={onClose}

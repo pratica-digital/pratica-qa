@@ -21,6 +21,7 @@ import { useCallback, useState } from 'react';
 import type { TestResult, TestResultAttachment, TestRun } from '../types/testRun';
 import { useTestRunReport } from "../hooks/useTestRunReport";
 import { resolveApiAssetUrl } from '../lib/api';
+import praticaLogoUrl from '../assets/pratica-logo.png';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -191,8 +192,12 @@ async function loadAttachmentImageDataUrl(attachment: TestResultAttachment) {
     return null;
   }
 
+  return loadImageDataUrl(resolveApiAssetUrl(getAttachmentUrl(attachment)));
+}
+
+async function loadImageDataUrl(url: string) {
   try {
-    const response = await fetch(resolveApiAssetUrl(getAttachmentUrl(attachment)));
+    const response = await fetch(url);
 
     if (!response.ok) {
       return null;
@@ -506,395 +511,505 @@ function StatusSection({
 }
 
 // ─── PDF generation ───────────────────────────────────────────────────────────
-
 async function generatePDF(testRun: TestRun, results: TestResult[]) {
   const { default: jsPDF } = await import('jspdf');
 
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  const pageW = doc.internal.pageSize.getWidth();
-  const pageH = doc.internal.pageSize.getHeight();
-  const margin = 16;
+  const pageW  = doc.internal.pageSize.getWidth();
+  const pageH  = doc.internal.pageSize.getHeight();
+  const margin = 20;
   const contentW = pageW - margin * 2;
   let y = margin;
+  const generatedAt = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long' }).format(new Date());
+  const footerLogoDataUrl = await loadImageDataUrl(praticaLogoUrl);
 
-  const colors = {
-    primary: [30, 58, 138] as [number, number, number],
-    passed: [16, 185, 129] as [number, number, number],
-    failed: [239, 68, 68] as [number, number, number],
-    skipped: [245, 158, 11] as [number, number, number],
-    pending: [161, 161, 170] as [number, number, number],
-    text: [24, 24, 27] as [number, number, number],
-    muted: [113, 113, 122] as [number, number, number],
-    border: [228, 228, 231] as [number, number, number],
-    bg: [250, 250, 250] as [number, number, number],
+  // ── Design Tokens — cores extraídas da LoginPage / marca Pratica ──────────
+  const C = {
+    // Brand blues (da LoginPage: bg-[#1c4484], blue-900 = #1e3a8a, blue-800 = #1e40af)
+    navy:       [28,  68,  132] as [number, number, number],  // #1c4484  — CTA principal
+    navy900:    [30,  58,  138] as [number, number, number],  // blue-900
+    navy800:    [30,  64,  175] as [number, number, number],  // blue-800
+    navyLight:  [219, 234, 254] as [number, number, number],  // blue-100
+    navySubtle: [239, 246, 255] as [number, number, number],  // blue-50
+
+    // Brand accent — verde-lima do ícone ShieldCheck (#ADFF2F)
+    lime:       [173, 255, 47]  as [number, number, number],  // #ADFF2F
+    limeDark:   [101, 163, 13]  as [number, number, number],  // lime-600 (texto legível)
+    limeBg:     [236, 252, 203] as [number, number, number],  // lime-100
+
+    // Status
+    passed:     [5,   150, 105] as [number, number, number],  // emerald-600
+    passedBg:   [209, 250, 229] as [number, number, number],
+    failed:     [220, 38,  38]  as [number, number, number],  // red-600
+    failedBg:   [254, 226, 226] as [number, number, number],
+    skipped:    [241,185, 56]   as [number, number, number],  // amber-700
+    skippedBg:  [255,252, 33] as [number, number, number],
+    pending:    [100, 116, 139] as [number, number, number],  // slate-500
+    pendingBg:  [241, 245, 249] as [number, number, number],
+
+    // Neutrals
+    text:       [15,  23,  42]  as [number, number, number],  // slate-900
+    textSub:    [71,  85,  105] as [number, number, number],  // slate-500
+    textMuted:  [148, 163, 184] as [number, number, number],  // slate-400
+    border:     [226, 232, 240] as [number, number, number],  // slate-200
+    surface:    [248, 250, 252] as [number, number, number],  // slate-50
+    white:      [255, 255, 255] as [number, number, number],
   };
 
-  function checkPageBreak(needed: number) {
-    if (y + needed > pageH - margin) {
-      doc.addPage();
-      y = margin;
-    }
-  }
+  const STATUS_COLORS: Record<StatusGroup, {
+    fg:  [number, number, number];
+    bg:  [number, number, number];
+    bar: [number, number, number];
+  }> = {
+    PASSED:  { fg: C.passed,  bg: C.passedBg,  bar: C.passed  },
+    FAILED:  { fg: C.failed,  bg: C.failedBg,  bar: C.failed  },
+    SKIPPED: { fg: C.skipped, bg: C.skippedBg, bar: C.skipped },
+    PENDING: { fg: C.pending, bg: C.pendingBg, bar: C.pending },
+  };
 
-  function drawLine(color = colors.border) {
-    doc.setDrawColor(...color);
-    doc.setLineWidth(0.2);
-    doc.line(margin, y, pageW - margin, y);
-    y += 4;
-  }
-
-  // ── Capa ──
-  doc.setFillColor(...colors.primary);
-  doc.rect(0, 0, pageW, 50, 'F');
-
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(20);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Relatório de Test Run', margin, 22);
-
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'normal');
-  doc.text(testRun.name, margin, 32);
-
-  doc.setFontSize(8);
-  doc.text(`Gerado em ${new Intl.DateTimeFormat('pt-BR').format(new Date())}`, margin, 42);
-
-  y = 60;
-
-  // ── Informações gerais ──
-  doc.setTextColor(...colors.text);
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Informações Gerais', margin, y);
-  y += 6;
-  drawLine();
-
-  const suiteTypes = [...new Set((testRun.suites ?? []).map((s) => s.testType).filter(Boolean))];
-  const typeLabel = suiteTypes.length > 0
-    ? suiteTypes.map((t) => testTypeLabel(t)).join(', ')
-    : '—';
-
-  const info = [
-    ['Projeto', testRun.project?.name ?? '—'],
-    ['Plano de Teste', testRun.testPlan ? `${testRun.testPlan.name} v${testRun.testPlan.version}` : '—'],
-    ['Tipo de Teste', typeLabel],
-    ['Status', testRun.status],
-    ['Responsável', testRun.assignedTo?.name ?? '—'],
-    ['Início', fmt(testRun.startedAt)],
-    ['Conclusão', fmt(testRun.completedAt)],
-    ['Última atualização', fmt(testRun.updatedAt)],
-  ];
-
-  doc.setFontSize(9);
-  info.forEach(([label, value]) => {
-    checkPageBreak(7);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...colors.muted);
-    doc.text(label, margin, y);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...colors.text);
-    doc.text(String(value), margin + 40, y);
-    y += 6;
-  });
-
-  y += 6;
-
-  // ── Resumo ──
-  checkPageBreak(40);
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...colors.text);
-  doc.text('Resumo de Execução', margin, y);
-  y += 6;
-  drawLine();
-
-  const passed = results.filter((r) => r.status === 'PASSED').length;
-  const failed = results.filter((r) => r.status === 'FAILED').length;
-  const skipped = results.filter((r) => r.status === 'SKIPPED').length;
-  const notRun = results.filter((r) => r.status === 'PENDING').length;
-  const total = results.length;
-
-  const cardW = (contentW - 9) / 4;
-  const summaryItems = [
-    { label: 'Passed', value: passed, color: colors.passed },
-    { label: 'Failed', value: failed, color: colors.failed },
-    { label: 'Skipped', value: skipped, color: colors.skipped },
-    { label: 'Not Run', value: notRun, color: colors.pending },
-  ];
-
-  checkPageBreak(28);
-  summaryItems.forEach((item, i) => {
-    const x = margin + i * (cardW + 3);
-    doc.setFillColor(...colors.bg);
-    doc.roundedRect(x, y, cardW, 22, 2, 2, 'F');
-    doc.setDrawColor(...colors.border);
-    doc.setLineWidth(0.3);
-    doc.roundedRect(x, y, cardW, 22, 2, 2, 'S');
-
-    doc.setFillColor(...item.color);
-    doc.roundedRect(x + 2, y + 2, 3, 18, 1, 1, 'F');
-
-    doc.setTextColor(...colors.muted);
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'normal');
-    doc.text(item.label, x + 8, y + 8);
-
-    doc.setTextColor(...item.color);
-    doc.setFontSize(16);
-    doc.setFont('helvetica', 'bold');
-    doc.text(String(item.value), x + 8, y + 18);
-  });
-
-  y += 30;
-
-  // ── Barra de progresso ──
-  checkPageBreak(14);
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(...colors.muted);
-  doc.text(`Total: ${total} casos de teste`, margin, y);
-  y += 4;
-
-  const barH = 4;
-  doc.setFillColor(228, 228, 231);
-  doc.roundedRect(margin, y, contentW, barH, 1, 1, 'F');
-
-  let barX = margin;
-  const barData = [
-    { count: passed, color: colors.passed },
-    { count: failed, color: colors.failed },
-    { count: skipped, color: colors.skipped },
-  ];
-  barData.forEach(({ count, color }) => {
-    if (total === 0 || count === 0) return;
-    const w = (count / total) * contentW;
-    doc.setFillColor(...color);
-    doc.roundedRect(barX, y, w, barH, 1, 1, 'F');
-    barX += w;
-  });
-
-  y += 12;
-
-  // ── Test Cases ──
-  const ORDER: StatusGroup[] = ['FAILED', 'PASSED', 'SKIPPED', 'PENDING'];
-  const statusLabels: Record<StatusGroup, string> = {
-    FAILED: 'Failed',
-    PASSED: 'Passed',
+  const STATUS_LABELS: Record<StatusGroup, string> = {
+    PASSED:  'Passed',
+    FAILED:  'Failed',
     SKIPPED: 'Skipped',
     PENDING: 'Not Run',
   };
-  const statusColors: Record<StatusGroup, [number, number, number]> = {
-    PASSED: colors.passed,
-    FAILED: colors.failed,
-    SKIPPED: colors.skipped,
-    PENDING: colors.pending,
+
+  const ORDER: StatusGroup[] = ['FAILED', 'PASSED', 'SKIPPED', 'PENDING'];
+
+  // ── Utilidades ────────────────────────────────────────────────────────────
+  function sf(style: 'bold' | 'normal' | 'italic', size: number, color: [number, number, number] = C.text) {
+    doc.setFont('helvetica', style);
+    doc.setFontSize(size);
+    doc.setTextColor(...color);
+  }
+
+  function fr(x: number, yy: number, w: number, h: number, color: [number, number, number], r = 0) {
+    doc.setFillColor(...color);
+    r > 0 ? doc.roundedRect(x, yy, w, h, r, r, 'F') : doc.rect(x, yy, w, h, 'F');
+  }
+
+  function sr(x: number, yy: number, w: number, h: number, color: [number, number, number], lw = 0.25, r = 0) {
+    doc.setDrawColor(...color);
+    doc.setLineWidth(lw);
+    r > 0 ? doc.roundedRect(x, yy, w, h, r, r, 'S') : doc.rect(x, yy, w, h, 'S');
+  }
+
+  // Registra coordenadas y de início de cada seção de status (para TOC / links internos)
+  // jsPDF não suporta âncoras internas nativas — guardamos page+y para uso futuro
+  const sectionAnchors: Record<StatusGroup, { page: number; y: number } | null> = {
+    FAILED: null, PASSED: null, SKIPPED: null, PENDING: null,
   };
 
-  for (const status of ORDER) {
-    const group = results.filter((r) => r.status === status);
-    if (group.length === 0) continue;
+  // ── Paginação ─────────────────────────────────────────────────────────────
+  let pageNum = 1;
 
-    checkPageBreak(16);
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...statusColors[status]);
-    doc.text(`${statusLabels[status]} (${group.length})`, margin, y);
-    y += 5;
-    doc.setDrawColor(...statusColors[status]);
-    doc.setLineWidth(0.4);
-    doc.line(margin, y, pageW - margin, y);
-    y += 6;
+  function drawFooter() {
+    const fy = pageH - 6;
+    sf('normal', 7, C.textMuted);
+    doc.text(`Gerado em ${generatedAt}`, margin, fy);
+    doc.text(`Página ${pageNum}`, pageW - margin, fy, { align: 'right' });
 
-    for (const result of group) {
-      const tc = result.testCase;
-      const stepsCount = tc.steps?.length ?? 0;
-      const hasDesc = Boolean(tc.description);
-      const hasExpected = Boolean(tc.expectedResult);
-      const hasComment = Boolean(result.comment);
-      const attachments = result.attachments ?? [];
-      const attachmentsHeight = attachments.reduce(
-        (height, attachment) => height + (isImageAttachment(attachment) ? 30 : 5),
-        0,
-      );
-      const historyCount = result.history?.length ?? 0;
-      const estimatedH =
-        18 +
-        (hasDesc ? 8 : 0) +
-        stepsCount * 7 +
-        (hasExpected ? 8 : 0) +
-        (hasComment ? 10 : 0) +
-        attachmentsHeight +
-        Math.min(historyCount, 3) * 7;
-
-      checkPageBreak(estimatedH);
-
-      // Card background
-      doc.setFillColor(...colors.bg);
-      doc.setDrawColor(...colors.border);
-      doc.setLineWidth(0.2);
-      doc.roundedRect(margin, y, contentW, estimatedH - 2, 2, 2, 'FD');
-
-      // Status bar
-      doc.setFillColor(...statusColors[status]);
-      doc.roundedRect(margin, y, 3, estimatedH - 2, 1, 1, 'F');
-
-      const cx = margin + 7;
-      let cy = y + 7;
-
-      doc.setTextColor(...colors.text);
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold');
-      const titleLines = doc.splitTextToSize(tc.title, contentW - 40);
-      doc.text(titleLines, cx, cy);
-      cy += titleLines.length * 5;
-
-      if (result.executedAt) {
-        doc.setFontSize(7);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...colors.muted);
-        doc.text(
-          `Executado: ${fmt(result.executedAt)}${result.executedBy ? ` · ${result.executedBy.name}` : ''}`,
-          cx,
-          cy,
-        );
-        cy += 5;
-      }
-
-      if (hasDesc) {
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(...colors.muted);
-        doc.text('Descrição:', cx, cy);
-        cy += 4;
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...colors.text);
-        const descLines = doc.splitTextToSize(tc.description ?? '', contentW - 14);
-        doc.text(descLines.slice(0, 2), cx, cy);
-        cy += Math.min(descLines.length, 2) * 4 + 1;
-      }
-
-      if (stepsCount > 0) {
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(...colors.muted);
-        doc.text('Steps:', cx, cy);
-        cy += 4;
-        tc.steps?.forEach((step) => {
-          doc.setFont('helvetica', 'normal');
-          doc.setTextColor(...colors.text);
-          const stepText = `${step.order}. ${step.description}`;
-          const stepLines = doc.splitTextToSize(stepText, contentW - 18);
-          doc.text(stepLines.slice(0, 2), cx + 2, cy);
-          cy += Math.min(stepLines.length, 2) * 4 + 1;
-        });
-      }
-
-      if (hasExpected) {
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(...colors.muted);
-        doc.text('Resultado Esperado:', cx, cy);
-        cy += 4;
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...colors.text);
-        const expLines = doc.splitTextToSize(tc.expectedResult ?? '', contentW - 14);
-        doc.text(expLines.slice(0, 2), cx, cy);
-        cy += Math.min(expLines.length, 2) * 4 + 1;
-      }
-
-      if (hasComment) {
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(...colors.muted);
-        doc.text('Observações:', cx, cy);
-        cy += 4;
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...colors.text);
-        const commentLines = doc.splitTextToSize(result.comment ?? '', contentW - 14);
-        doc.text(commentLines.slice(0, 2), cx, cy);
-        cy += Math.min(commentLines.length, 2) * 4 + 1;
-      }
-
-      if (attachments.length > 0) {
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(...colors.muted);
-        doc.text('Evidencias:', cx, cy);
-        cy += 4;
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...colors.text);
-        for (const attachment of attachments) {
-          if (isImageAttachment(attachment)) {
-            const imageDataUrl = await loadAttachmentImageDataUrl(attachment);
-
-            if (imageDataUrl) {
-              try {
-                doc.addImage(
-                  imageDataUrl,
-                  getPdfImageFormat(attachment),
-                  cx + 2,
-                  cy,
-                  42,
-                  24,
-                );
-                cy += 26;
-              } catch {
-                doc.setTextColor(...colors.muted);
-                doc.text('[preview indisponivel]', cx + 2, cy);
-                doc.setTextColor(...colors.text);
-                cy += 4;
-              }
-            }
-          }
-
-          const attachmentLines = doc.splitTextToSize(
-            `${getAttachmentName(attachment)} - ${attachmentMeta(attachment)}`,
-            contentW - 18,
-          );
-          doc.text(attachmentLines.slice(0, 1), cx + 2, cy);
-          cy += 4;
-        }
-      }
-
-      if (historyCount > 0) {
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(...colors.muted);
-        doc.text('Historico:', cx, cy);
-        cy += 4;
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...colors.text);
-        result.history?.slice(0, 3).forEach((entry) => {
-          const historyLine = `${fmt(entry.createdAt)} - ${entry.actor?.name ?? 'Sistema'}: ${statusLabel(entry.previousStatus)} -> ${statusLabel(entry.newStatus)}`;
-          const historyLines = doc.splitTextToSize(historyLine, contentW - 18);
-          doc.text(historyLines.slice(0, 1), cx + 2, cy);
-          cy += 4;
-        });
-      }
-
-      y += estimatedH + 2;
+    if (footerLogoDataUrl) {
+      try {
+        const lw = 22, lh = 6;
+        doc.addImage(footerLogoDataUrl, 'PNG', (pageW - lw) / 2, fy - lh + 1, lw, lh);
+      } catch { /* continua sem logo */ }
     }
 
-    y += 6;
+    doc.setDrawColor(...C.border);
+    doc.setLineWidth(0.25);
+    doc.line(margin, fy - 8, pageW - margin, fy - 8);
+    pageNum++;
   }
 
-  // ── Rodapé ──
-  const totalPages = (doc.internal as unknown as { getNumberOfPages: () => number }).getNumberOfPages();
-  for (let i = 1; i <= totalPages; i++) {
-    doc.setPage(i);
-    doc.setFontSize(7);
-    doc.setTextColor(...colors.muted);
-    doc.text(
-      `${testRun.name} · Gerado em ${new Intl.DateTimeFormat('pt-BR').format(new Date())}`,
-      margin,
-      pageH - 8,
-    );
-    doc.text(`${i} / ${totalPages}`, pageW - margin, pageH - 8, { align: 'right' });
+  function drawPageHeader() {
+    // Stripe dupla: navy + lime
+    fr(0, 0, pageW, 2, C.navy);
+    fr(0, 2, pageW, 1, C.lime);
   }
 
-  const safeName = testRun.name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+  function checkPage(needed: number) {
+    if (y + needed > pageH - margin - 8) {
+      drawFooter();
+      doc.addPage();
+      y = margin;
+      drawPageHeader();
+    }
+  }
+
+  // ── CAPA ──────────────────────────────────────────────────────────────────
+
+  // Fundo navy
+  fr(0, 0, pageW, 80, C.navy900);
+
+  // Acento lime no canto superior direito (eco do ShieldCheck da login)
+  fr(pageW - 50, -8, 58, 58, C.navy800, 8);
+  fr(pageW - 36, -6, 42, 42, C.navy,    6);
+  // Triângulo lime no canto — quadrado pequeno rotacionado visualmente por sobreposição
+
+
+
+  // Stripe lime horizontal no rodapé do hero
+  fr(0, 78, pageW, 3, C.lime);
+  fr(0, 77, pageW, 1.5, C.limeBg); // suaviza a transição
+
+  // Título
+  sf('bold', 24, C.white);
+  doc.text('Relatório de', margin, 28);
+  sf('bold', 24, C.lime);
+  doc.text('Test Run', margin, 40);
+
+  // Linha divisória branca
+  doc.setDrawColor(255, 255, 255);
+  doc.setLineWidth(0.4);
+  doc.line(margin, 45, margin + 55, 45);
+
+  // Nome do test run
+  sf('normal', 10, C.navyLight);
+  const nameLines = doc.splitTextToSize(testRun.name, contentW - 24);
+  doc.text(nameLines.slice(0, 2), margin, 53);
+
+  // Data geração
+  sf('normal', 7.5, C.navyLight);
+  doc.text(`Gerado em ${generatedAt}`, margin, 72);
+
+  y = 92;
+
+  // ── INFORMAÇÕES GERAIS ────────────────────────────────────────────────────
+  sf('bold', 9, C.navy);
+  doc.text('INFORMAÇÕES GERAIS', margin, y);
+
+  y += 8;
+
+  const suiteTypes = [...new Set((testRun.suites ?? []).map((s) => s.testType).filter(Boolean))];
+  const typeLabel  = suiteTypes.length > 0 ? suiteTypes.map((t) => testTypeLabel(t)).join(', ') : '—';
+
+  const infoRows: [string, string][] = [
+    ['Projeto',            testRun.project?.name ?? '—'],
+    ['Plano de Teste',     testRun.testPlan ? `${testRun.testPlan.name} v${testRun.testPlan.version}` : '—'],
+    ['Tipo de Teste',      typeLabel],
+    ['Status',             testRun.status],
+    ['Responsável',        testRun.assignedTo?.name ?? '—'],
+    ['Início',             fmt(testRun.startedAt)],
+    ['Conclusão',          fmt(testRun.completedAt)],
+    ['Última atualização', fmt(testRun.updatedAt)],
+  ];
+
+  const colW = (contentW - 6) / 2;
+  infoRows.forEach(([label, value], i) => {
+    const col = i % 2;
+    if (col === 0) {
+      checkPage(12);
+      if (Math.floor(i / 2) % 2 === 0) fr(margin, y - 4, contentW, 10, C.surface);
+    }
+    const x = margin + col * (colW + 6);
+    sf('bold', 6.5, C.textMuted);
+    doc.text(label.toUpperCase(), x, y);
+    sf('normal', 8.5, C.text);
+    doc.text(String(value), x, y + 4.5);
+    if (col === 1) y += 11;
+  });
+  if (infoRows.length % 2 !== 0) y += 11;
+
+  y += 10;
+
+  // ── RESUMO DE EXECUÇÃO ────────────────────────────────────────────────────
+  checkPage(70);
+  sf('bold', 9, C.navy);
+  doc.text('RESUMO DE EXECUÇÃO', margin, y);
+  y += 8;
+
+  const passed  = results.filter((r) => r.status === 'PASSED').length;
+  const failed  = results.filter((r) => r.status === 'FAILED').length;
+  const skipped = results.filter((r) => r.status === 'SKIPPED').length;
+  const notRun  = results.filter((r) => r.status === 'PENDING').length;
+  const total   = results.length;
+  const passRate = total > 0 ? Math.round((passed / total) * 100) : 0;
+
+  // KPI cards — 4 colunas
+  // Nota: jsPDF não suporta links internos entre páginas via doc.link().
+  // Os cards terão visual de "clicável" (ícone de seta) como indicador visual,
+  // mas a navegação interna não é tecnicamente possível com esta biblioteca.
+  const kpiItems = [
+    { label: 'Passed',  value: passed,  status: 'PASSED'  as StatusGroup },
+    { label: 'Failed',  value: failed,  status: 'FAILED'  as StatusGroup },
+    { label: 'Skipped', value: skipped, status: 'SKIPPED' as StatusGroup },
+    { label: 'Not Run', value: notRun,  status: 'PENDING' as StatusGroup },
+  ];
+
+  const cardW = (contentW - 9) / 4;
+  const cardH = 30;
+
+  checkPage(cardH + 4);
+  kpiItems.forEach((item, i) => {
+    const sc = STATUS_COLORS[item.status];
+    const cx = margin + i * (cardW + 3);
+
+    // Sombra simulada (retângulo deslocado levemente)
+    fr(cx + 1, y + 1, cardW, cardH, C.border, 3);
+
+    // Card body
+    fr(cx, y, cardW, cardH, C.white, 3);
+    sr(cx, y, cardW, cardH, C.border, 0.25, 3);
+
+    // Barra superior colorida (3mm) com lime como highlight da marca
+    fr(cx, y, cardW, 3.5, sc.bar, 3);
+    fr(cx, y + 2, cardW, 1.5, sc.bar); // cobre o radius inferior da barra
+
+    // Número grande
+    sf('bold', 20, sc.fg);
+    doc.text(String(item.value), cx + cardW / 2, y + 18, { align: 'center' });
+
+    // Label
+    sf('normal', 6.5, C.textSub);
+    doc.text(item.label.toUpperCase(), cx + cardW / 2, y + 25, { align: 'center' });
+
+    // Indicador visual "ver detalhes" — seta pequena no canto inferior direito
+    sf('normal', 6, C.textMuted);
+    doc.text('↓', cx + cardW - 5, y + cardH - 3);
+  });
+
+  y += cardH + 10;
+
+
+
+  const barH = 5;
+
+  // desenha apenas os segmentos coloridos (sem track/borda)
+  const inset = 1.2; // horizontal inset to keep segments from touching page edges
+  const innerY = y + 0.6; // slight vertical inset
+  const innerH = Math.max(1, barH - 1.2);
+  let bx = margin + inset;
+  const segAvailableW = Math.max(0, contentW - inset * 2);
+
+  [
+    { count: passed,  color: C.passed  },
+    { count: failed,  color: C.failed  },
+    { count: skipped, color: C.skipped },
+  ].forEach(({ count, color }) => {
+    if (!total || !count) return;
+    const w = (count / total) * segAvailableW;
+    fr(bx, innerY, w, innerH, color);
+    bx += w;
+  });
+
+  // sem borda externa — apenas segmentos coloridos
+  y += barH + 5;
+
+  
+
+  // ── PÁGINAS DE TEST CASES ─────────────────────────────────────────────────
+  if (results.length > 0) {
+    drawFooter();
+    doc.addPage();
+    drawPageHeader();
+    y = margin + 6;
+
+    for (const status of ORDER) {
+      const group = results.filter((r) => r.status === status);
+      if (group.length === 0) continue;
+
+      const sc = STATUS_COLORS[status];
+
+      checkPage(22);
+
+      // Registra âncora da seção
+      sectionAnchors[status] = { page: pageNum, y };
+
+      // Cabeçalho de seção — fundo colorido + stripe navy à esquerda
+      fr(margin, y - 1, contentW, 12, sc.bg, 3);
+      fr(margin, y - 1, 4, 12, sc.bar, 2);
+      // Stripe lime no topo do header de seção
+
+
+      sf('bold', 9.5, sc.fg);
+      doc.text(
+        `${STATUS_LABELS[status].toUpperCase()}  ·  ${group.length} caso${group.length !== 1 ? 's' : ''}`,
+        margin + 8, y + 7,
+      );
+
+      // Badge de porcentagem no canto direito do header
+      const pct = total > 0 ? Math.round((group.length / total) * 100) : 0;
+      sf('bold', 7.5, sc.fg);
+      doc.text(`${pct}%`, pageW - margin - 4, y + 7, { align: 'right' });
+
+      y += 16;
+
+      for (const result of group) {
+        const tc = result.testCase;
+        const hasDesc     = Boolean(tc.description);
+        const hasExpected = Boolean(tc.expectedResult);
+        const hasComment  = Boolean(result.comment);
+        const attachments = result.attachments ?? [];
+        const historyCount = result.history?.length ?? 0;
+
+        const titleLines = doc.splitTextToSize(tc.title || 'Sem título', contentW - 52);
+        const titleLineCount = Math.min(titleLines.length, 2);
+
+        const measureBlock = (text: string, maxL = 2) =>
+          Math.min(doc.splitTextToSize(text, contentW - 20).length, maxL) * 4.5;
+        const measureField = (text: string) => 4 + measureBlock(text) + 3;
+        const stepsH = (tc.steps ?? []).reduce(
+          (h, step) => h + measureBlock(`${step.order}. ${step.description}`) + 1, 0,
+        );
+        const attachH = attachments.length > 0
+          ? 4 + attachments.reduce((h, a) => h + (isImageAttachment(a) ? 30 : 0) + 5, 0)
+          : 0;
+        const histH = historyCount > 0 ? 4 + Math.min(historyCount, 3) * 4.5 : 0;
+
+        const estimatedH =
+          8 +
+          (titleLineCount > 1 ? 11 : 6) +
+          (result.executedAt || result.executedBy ? 5 : 0) +
+          6 + // divider
+          (hasDesc     ? measureField(tc.description    ?? '') : 0) +
+          (hasExpected ? measureField(tc.expectedResult ?? '') : 0) +
+          (hasComment  ? measureField(result.comment    ?? '') : 0) +
+          (stepsH > 0  ? 4 + stepsH + 2                      : 0) +
+          attachH + histH + 6;
+
+        checkPage(estimatedH + 4);
+
+        const cardX = margin;
+        const cardY = y;
+
+        // Sombra simulada
+        fr(cardX + 1, cardY + 1, contentW, estimatedH, C.border, 3);
+
+        // Card
+        fr(cardX, cardY, contentW, estimatedH, C.white, 3);
+        sr(cardX, cardY, contentW, estimatedH, C.border, 0.25, 3);
+
+        // Stripe esquerda colorida de status
+        fr(cardX, cardY, 4, estimatedH, sc.bar, 2);
+        fr(cardX + 2, cardY, 2, estimatedH, sc.bar);
+
+
+
+        const cx = cardX + 10;
+        let cy = cardY + 8;
+
+        // Título
+        sf('bold', 9.5, C.text);
+        doc.text(titleLines.slice(0, titleLineCount), cx, cy);
+        cy += titleLineCount > 1 ? 11 : 6;
+
+        // Meta: executor + data
+        if (result.executedAt || result.executedBy) {
+          const meta = [result.executedBy?.name, result.executedAt ? fmt(result.executedAt) : null]
+            .filter(Boolean).join('  ·  ');
+          sf('normal', 7, C.textMuted);
+          doc.text(meta, cx, cy);
+          cy += 5;
+        }
+
+        // Badge status (canto superior direito)
+        const badgeW = 26;
+        const badgeX = cardX + contentW - badgeW - 6;
+        const badgeY = cardY + 5;
+        fr(badgeX, badgeY, badgeW, 8, sc.bg, 2);
+        sr(badgeX, badgeY, badgeW, 8, sc.bar, 0.4, 2);
+        sf('bold', 6.5, sc.fg);
+        doc.text(STATUS_LABELS[status].toUpperCase(), badgeX + badgeW / 2, badgeY + 5, { align: 'center' });
+
+        // Divisor
+        cy += 2;
+        doc.setDrawColor(...C.border);
+        doc.setLineWidth(0.2);
+        doc.line(cx, cy, cardX + contentW - 6, cy);
+        cy += 5;
+
+        // Campos
+        function drawField(label: string, text: string, maxLines = 2) {
+          sf('bold', 6.5, C.navy);
+          doc.text(label.toUpperCase(), cx, cy);
+          cy += 4;
+          sf('normal', 8, C.text);
+          const lines = doc.splitTextToSize(text, contentW - 20);
+          doc.text(lines.slice(0, maxLines), cx + 2, cy);
+          cy += Math.min(lines.length, maxLines) * 4.5 + 3;
+        }
+
+        if (hasDesc)     drawField('Descrição',          tc.description    ?? '');
+        if (hasExpected) drawField('Resultado Esperado', tc.expectedResult ?? '');
+        if (hasComment)  drawField('Observações',        result.comment    ?? '');
+
+        if ((tc.steps?.length ?? 0) > 0) {
+          sf('bold', 6.5, C.navy);
+          doc.text('STEPS', cx, cy);
+          cy += 4;
+          tc.steps?.forEach((step) => {
+            sf('normal', 8, C.text);
+            const sLines = doc.splitTextToSize(`${step.order}. ${step.description}`, contentW - 22);
+            doc.text(sLines.slice(0, 2), cx + 2, cy);
+            cy += Math.min(sLines.length, 2) * 4.5 + 1;
+          });
+          cy += 2;
+        }
+
+        if (attachments.length > 0) {
+          sf('bold', 6.5, C.navy);
+          doc.text('EVIDÊNCIAS', cx, cy);
+          cy += 4;
+          for (const attachment of attachments) {
+            if (isImageAttachment(attachment)) {
+              const imgUrl = await loadAttachmentImageDataUrl(attachment);
+              if (imgUrl) {
+                try {
+                  doc.addImage(imgUrl, getPdfImageFormat(attachment), cx + 2, cy, 50, 28);
+                  cy += 30;
+                } catch {
+                  sf('normal', 7.5, C.textMuted);
+                  doc.text('[preview indisponível]', cx + 2, cy);
+                  cy += 5;
+                }
+              }
+            }
+            sf('normal', 7.5, C.textSub);
+            const aLines = doc.splitTextToSize(
+              `${getAttachmentName(attachment)}  —  ${attachmentMeta(attachment)}`,
+              contentW - 18,
+            );
+            doc.text(aLines.slice(0, 1), cx + 2, cy);
+            cy += 5;
+          }
+        }
+
+        if (historyCount > 0) {
+          sf('bold', 6.5, C.navy);
+          doc.text('HISTÓRICO', cx, cy);
+          cy += 4;
+          result.history?.slice(0, 3).forEach((entry) => {
+            const line = `${fmt(entry.createdAt)}  ·  ${entry.actor?.name ?? 'Sistema'}  ›  ${statusLabel(entry.previousStatus)} → ${statusLabel(entry.newStatus)}`;
+            sf('normal', 7.5, C.textSub);
+            const hLines = doc.splitTextToSize(line, contentW - 18);
+            doc.text(hLines.slice(0, 1), cx + 2, cy);
+            cy += 4.5;
+          });
+        }
+
+        y += Math.max(estimatedH, cy - cardY + 6) + 4;
+      }
+
+      y += 8;
+    }
+  }
+
+  drawFooter();
+
+  // ── Salvar ────────────────────────────────────────────────────────────────
+  const safeName = testRun.name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/gi, '_')
+    .replace(/^_+|_+$/g, '')
+    .toLowerCase() || 'test_run';
+
   doc.save(`relatorio_${safeName}.pdf`);
+  return doc;
 }
+
+
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 

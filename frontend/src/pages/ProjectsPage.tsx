@@ -822,7 +822,7 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
                     <th className="px-4 py-3">Runs</th>
                     <th className="px-4 py-3">Plans</th>
                     <th className="px-4 py-3">Updated</th>
-                    <th className="px-4 py-3 text-right">Actions</th>
+                    <th className="px-4 py-3 text-right"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
