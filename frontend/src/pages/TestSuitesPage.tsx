@@ -73,7 +73,7 @@ function getUpdatedAt(suite: ManagedTestSuite) {
     return 'No updates';
   }
 
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat('pt-BR', {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(suite.updatedAt));
@@ -122,7 +122,7 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
       if (fetchError instanceof ApiError && fetchError.status === 401) {
         setError('Your session expired. Sign out and sign in again.');
       } else {
-        setError(fetchError instanceof Error ? fetchError.message : 'Unable to load test suites.');
+        setError(fetchError instanceof Error ? fetchError.message : 'Não foi possível carregar as suítes de teste.');
       }
     } finally {
       setIsLoading(false);
@@ -184,7 +184,7 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
     orderedCaseIds: string[],
   ) {
     if (!token) {
-      throw new Error('Authentication is required.');
+      throw new Error('Autenticação obrigatória.');
     }
 
     const updatedSuite = await testSuitesApi.update(token, suite.id, payload);
@@ -222,7 +222,7 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
     steps: ReplaceTestStepsPayload,
   ) {
     if (!token) {
-      throw new Error('Authentication is required.');
+      throw new Error('Autenticação obrigatória.');
     }
 
     await testCasesApi.update(token, testCase.id, payload);
@@ -278,7 +278,7 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
       setSuccess('Test suite deleted.');
     } catch (deleteError) {
       setSuitePendingDelete(null);
-      setError(deleteError instanceof Error ? deleteError.message : 'Unable to delete test suite.');
+      setError(deleteError instanceof Error ? deleteError.message : 'Não foi possível excluir a suíte de teste.');
     } finally {
       setIsDeleting(false);
     }
@@ -315,7 +315,7 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
       setSuccess('Test case deleted.');
     } catch (deleteError) {
       setCasePendingDelete(null);
-      setError(deleteError instanceof Error ? deleteError.message : 'Unable to delete test case.');
+      setError(deleteError instanceof Error ? deleteError.message : 'Não foi possível excluir o caso de teste.');
     } finally {
       setIsDeleting(false);
     }
@@ -343,7 +343,7 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
           <button
             className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-blue-700 px-3 text-sm font-medium text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
             disabled={!canManageTestAssets}
-            title={isReadOnly ? 'Viewer mode is read-only' : 'Create suite'}
+            title={isReadOnly ? 'Modo visualizador é somente leitura' : 'Criar suíte'}
             type="button"
             onClick={() => setModalOpen(true)}
           >
@@ -359,7 +359,7 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
           <input
             className="w-full border-0 bg-transparent p-0 text-sm text-slate-900 outline-none placeholder:text-slate-400"
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search suites"
+            placeholder="Buscar suítes"
             type="search"
             value={search}
           />
@@ -432,14 +432,14 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
                           disabled={!canManageTestAssets}
                           items={[
                             {
-                              label: 'Edit',
+                              label: 'Editar',
                               onSelect: () => setEditingSuite(suite),
-                              title: 'Edit test suite',
+                              title: 'Editar suíte de teste',
                             },
                             {
-                              label: 'Delete',
+                              label: 'Excluir',
                               onSelect: () => requestSuiteDelete(suite),
-                              title: 'Delete test suite',
+                              title: 'Excluir suíte de teste',
                               tone: 'danger',
                             },
                           ]}

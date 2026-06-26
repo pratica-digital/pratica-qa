@@ -15,6 +15,7 @@ import { useAuth } from '../auth/useAuth';
 import { TestCaseRunner } from '../components/test-run/TestCaseRunner';
 import { TestRunStatusBadge, UserRoleBadge } from '../components/badges';
 import { ApiError, testResultsApi, testRunsApi } from '../lib/api';
+import { testResultStatusLabel } from '../lib/labels';
 import type {
   ExecuteTestResultPayload,
   TestResult,
@@ -37,11 +38,11 @@ type StatusFilter = 'ALL' | TestResultStatus;
 type SortMode = 'suite' | 'status' | 'date' | 'executor';
 
 const statusFilters: Array<{ label: string; value: StatusFilter }> = [
-  { label: 'All', value: 'ALL' },
-  { label: 'Passed', value: 'PASSED' },
-  { label: 'Failed', value: 'FAILED' },
-  { label: 'Skipped', value: 'SKIPPED' },
-  { label: 'Not Run', value: 'PENDING' },
+  { label: 'Todos', value: 'ALL' },
+  { label: 'Aprovados', value: 'PASSED' },
+  { label: 'Falhas', value: 'FAILED' },
+  { label: 'Ignorados', value: 'SKIPPED' },
+  { label: 'Não executados', value: 'PENDING' },
 ];
 
 const statusOrder: Record<TestResultStatus, number> = {
@@ -52,7 +53,7 @@ const statusOrder: Record<TestResultStatus, number> = {
 };
 
 function getResultSuiteName(result: TestResult) {
-  return result.testCase.suite?.name ?? 'Unassigned suite';
+  return result.testCase.suite?.name ?? 'Suíte não atribuída';
 }
 
 function getResultProjectName(result: TestResult) {
@@ -60,12 +61,12 @@ function getResultProjectName(result: TestResult) {
     result.testCase.suite?.project?.name ??
     result.testRun?.project?.name ??
     result.testRun?.projectId ??
-    'Project'
+    'Projeto'
   );
 }
 
 function getStatusLabel(status: TestResultStatus) {
-  return status === 'PENDING' ? 'Not Run' : status;
+  return testResultStatusLabel(status);
 }
 
 function mergeUpdatedResult(current: TestRun, updatedResult: TestResult) {
@@ -124,7 +125,7 @@ function groupResultsBySuite(run: TestRun, results: TestResult[]) {
   return [...groups.entries()]
     .map(([suiteId, suiteResults]) => ({
       suiteId,
-      suiteName: suiteNames.get(suiteId) ?? 'Unassigned suite',
+      suiteName: suiteNames.get(suiteId) ?? 'Suíte não atribuída',
       order: suiteOrder.get(suiteId) ?? Number.MAX_SAFE_INTEGER,
       results: suiteResults,
     }))
@@ -243,7 +244,7 @@ export function TestRunExecutionPage({
         setActiveResultId((current) => current ?? freshRun.results?.[0]?.id ?? null);
       } catch (fetchError) {
         if (!cancelled) {
-          setError(fetchError instanceof Error ? fetchError.message : 'Unable to reload test run.');
+      setError(fetchError instanceof Error ? fetchError.message : 'Não foi possível recarregar a execução.');
         }
       }
     }
@@ -257,18 +258,18 @@ export function TestRunExecutionPage({
 
   const disabledReason = useMemo(() => {
     if (!user) {
-      return 'Sign in is required to execute this run.';
+      return 'É necessário entrar para executar esta rodada.';
     }
 
     if (user.role === 'VIEWER') {
-      return 'Viewer mode is read-only.';
+      return 'Modo visualizador é somente leitura.';
     }
 
     if (canManageTests(user)) {
       return undefined;
     }
 
-    return 'Execution is available to QA users and admins.';
+    return 'A execução está disponível para usuários QA e administradores.';
   }, [user]);
 
   const navigateResult = useCallback(
@@ -303,12 +304,12 @@ export function TestRunExecutionPage({
         comment: payload.comment,
       });
       applyUpdatedResult(updatedResult);
-      setSuccess(`${result.testCase.title} marked as ${getStatusLabel(payload.status)}.`);
+      setSuccess(`${result.testCase.title} marcado como ${getStatusLabel(payload.status)}.`);
     } catch (submitError) {
       if (submitError instanceof ApiError && submitError.status === 403) {
-        setError('You do not have permission to update this result.');
+        setError('Você não tem permissão para atualizar este resultado.');
       } else {
-        setError(submitError instanceof Error ? submitError.message : 'Unable to update result.');
+        setError(submitError instanceof Error ? submitError.message : 'Não foi possível atualizar o resultado.');
       }
     } finally {
       setSubmittingResultId(null);
@@ -329,13 +330,13 @@ export function TestRunExecutionPage({
 
       applyUpdatedResult(updatedResult);
       setSuccess(
-        `${files.length} evidence file${files.length > 1 ? 's' : ''} uploaded for ${result.testCase.title}.`,
+        `${files.length} arquivo${files.length > 1 ? 's' : ''} de evidência enviado${files.length > 1 ? 's' : ''} para ${result.testCase.title}.`,
       );
     } catch (uploadError) {
       if (uploadError instanceof ApiError && uploadError.status === 403) {
-        setError('You do not have permission to upload evidence.');
+        setError('Você não tem permissão para enviar evidências.');
       } else {
-        setError(uploadError instanceof Error ? uploadError.message : 'Unable to upload evidence.');
+        setError(uploadError instanceof Error ? uploadError.message : 'Não foi possível enviar a evidência.');
       }
     } finally {
       setSubmittingResultId(null);
@@ -358,12 +359,12 @@ export function TestRunExecutionPage({
       const updatedResult = await testResultsApi.removeAttachment(token, result.id, attachment.id);
 
       applyUpdatedResult(updatedResult);
-      setSuccess('Evidence removed.');
+      setSuccess('Evidência removida.');
     } catch (removeError) {
       if (removeError instanceof ApiError && removeError.status === 403) {
-        setError('You do not have permission to remove evidence.');
+        setError('Você não tem permissão para remover evidências.');
       } else {
-        setError(removeError instanceof Error ? removeError.message : 'Unable to remove evidence.');
+        setError(removeError instanceof Error ? removeError.message : 'Não foi possível remover a evidência.');
       }
     } finally {
       setSubmittingResultId(null);
@@ -383,7 +384,7 @@ export function TestRunExecutionPage({
       const response = await testRunsApi.rerunFailed(token, run.id, {});
 
       if (!response.testRun || response.failedCount === 0) {
-        setSuccess('There are no failed tests to re-run.');
+        setSuccess('Não há testes com falha para reexecutar.');
         return;
       }
 
@@ -391,12 +392,12 @@ export function TestRunExecutionPage({
       onRunUpdated(response.testRun);
       setStatusFilter('ALL');
       setActiveResultId(response.testRun.results?.[0]?.id ?? null);
-      setSuccess(`${response.failedCount} failed tests queued for re-execution.`);
+      setSuccess(`${response.failedCount} teste${response.failedCount === 1 ? '' : 's'} com falha enfileirado${response.failedCount === 1 ? '' : 's'} para reexecução.`);
     } catch (rerunError) {
       if (rerunError instanceof ApiError && rerunError.status === 403) {
-        setError('You do not have permission to re-run failed tests.');
+        setError('Você não tem permissão para reexecutar testes com falha.');
       } else {
-        setError(rerunError instanceof Error ? rerunError.message : 'Unable to re-run failed tests.');
+        setError(rerunError instanceof Error ? rerunError.message : 'Não foi possível reexecutar os testes com falha.');
       }
     } finally {
       setRerunning(false);
@@ -421,11 +422,11 @@ export function TestRunExecutionPage({
             type="button"
           >
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-            Back
+            Voltar
           </button>
           <div className="mt-4">
             <p className="text-sm font-medium text-slate-500">
-              {run.project?.name ?? 'Test run'}
+              {run.project?.name ?? 'Execução'}
             </p>
             <h1 className="mt-1 text-2xl font-semibold tracking-normal text-slate-950">
               {run.name}
@@ -442,11 +443,11 @@ export function TestRunExecutionPage({
           <div className="rounded-lg border border-slate-200 bg-white p-3">
             <div className="flex items-center gap-2 text-xs font-medium uppercase text-slate-500">
               <UserRound className="h-4 w-4" aria-hidden="true" />
-              Assigned
+              Responsável
             </div>
             <div className="mt-2 flex items-center justify-between gap-3">
               <span className="min-w-0 truncate text-sm font-medium text-slate-950">
-                {run.assignedTo?.name ?? 'Unassigned'}
+                {run.assignedTo?.name ?? 'Não atribuído'}
               </span>
               {run.assignedTo?.role ? <UserRoleBadge role={run.assignedTo.role} /> : null}
             </div>
@@ -454,26 +455,26 @@ export function TestRunExecutionPage({
           <div className="rounded-lg border border-slate-200 bg-white p-3">
             <div className="flex items-center justify-between gap-3">
               <span className="text-xs font-medium uppercase text-slate-500">
-                Run status
+                Status da execução
               </span>
               <TestRunStatusBadge status={run.status} />
             </div>
             <div className="mt-3 grid grid-cols-4 gap-2 text-center text-sm">
               <div>
                 <p className="font-semibold text-slate-950">{countResults(results, 'PASSED')}</p>
-                <p className="text-xs text-slate-500">Pass</p>
+                <p className="text-xs text-slate-500">Aprov.</p>
               </div>
               <div>
                 <p className="font-semibold text-slate-950">{countResults(results, 'FAILED')}</p>
-                <p className="text-xs text-slate-500">Fail</p>
+                <p className="text-xs text-slate-500">Falha</p>
               </div>
               <div>
                 <p className="font-semibold text-slate-950">{countResults(results, 'SKIPPED')}</p>
-                <p className="text-xs text-slate-500">Skip</p>
+                <p className="text-xs text-slate-500">Ignor.</p>
               </div>
               <div>
                 <p className="font-semibold text-slate-950">{countResults(results, 'PENDING')}</p>
-                <p className="text-xs text-slate-500">Open</p>
+                <p className="text-xs text-slate-500">Aberto</p>
               </div>
             </div>
           </div>
@@ -510,7 +511,7 @@ export function TestRunExecutionPage({
               <input
                 className="w-full border-0 bg-transparent p-0 text-sm text-slate-900 outline-none placeholder:text-slate-400"
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search test case, suite, executor, comment"
+                placeholder="Buscar caso, suíte, executor ou comentário"
                 type="search"
                 value={search}
               />
@@ -520,10 +521,10 @@ export function TestRunExecutionPage({
               onChange={(event) => setSortMode(event.target.value as SortMode)}
               value={sortMode}
             >
-              <option value="suite">Sort by suite</option>
-              <option value="status">Sort by status</option>
-              <option value="date">Sort by last update</option>
-              <option value="executor">Sort by executor</option>
+              <option value="suite">Ordenar por suíte</option>
+              <option value="status">Ordenar por status</option>
+              <option value="date">Ordenar por última atualização</option>
+              <option value="executor">Ordenar por executor</option>
             </select>
           </div>
           <button
@@ -533,13 +534,13 @@ export function TestRunExecutionPage({
             type="button"
           >
             <RotateCcw className="h-4 w-4" aria-hidden="true" />
-            {rerunning ? 'Creating re-run' : 'Re-run failed tests'}
+            {rerunning ? 'Criando reexecução' : 'Reexecutar falhas'}
           </button>
         </div>
 
         <div className="flex items-center gap-2">
           <span className="text-sm text-slate-500">
-            {visibleResults.length} tests
+            {visibleResults.length} teste{visibleResults.length === 1 ? '' : 's'}
           </span>
           <button
             className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-600 bg-slate-600 px-3 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
@@ -548,7 +549,7 @@ export function TestRunExecutionPage({
             type="button"
           >
             <ArrowUp className="h-4 w-4" aria-hidden="true" />
-            Previous
+            Anterior
           </button>
           <button
             className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-600 bg-slate-600 px-3 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
@@ -560,7 +561,7 @@ export function TestRunExecutionPage({
             type="button"
           >
             <ArrowDown className="h-4 w-4" aria-hidden="true" />
-            Next
+            Próximo
           </button>
         </div>
       </div>
@@ -590,8 +591,8 @@ export function TestRunExecutionPage({
                   {group.suiteName}
                 </h2>
                 <span className="text-xs font-medium text-slate-500">
-                  {group.results.length} tests
-                  {collapsedSuiteIds.includes(group.suiteId) ? ' - collapsed' : ''}
+                  {group.results.length} teste{group.results.length === 1 ? '' : 's'}
+                  {collapsedSuiteIds.includes(group.suiteId) ? ' - recolhida' : ''}
                 </span>
               </button>
               <div className={`space-y-4 ${collapsedSuiteIds.includes(group.suiteId) ? 'hidden' : ''}`}>
@@ -617,12 +618,12 @@ export function TestRunExecutionPage({
         <div className="rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
           <ClipboardCheck className="mx-auto h-8 w-8 text-slate-400" aria-hidden="true" />
           <h2 className="mt-3 text-sm font-semibold text-slate-950">
-            {statusFilter === 'ALL' && !search.trim() ? 'No results yet' : 'No matching results'}
+            {statusFilter === 'ALL' && !search.trim() ? 'Nenhum resultado ainda' : 'Nenhum resultado correspondente'}
           </h2>
           <p className="mt-1 text-sm text-slate-500">
             {statusFilter === 'ALL' && !search.trim()
-              ? 'This run has no test cases queued for execution.'
-              : 'Adjust the status filter or search to see more tests.'}
+              ? 'Esta execução não tem casos de teste enfileirados.'
+              : 'Ajuste o filtro de status ou a busca para ver mais testes.'}
           </p>
           <button
             className="mt-4 inline-flex h-9 items-center gap-2 rounded-lg border border-slate-600 bg-slate-600 px-3 text-sm font-medium text-white hover:bg-slate-700"
@@ -630,7 +631,7 @@ export function TestRunExecutionPage({
             type="button"
           >
             <RefreshCw className="h-4 w-4" aria-hidden="true" />
-            Return to runs
+            Voltar para execuções
           </button>
         </div>
       )}

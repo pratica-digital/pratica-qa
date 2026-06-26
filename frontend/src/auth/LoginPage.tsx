@@ -16,7 +16,7 @@ type PasswordVisibilityButtonProps = {
 
 function PasswordVisibilityButton({ label, onToggle, visible }: PasswordVisibilityButtonProps) {
   const Icon = visible ? EyeOff : Eye;
-  const title = visible ? `Hide ${label}` : `Show ${label}`;
+  const title = visible ? `Ocultar ${label}` : `Mostrar ${label}`;
 
   return (
     <button
@@ -57,7 +57,7 @@ export function LoginPage() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
-  const [notice, setNotice] = useState(resetLinkParams ? 'Create a new password to finish access setup.' : '');
+  const [notice, setNotice] = useState(resetLinkParams ? 'Crie uma nova senha para concluir a configuração de acesso.' : '');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -74,7 +74,7 @@ export function LoginPage() {
     try {
       await login(email, password);
     } catch (loginError) {
-      setError(loginError instanceof Error ? loginError.message : 'Unable to sign in');
+      setError(loginError instanceof Error ? loginError.message : 'Não foi possível entrar.');
     } finally {
       setIsSubmitting(false);
     }
@@ -90,7 +90,7 @@ export function LoginPage() {
       const response = await authApi.requestPasswordRecovery(recoveryEmail);
       setNotice(response.message);
     } catch (recoveryError) {
-      setError(recoveryError instanceof Error ? recoveryError.message : 'Unable to request recovery');
+      setError(recoveryError instanceof Error ? recoveryError.message : 'Não foi possível solicitar a recuperação.');
     } finally {
       setIsSubmitting(false);
     }
@@ -109,7 +109,7 @@ export function LoginPage() {
     }
 
     if (newPassword !== confirmPassword) {
-      setError('Passwords do not match.');
+      setError('As senhas não coincidem.');
       return;
     }
 
@@ -117,14 +117,14 @@ export function LoginPage() {
 
     try {
       await authApi.resetPassword(email, resetToken, newPassword);
-      setNotice('Password updated. Sign in with your new password.');
+      setNotice('Senha atualizada. Entre com a nova senha.');
       setPassword('');
       setNewPassword('');
       setConfirmPassword('');
       setResetToken('');
       setMode('login');
     } catch (resetError) {
-      setError(resetError instanceof Error ? resetError.message : 'Unable to reset password');
+      setError(resetError instanceof Error ? resetError.message : 'Não foi possível redefinir a senha.');
     } finally {
       setIsSubmitting(false);
     }
@@ -135,7 +135,7 @@ export function LoginPage() {
       <section className="w-full max-w-md rounded-lg border border-zinc-200 bg-white p-10 shadow-sm">
         <img
           src={praticaLogo}
-          alt="Login illustration"
+          alt="Logo Prática"
           className="mx-auto mb-6 h-22 w-64 object-cover "
         />
         <div className="flex flex-col items-center gap-2 text-center">
@@ -159,7 +159,7 @@ export function LoginPage() {
         {mode === 'login' ? (
           <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
             <label className="block text-sm font-medium text-zinc-700">
-              Email
+              E-mail
               <input
                 autoComplete="email"
                 autoFocus
@@ -172,7 +172,7 @@ export function LoginPage() {
             </label>
 
             <label className="block text-sm font-medium text-zinc-700">
-              Password
+              Senha
               <span className="relative mt-1 block">
                 <input
                   autoComplete="current-password"
@@ -184,7 +184,7 @@ export function LoginPage() {
                   value={password}
                 />
                 <PasswordVisibilityButton
-                  label="password"
+                  label="senha"
                   onToggle={() => setShowPassword((value) => !value)}
                   visible={showPassword}
                 />
@@ -209,7 +209,7 @@ export function LoginPage() {
               type="submit"
             >
               <LogIn className="h-4 w-4" aria-hidden="true" />
-              {isSubmitting ? 'Signing in' : 'Sign in'}
+              {isSubmitting ? 'Entrando' : 'Entrar'}
             </button>
 
             <div className="flex items-center justify-between gap-3">
@@ -223,7 +223,7 @@ export function LoginPage() {
                 }}
                 type="button"
               >
-                Forgot password
+                Esqueci minha senha
               </button>
               <button
                 className="text-sm font-medium text-slate-600 hover:text-slate-950"
@@ -234,7 +234,7 @@ export function LoginPage() {
                 }}
                 type="button"
               >
-                Use reset token
+                Usar token de redefinição
               </button>
             </div>
           </form>
@@ -243,7 +243,7 @@ export function LoginPage() {
         {mode === 'recover' ? (
           <form className="mt-6 space-y-4" onSubmit={handleRecoverySubmit}>
             <label className="block text-sm font-medium text-zinc-700">
-              Email
+              E-mail
               <input
                 autoComplete="email"
                 autoFocus
@@ -273,7 +273,7 @@ export function LoginPage() {
               type="submit"
             >
               <Mail className="h-4 w-4" aria-hidden="true" />
-              {isSubmitting ? 'Sending' : 'Send recovery email'}
+              {isSubmitting ? 'Enviando' : 'Enviar e-mail de recuperação'}
             </button>
 
             <button
@@ -284,7 +284,7 @@ export function LoginPage() {
               }}
               type="button"
             >
-              Back to sign in
+              Voltar para entrar
             </button>
           </form>
         ) : null}
@@ -292,7 +292,7 @@ export function LoginPage() {
         {mode === 'reset' ? (
           <form className="mt-6 space-y-4" onSubmit={handleResetSubmit}>
             <label className="block text-sm font-medium text-zinc-700">
-              Email
+              E-mail
               <input
                 autoComplete="email"
                 autoFocus
@@ -306,11 +306,11 @@ export function LoginPage() {
 
             {resetLinkParams ? (
               <p className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700">
-                Reset token loaded from the email link.
+                Token de redefinição carregado pelo link do e-mail.
               </p>
             ) : (
               <label className="block text-sm font-medium text-zinc-700">
-                Reset token
+                Token de redefinição
                 <input
                   autoComplete="one-time-code"
                   className="mt-1 h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-950 outline-none transition focus:border-zinc-400 focus:ring-2 focus:ring-zinc-200"
@@ -323,7 +323,7 @@ export function LoginPage() {
             )}
 
             <label className="block text-sm font-medium text-zinc-700">
-              New password
+              Nova senha
               <span className="relative mt-1 block">
                 <input
                   autoComplete="new-password"
@@ -335,7 +335,7 @@ export function LoginPage() {
                   value={newPassword}
                 />
                 <PasswordVisibilityButton
-                  label="new password"
+                  label="nova senha"
                   onToggle={() => setShowNewPassword((value) => !value)}
                   visible={showNewPassword}
                 />
@@ -343,7 +343,7 @@ export function LoginPage() {
             </label>
 
             <label className="block text-sm font-medium text-zinc-700">
-              Confirm password
+              Confirmar senha
               <span className="relative mt-1 block">
                 <input
                   autoComplete="new-password"
@@ -355,7 +355,7 @@ export function LoginPage() {
                   value={confirmPassword}
                 />
                 <PasswordVisibilityButton
-                  label="confirm password"
+                  label="confirmação de senha"
                   onToggle={() => setShowConfirmPassword((value) => !value)}
                   visible={showConfirmPassword}
                 />
@@ -380,7 +380,7 @@ export function LoginPage() {
               type="submit"
             >
               <KeyRound className="h-4 w-4" aria-hidden="true" />
-              {isSubmitting ? 'Saving' : 'Reset password'}
+              {isSubmitting ? 'Salvando' : 'Redefinir senha'}
             </button>
 
             <button
@@ -391,7 +391,7 @@ export function LoginPage() {
               }}
               type="button"
             >
-              Back to sign in
+              Voltar para entrar
             </button>
           </form>
         ) : null}

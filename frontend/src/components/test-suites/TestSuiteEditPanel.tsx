@@ -83,7 +83,7 @@ export function TestSuiteEditPanel({
       );
       onClose();
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Unable to save test suite.');
+      setError(saveError instanceof Error ? saveError.message : 'Não foi possível salvar a suíte de teste.');
     } finally {
       setSaving(false);
     }

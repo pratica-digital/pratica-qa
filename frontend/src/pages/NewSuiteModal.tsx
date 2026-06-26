@@ -103,11 +103,11 @@ export function NewSuiteModal({
     const nextErrors: SuiteFormErrors = {};
 
     if (!form.name.trim()) {
-      nextErrors.name = 'Name is required';
+      nextErrors.name = 'Nome obrigatório';
     }
 
     if (!form.project) {
-      nextErrors.project = !hasProjectOptions ? 'Create a project before creating a suite' : 'Select a project';
+      nextErrors.project = !hasProjectOptions ? 'Crie um projeto antes de criar uma suíte' : 'Selecione um projeto';
     }
 
     return nextErrors;
@@ -134,7 +134,7 @@ export function NewSuiteModal({
       setForm(initialForm);
       setErrors({});
     } catch (createError) {
-      setSubmitError(createError instanceof Error ? createError.message : 'Unable to create test suite.');
+      setSubmitError(createError instanceof Error ? createError.message : 'Não foi possível criar a suíte de teste.');
     } finally {
       setSubmitting(false);
     }
@@ -149,13 +149,13 @@ export function NewSuiteModal({
             <Layers3 className="h-4 w-4" aria-hidden="true" />
           </span>
           <div className="min-w-0 flex-1">
-            <h2 className="text-sm font-semibold text-slate-950">New test suite</h2>
-            <p className="truncate text-xs text-slate-400">Create a suite for a project area</p>
+            <h2 className="text-sm font-semibold text-slate-950">Nova suíte de teste</h2>
+            <p className="truncate text-xs text-slate-400">Crie uma suíte para uma área do projeto</p>
           </div>
           <button
             className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
             onClick={onClose}
-            title="Close modal"
+            title="Fechar modal"
             type="button"
           >
             <X className="h-4 w-4" aria-hidden="true" />
@@ -163,7 +163,7 @@ export function NewSuiteModal({
         </div>
 
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5">
-          <Field label="Suite name" required hint="Use a clear name, for example Auth login flow">
+          <Field label="Nome da suíte" required hint="Use um nome claro, por exemplo Fluxo de login">
             <Input
               onChange={(event) => setField('name', event.target.value)}
               placeholder="Checkout payment flow"
@@ -176,10 +176,10 @@ export function NewSuiteModal({
             ) : null}
           </Field>
 
-          <Field label="Project" required>
+          <Field label="Projeto" required>
             <Select value={form.project} onChange={(event) => setField('project', event.target.value)}>
               <option value="">
-                {!hasProjectOptions ? 'No projects available' : 'Select...'}
+                {!hasProjectOptions ? 'Nenhum projeto disponível' : 'Selecione...'}
               </option>
               {projectOptions.map((project) => (
                 <option key={project.id} value={project.id}>
@@ -203,7 +203,7 @@ export function NewSuiteModal({
             onClick={onClose}
             type="button"
           >
-            Cancel
+            Cancelar
           </button>
           <button
             className="inline-flex h-9 items-center gap-2 rounded-lg bg-blue-700 px-4 text-sm font-medium text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
@@ -214,12 +214,12 @@ export function NewSuiteModal({
             {submitting ? (
               <>
                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                Creating
+                Criando
               </>
             ) : (
               <>
                 <Layers3 className="h-4 w-4" aria-hidden="true" />
-                Create suite
+                Criar suíte
               </>
             )}
           </button>

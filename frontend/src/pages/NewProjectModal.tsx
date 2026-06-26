@@ -82,13 +82,13 @@ export function NewProjectModal({ open, onClose, onCreate }: NewProjectModalProp
     const nextErrors: ProjectFormErrors = {};
 
     if (!form.name.trim()) {
-      nextErrors.name = 'Name is required';
+      nextErrors.name = 'Nome obrigatório';
     }
 
     if (!normalizedKey) {
-      nextErrors.key = 'Key is required';
+      nextErrors.key = 'Chave obrigatória';
     } else if (!/^[A-Z0-9][A-Z0-9_-]*$/.test(normalizedKey)) {
-      nextErrors.key = 'Use uppercase letters, numbers, _ or -';
+      nextErrors.key = 'Use letras maiúsculas, números, _ ou -';
     }
 
     return nextErrors;
@@ -115,7 +115,7 @@ export function NewProjectModal({ open, onClose, onCreate }: NewProjectModalProp
       setErrors({});
       onClose();
     } catch (createError) {
-      setSubmitError(createError instanceof Error ? createError.message : 'Unable to create project.');
+      setSubmitError(createError instanceof Error ? createError.message : 'Não foi possível criar o projeto.');
     } finally {
       setSubmitting(false);
     }
@@ -130,13 +130,13 @@ export function NewProjectModal({ open, onClose, onCreate }: NewProjectModalProp
             <FolderOpen className="h-4 w-4" aria-hidden="true" />
           </span>
           <div className="min-w-0 flex-1">
-            <h2 className="text-sm font-semibold text-slate-950">New project</h2>
-            <p className="truncate text-xs text-slate-400">Create the QA workspace container</p>
+            <h2 className="text-sm font-semibold text-slate-950">Novo projeto</h2>
+            <p className="truncate text-xs text-slate-400">Crie o espaço de trabalho de QA</p>
           </div>
           <button
             className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
             onClick={onClose}
-            title="Close modal"
+            title="Fechar modal"
             type="button"
           >
             <X className="h-4 w-4" aria-hidden="true" />
@@ -144,7 +144,7 @@ export function NewProjectModal({ open, onClose, onCreate }: NewProjectModalProp
         </div>
 
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5">
-          <Field label="Project name" required>
+          <Field label="Nome do projeto" required>
             <input
               className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
               onChange={(event) => setField('name', event.target.value)}
@@ -158,7 +158,7 @@ export function NewProjectModal({ open, onClose, onCreate }: NewProjectModalProp
             ) : null}
           </Field>
 
-          <Field label="Project key" required hint="Example: WEB, API, MOBILE_CHECKOUT">
+          <Field label="Chave do projeto" required hint="Exemplo: WEB, API, MOBILE_CHECKOUT">
             <input
               className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm uppercase text-slate-900 outline-none transition placeholder:normal-case placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
               maxLength={24}
@@ -173,11 +173,11 @@ export function NewProjectModal({ open, onClose, onCreate }: NewProjectModalProp
             ) : null}
           </Field>
 
-          <Field label="Description" hint="Optional scope or product context">
+          <Field label="Descrição" hint="Escopo ou contexto do produto, opcional">
             <textarea
               className="w-full resize-none rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
               onChange={(event) => setField('description', event.target.value)}
-              placeholder="Primary QA project for the customer web experience"
+              placeholder="Projeto principal de QA para a experiência web"
               rows={3}
               value={form.description}
             />
@@ -193,7 +193,7 @@ export function NewProjectModal({ open, onClose, onCreate }: NewProjectModalProp
               onClick={onClose}
               type="button"
             >
-              Cancel
+              Cancelar
             </button>
             <button
               className="inline-flex h-9 items-center gap-2 rounded-lg bg-blue-700 px-4 text-sm font-medium text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
@@ -202,7 +202,7 @@ export function NewProjectModal({ open, onClose, onCreate }: NewProjectModalProp
               type="button"
             >
               <FolderOpen className="h-4 w-4" aria-hidden="true" />
-              {submitting ? 'Creating' : 'Create project'}
+              {submitting ? 'Criando' : 'Criar projeto'}
             </button>
           </div>
         </div>

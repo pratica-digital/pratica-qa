@@ -149,7 +149,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
         ]);
 
         if (!plansResponse.ok || !suitesResponse.ok) {
-          setLoadError('Failed to load data');
+          setLoadError('Falha ao carregar os dados');
           return;
         }
 
@@ -164,7 +164,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
         setTestPlans(plansList);
         setSuites(suitesList);
       } catch {
-        setLoadError('Unable to load data');
+        setLoadError('Não foi possível carregar os dados');
       } finally {
         setIsLoadingData(false);
       }
@@ -322,7 +322,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
         const message = Array.isArray(errorData.message)
           ? errorData.message.join(', ')
           : errorData.message;
-        setLoadError(message || 'Failed to create test run');
+        setLoadError(message || 'Falha ao criar a execução');
         setSubmitting(false);
         return;
       }
@@ -337,7 +337,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
       setErrors({});
       setActiveTab('info');
     } catch (error) {
-      setLoadError(error instanceof Error ? error.message : 'Unable to create test run');
+      setLoadError(error instanceof Error ? error.message : 'Não foi possível criar a execução');
     } finally {
       setSubmitting(false);
     }

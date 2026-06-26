@@ -63,7 +63,7 @@ export function Sidebar({ activePage, isOpen, onClose, onNavigate }: SidebarProp
           <button
             className="flex h-9 w-9 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-950 lg:hidden"
             onClick={onClose}
-            title="Close sidebar"
+            title="Fechar menu"
             type="button"
           >
             <X className="h-4 w-4" aria-hidden="true" />
@@ -101,13 +101,13 @@ export function Sidebar({ activePage, isOpen, onClose, onNavigate }: SidebarProp
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-medium uppercase text-blue-200">
-                  Signed in
+                  Conectado
                 </p>
                 <p className="mt-1 truncate text-sm font-semibold text-white">
                   {user?.name}
                 </p>
                 <p className="mt-0.5 text-xs text-blue-200">
-                  {activeAssignedRuns.length} active assigned
+                  {activeAssignedRuns.length} atribuição{activeAssignedRuns.length === 1 ? '' : 'ões'} ativa{activeAssignedRuns.length === 1 ? '' : 's'}
                 </p>
               </div>
               <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />

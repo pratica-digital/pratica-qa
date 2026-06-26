@@ -60,14 +60,14 @@ export type TestCase = {
 };
 
 export const navigationItems: NavigationItem[] = [
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'projects', label: 'Projects', icon: FolderOpen },
-  { id: 'test-plans', label: 'Test Plans', icon: ClipboardList },
-  { id: 'test-suites', label: 'Test Suites', icon: Layers3 },
-  { id: 'test-cases', label: 'Test Cases', icon: ListChecks },
-  { id: 'test-runs', label: 'Test Runs', icon: PlaySquare },
-  { id: 'users', label: 'Users', icon: UsersRound, roles: ['ADMIN'] },
-  { id: 'profile', label: 'Profile', icon: UserRound },
+  { id: 'dashboard', label: 'Painel', icon: LayoutDashboard },
+  { id: 'projects', label: 'Projetos', icon: FolderOpen },
+  { id: 'test-plans', label: 'Planos de Teste', icon: ClipboardList },
+  { id: 'test-suites', label: 'Suítes de Teste', icon: Layers3 },
+  { id: 'test-cases', label: 'Casos de Teste', icon: ListChecks },
+  { id: 'test-runs', label: 'Execuções', icon: PlaySquare },
+  { id: 'users', label: 'Usuários', icon: UsersRound, roles: ['ADMIN'] },
+  { id: 'profile', label: 'Perfil', icon: UserRound },
 ];
 
 export const projects: Project[] = [
@@ -79,7 +79,7 @@ export const projects: Project[] = [
     suites: 12,
     cases: 248,
     passRate: 92,
-    updatedAt: 'Today',
+    updatedAt: 'Hoje',
   },
   {
     key: 'API',
@@ -89,7 +89,7 @@ export const projects: Project[] = [
     suites: 8,
     cases: 164,
     passRate: 78,
-    updatedAt: 'Yesterday',
+    updatedAt: 'Ontem',
   },
   {
     key: 'MOB',

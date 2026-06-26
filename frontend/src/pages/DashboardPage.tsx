@@ -150,7 +150,7 @@ function formatDate(value?: string | null) {
     return 'No date';
   }
 
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat('pt-BR', {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
@@ -959,7 +959,7 @@ export function DashboardPage({ onNavigate, onOpenRun }: DashboardPageProps) {
       if (fetchError instanceof ApiError && fetchError.status === 401) {
         setError('Your session expired. Sign out and sign in again.');
       } else {
-        setError(fetchError instanceof Error ? fetchError.message : 'Unable to load dashboard.');
+        setError(fetchError instanceof Error ? fetchError.message : 'Não foi possível carregar o painel.');
       }
     } finally {
       setIsLoading(false);
@@ -1018,7 +1018,7 @@ export function DashboardPage({ onNavigate, onOpenRun }: DashboardPageProps) {
           },
         }));
       } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : 'Unable to load project preview.');
+        setError(loadError instanceof Error ? loadError.message : 'Não foi possível carregar a prévia do projeto.');
       } finally {
         setPreviewLoading(loadingKey, false);
       }
@@ -1049,7 +1049,7 @@ export function DashboardPage({ onNavigate, onOpenRun }: DashboardPageProps) {
           },
         }));
       } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : 'Unable to load suite preview.');
+        setError(loadError instanceof Error ? loadError.message : 'Não foi possível carregar a prévia da suíte.');
       } finally {
         setPreviewLoading(loadingKey, false);
       }
@@ -1073,7 +1073,7 @@ export function DashboardPage({ onNavigate, onOpenRun }: DashboardPageProps) {
           [plan.id]: nextPlan,
         }));
       } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : 'Unable to load test plan.');
+        setError(loadError instanceof Error ? loadError.message : 'Não foi possível carregar o plano de teste.');
       } finally {
         setPreviewLoading(loadingKey, false);
       }
@@ -1097,7 +1097,7 @@ export function DashboardPage({ onNavigate, onOpenRun }: DashboardPageProps) {
           runs: current.runs.map((item) => (item.id === nextRun.id ? nextRun : item)),
         }));
       } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : 'Unable to load test run.');
+        setError(loadError instanceof Error ? loadError.message : 'Não foi possível carregar a execução.');
       } finally {
         setPreviewLoading(loadingKey, false);
       }
@@ -1163,7 +1163,7 @@ export function DashboardPage({ onNavigate, onOpenRun }: DashboardPageProps) {
       setSelectedPlan(freshPlan);
       setPlanDetails((current) => ({ ...current, [plan.id]: freshPlan }));
     } catch (openError) {
-      setError(openError instanceof Error ? openError.message : 'Unable to open test plan.');
+      setError(openError instanceof Error ? openError.message : 'Não foi possível abrir o plano de teste.');
     }
   }
 
@@ -1187,7 +1187,7 @@ export function DashboardPage({ onNavigate, onOpenRun }: DashboardPageProps) {
         cases: casesPage.data,
       });
     } catch (openError) {
-      setError(openError instanceof Error ? openError.message : 'Unable to open test suite.');
+      setError(openError instanceof Error ? openError.message : 'Não foi possível abrir a suíte de teste.');
     }
   }
 
@@ -1203,7 +1203,7 @@ export function DashboardPage({ onNavigate, onOpenRun }: DashboardPageProps) {
       const freshRun = await testRunsApi.get(token, run.id);
       onOpenRun(freshRun);
     } catch (openError) {
-      setError(openError instanceof Error ? openError.message : 'Unable to open test run.');
+      setError(openError instanceof Error ? openError.message : 'Não foi possível abrir a execução.');
     } finally {
       setOpeningRunId(null);
     }
@@ -1220,7 +1220,7 @@ export function DashboardPage({ onNavigate, onOpenRun }: DashboardPageProps) {
       const freshRun = await testRunsApi.get(token, result.testRun.id);
       onOpenRun(freshRun);
     } catch (openError) {
-      setError(openError instanceof Error ? openError.message : 'Unable to open failed test run.');
+      setError(openError instanceof Error ? openError.message : 'Não foi possível abrir a execução com falha.');
     } finally {
       setOpeningRunId(null);
     }
@@ -1403,7 +1403,7 @@ export function DashboardPage({ onNavigate, onOpenRun }: DashboardPageProps) {
       void fetchDashboard();
     } catch (deleteError) {
       setDeleteTarget(null);
-      setError(deleteError instanceof Error ? deleteError.message : 'Unable to delete item.');
+      setError(deleteError instanceof Error ? deleteError.message : 'Não foi possível excluir o item.');
     } finally {
       setIsDeleting(false);
     }
@@ -1423,16 +1423,16 @@ export function DashboardPage({ onNavigate, onOpenRun }: DashboardPageProps) {
       ? 'Latest passed executions'
       : activeMetric === 'failed'
         ? 'Latest failed executions'
-        : 'Pending executions';
+        : 'Execuções pendentes';
 
   const deleteModalTitle =
     deleteTarget?.type === 'project'
-      ? 'Delete Project?'
+      ? 'Excluir projeto?'
       : deleteTarget?.type === 'suite'
-        ? 'Delete Test Suite?'
+        ? 'Excluir suíte de teste?'
         : deleteTarget?.type === 'plan'
-          ? 'Delete Test Plan?'
-          : 'Delete Test Run?';
+          ? 'Excluir plano de teste?'
+          : 'Excluir execução?';
 
   const deleteModalDescription =
     deleteTarget?.type === 'project'

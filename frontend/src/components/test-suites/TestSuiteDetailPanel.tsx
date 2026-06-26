@@ -19,7 +19,7 @@ function formatUpdatedAt(value?: string) {
     return 'No updates';
   }
 
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat('pt-BR', {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
@@ -62,16 +62,16 @@ export function TestSuiteDetailPanel({
             ariaLabel="Test suite actions"
             items={[
               {
-                label: 'Edit',
+                label: 'Editar',
                 onSelect: onEdit,
-                title: 'Edit test suite',
+                title: 'Editar suíte de teste',
               },
               ...(onDelete
                 ? [
                     {
-                      label: 'Delete',
+                      label: 'Excluir',
                       onSelect: onDelete,
-                      title: 'Delete test suite',
+                      title: 'Excluir suíte de teste',
                       tone: 'danger' as const,
                     },
                   ]

@@ -58,7 +58,7 @@ function getUpdatedAt(project: ProjectSummary) {
     return 'No updates';
   }
 
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat('pt-BR', {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(project.updatedAt));
@@ -242,7 +242,7 @@ function ProjectFormModal({
 
       onClose();
     } catch (projectError) {
-      setSubmitError(projectError instanceof Error ? projectError.message : 'Unable to save project.');
+      setSubmitError(projectError instanceof Error ? projectError.message : 'Não foi possível salvar o projeto.');
     } finally {
       setSubmitting(false);
     }
@@ -258,7 +258,7 @@ function ProjectFormModal({
             </span>
             <div className="min-w-0 flex-1">
               <h2 className="text-sm font-semibold text-slate-950">
-                {isEditing ? 'Edit project' : 'New project'}
+                {isEditing ? 'Editar projeto' : 'New project'}
               </h2>
               <p className="truncate text-xs text-slate-400">
                 {isEditing ? 'Update project details and cover' : 'Create the QA workspace container'}
@@ -393,7 +393,7 @@ function ProjectFormModal({
                 type="button"
               >
                 <FolderOpen className="h-4 w-4" aria-hidden="true" />
-                {submitting ? 'Saving' : isEditing ? 'Save changes' : 'Create project'}
+                {submitting ? 'Saving' : isEditing ? 'Save changes' : 'Criar projeto'}
               </button>
             </div>
           </div>
@@ -445,14 +445,14 @@ function ProjectDetailsPanel({
                 ariaLabel="Project actions"
                 items={[
                   {
-                    label: 'Edit',
+                    label: 'Editar',
                     onSelect: () => onEdit(project),
-                    title: 'Edit project',
+                    title: 'Editar projeto',
                   },
                   {
-                    label: 'Delete',
+                    label: 'Excluir',
                     onSelect: () => onDelete(project),
-                    title: 'Delete project',
+                    title: 'Excluir projeto',
                     tone: 'danger',
                   },
                 ]}
@@ -531,7 +531,7 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
       if (fetchError instanceof ApiError && fetchError.status === 401) {
         setError('Your session expired. Sign out and sign in again.');
       } else {
-        setError(fetchError instanceof Error ? fetchError.message : 'Unable to load projects.');
+        setError(fetchError instanceof Error ? fetchError.message : 'Não foi possível carregar os projetos.');
       }
     } finally {
       setIsLoading(false);
@@ -649,7 +649,7 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
       setSuccess('Project deleted.');
     } catch (deleteError) {
       setProjectPendingDelete(null);
-      setError(deleteError instanceof Error ? deleteError.message : 'Unable to delete project.');
+      setError(deleteError instanceof Error ? deleteError.message : 'Não foi possível excluir o projeto.');
     } finally {
       setIsDeleting(false);
     }
@@ -677,7 +677,7 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
             className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-blue-700 px-3 text-sm font-medium text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
             disabled={!canManageTestAssets}
             onClick={() => setModalOpen(true)}
-            title={canManageTestAssets ? 'Create project' : 'Requires test management permission'}
+            title={canManageTestAssets ? 'Criar projeto' : 'Requer permissão de gestão de testes'}
             type="button"
           >
             <Plus className="h-4 w-4" aria-hidden="true" />
@@ -692,7 +692,7 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
           <input
             className="w-full border-0 bg-transparent p-0 text-sm text-slate-900 outline-none placeholder:text-slate-400"
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search projects"
+            placeholder="Buscar projetos"
             type="search"
             value={search}
           />
@@ -764,14 +764,14 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
                             disabled={!canManageTestAssets}
                             items={[
                               {
-                                label: 'Edit',
+                                label: 'Editar',
                                 onSelect: () => requestProjectEdit(project),
-                                title: 'Edit project',
+                                title: 'Editar projeto',
                               },
                               {
-                                label: 'Delete',
+                                label: 'Excluir',
                                 onSelect: () => requestProjectDelete(project),
-                                title: 'Delete project',
+                                title: 'Excluir projeto',
                                 tone: 'danger',
                               },
                             ]}
@@ -862,14 +862,14 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
                           disabled={!canManageTestAssets}
                           items={[
                             {
-                              label: 'Edit',
+                              label: 'Editar',
                               onSelect: () => requestProjectEdit(project),
-                              title: 'Edit project',
+                              title: 'Editar projeto',
                             },
                             {
-                              label: 'Delete',
+                              label: 'Excluir',
                               onSelect: () => requestProjectDelete(project),
-                              title: 'Delete project',
+                              title: 'Excluir projeto',
                               tone: 'danger',
                             },
                           ]}

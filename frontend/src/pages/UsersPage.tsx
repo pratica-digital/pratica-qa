@@ -64,7 +64,7 @@ export function UsersPage() {
     try {
       setUsers(await usersApi.list(token));
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Unable to load users');
+      setError(loadError instanceof Error ? loadError.message : 'Não foi possível carregar os usuários');
     } finally {
       setIsLoading(false);
     }
@@ -143,7 +143,7 @@ export function UsersPage() {
         status: 'ACTIVE',
       });
     } catch (createError) {
-      setError(createError instanceof Error ? createError.message : 'Unable to create user');
+      setError(createError instanceof Error ? createError.message : 'Não foi possível criar o usuário');
     } finally {
       setIsSaving(false);
     }
@@ -166,7 +166,7 @@ export function UsersPage() {
         return next;
       });
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Unable to update user');
+      setError(saveError instanceof Error ? saveError.message : 'Não foi possível atualizar o usuário');
     } finally {
       setIsSaving(false);
     }
@@ -185,7 +185,7 @@ export function UsersPage() {
         action === 'activate' ? await usersApi.activate(token, item.id) : await usersApi.deactivate(token, item.id);
       updateUserInState(updatedUser);
     } catch (statusError) {
-      setError(statusError instanceof Error ? statusError.message : 'Unable to update user status');
+      setError(statusError instanceof Error ? statusError.message : 'Não foi possível atualizar o status do usuário');
     } finally {
       setIsSaving(false);
     }
@@ -212,7 +212,7 @@ export function UsersPage() {
         emailError: response.emailError,
       });
     } catch (resetError) {
-      setError(resetError instanceof Error ? resetError.message : 'Unable to reset password');
+      setError(resetError instanceof Error ? resetError.message : 'Não foi possível redefinir a senha');
     } finally {
       setIsSaving(false);
     }
@@ -238,7 +238,7 @@ export function UsersPage() {
           <input
             className="w-full border-0 bg-transparent p-0 text-sm text-slate-900 outline-none placeholder:text-slate-400"
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search users"
+            placeholder="Buscar usuários"
             type="search"
             value={search}
           />

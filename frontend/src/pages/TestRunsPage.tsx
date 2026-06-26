@@ -32,7 +32,7 @@ function getUpdatedAt(testRun: TestRun) {
     return 'No updates';
   }
 
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat('pt-BR', {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(testRun.updatedAt));
@@ -75,7 +75,7 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
       if (fetchError instanceof ApiError && fetchError.status === 401) {
         setError('Your session expired. Sign out and sign in again.');
       } else {
-        setError(fetchError instanceof Error ? fetchError.message : 'Unable to load test runs.');
+        setError(fetchError instanceof Error ? fetchError.message : 'Não foi possível carregar as execuções.');
       }
     } finally {
       setIsLoading(false);
@@ -146,7 +146,7 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
       }
       setSuccess('Test run assignment updated.');
     } catch (assignError) {
-      setError(assignError instanceof Error ? assignError.message : 'Unable to assign test run.');
+      setError(assignError instanceof Error ? assignError.message : 'Não foi possível atribuir a execução.');
     } finally {
       setAssigningRunId(null);
     }
@@ -177,7 +177,7 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
       const freshRun = await testRunsApi.get(token, testRun.id);
       onOpenRun(freshRun);
     } catch (openError) {
-      setError(openError instanceof Error ? openError.message : 'Unable to load test run.');
+      setError(openError instanceof Error ? openError.message : 'Não foi possível carregar a execução.');
     } finally {
       setOpeningRunId(null);
     }
@@ -211,7 +211,7 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
       setSuccess('Test run deleted.');
     } catch (deleteError) {
       setRunPendingDelete(null);
-      setError(deleteError instanceof Error ? deleteError.message : 'Unable to delete test run.');
+      setError(deleteError instanceof Error ? deleteError.message : 'Não foi possível excluir a execução.');
     } finally {
       setIsDeleting(false);
     }
@@ -281,7 +281,7 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
             <input
               className="w-full border-0 bg-transparent p-0 text-sm text-slate-900 outline-none placeholder:text-slate-400"
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search test runs"
+              placeholder="Buscar execuções"
               type="search"
               value={search}
             />
@@ -410,7 +410,7 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
                       ) : (
                         <Eye className="h-4 w-4" aria-hidden="true" />
                       )}
-                      {openingRunId === testRun.id ? 'Opening' : canExecute ? ' ' : 'View'}
+                      {openingRunId === testRun.id ? 'Opening' : canExecute ? ' ' : 'Visualizar'}
                     </button>
 
                     {canManageTestAssets ? (
@@ -418,9 +418,9 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
                         ariaLabel="Test run actions"
                         items={[
                           {
-                            label: 'Delete',
+                            label: 'Excluir',
                             onSelect: () => requestRunDelete(testRun),
-                            title: 'Delete test run',
+                            title: 'Excluir execução',
                             tone: 'danger',
                           },
                         ]}

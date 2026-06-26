@@ -34,7 +34,7 @@ export function TestPlansPage() {
       if (err instanceof ApiError && err.status === 401) {
         setError('Your session expired. Sign out and sign in again.');
       } else {
-        setError(err instanceof Error ? err.message : 'Unable to load test plans.');
+        setError(err instanceof Error ? err.message : 'Não foi possível carregar os planos de teste.');
       }
     } finally {
       setIsLoading(false);
@@ -61,13 +61,13 @@ export function TestPlansPage() {
       const freshPlan = await testPlansApi.get(token, plan.id);
       setSelectedPlan(freshPlan);
     } catch (openError) {
-      setError(openError instanceof Error ? openError.message : 'Unable to load test plan.');
+      setError(openError instanceof Error ? openError.message : 'Não foi possível carregar o plano de teste.');
     }
   }
 
   async function handleSavePlan(testPlan: TestPlan, payload: UpdateTestPlanPayload) {
     if (!token) {
-      throw new Error('Authentication is required.');
+      throw new Error('Autenticação obrigatória.');
     }
 
     const updatedPlan = await testPlansApi.update(token, testPlan.id, payload);
@@ -110,7 +110,7 @@ export function TestPlansPage() {
       setSuccess('Test plan deleted.');
     } catch (deleteError) {
       setPlanPendingDelete(null);
-      setError(deleteError instanceof Error ? deleteError.message : 'Unable to delete test plan.');
+      setError(deleteError instanceof Error ? deleteError.message : 'Não foi possível excluir o plano de teste.');
     } finally {
       setIsDeleting(false);
     }
@@ -141,7 +141,7 @@ export function TestPlansPage() {
             className="inline-flex h-9 items-center gap-2 rounded-lg bg-blue-700 px-3 text-sm text-white"
             onClick={() => setModalOpen(true)}
             disabled={!canManageTestAssets}
-            title={!canManageTestAssets ? 'Requires test management permission' : 'Create test plan'}
+            title={!canManageTestAssets ? 'Requer permissão de gestão de testes' : 'Criar plano de teste'}
           >
             <Plus className="h-4 w-4" /> New plan
           </button>
@@ -186,17 +186,17 @@ export function TestPlansPage() {
                     ariaLabel="Test plan actions"
                     items={[
                       {
-                        label: canManageTestAssets ? 'Edit' : 'View',
+                        label: canManageTestAssets ? 'Editar' : 'Visualizar',
                         onSelect: () => setEditingPlan(plan),
-                        title: canManageTestAssets ? 'Edit test plan' : 'View test plan',
+                        title: canManageTestAssets ? 'Editar plano de teste' : 'View test plan',
                       },
                       {
                         disabled: !canManageTestAssets,
-                        label: 'Delete',
+                        label: 'Excluir',
                         onSelect: () => requestPlanDelete(plan),
                         title: canManageTestAssets
-                          ? 'Delete test plan'
-                          : 'Requires test management permission',
+                          ? 'Excluir plano de teste'
+                          : 'Requer permissão de gestão de testes',
                         tone: 'danger',
                       },
                     ]}

@@ -28,8 +28,8 @@ const actionConfig: Array<{
 }> = [
   {
     status: 'PASSED',
-    label: 'Passed',
-    title: 'Mark as passed',
+    label: 'Aprovado',
+    title: 'Marcar como aprovado',
     className:
       'border-emerald-200 text-emerald-800 hover:bg-emerald-100',
     activeClassName: 'border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700',
@@ -37,8 +37,8 @@ const actionConfig: Array<{
   },
   {
     status: 'FAILED',
-    label: 'Failed',
-    title: 'Mark as failed',
+    label: 'Falhou',
+    title: 'Marcar como falhou',
     className:
       'border-red-200 text-red-800 hover:bg-red-100',
     activeClassName: 'border-red-600 bg-red-600 text-white hover:bg-red-700',
@@ -46,8 +46,8 @@ const actionConfig: Array<{
   },
   {
     status: 'SKIPPED',
-    label: 'Skipped',
-    title: 'Mark as skipped',
+    label: 'Ignorado',
+    title: 'Marcar como ignorado',
     className:
       'border-amber-200 text-amber-800 hover:bg-amber-100',
     activeClassName: 'border-amber-200 bg-amber-100 text-amber-800 hover:bg-amber-100',
@@ -55,8 +55,8 @@ const actionConfig: Array<{
   },
   {
     status: 'PENDING',
-    label: 'Not Run',
-    title: 'Mark as not run',
+    label: 'Não executado',
+    title: 'Marcar como não executado',
     className:
       'border-slate-200 text-slate-700 hover:bg-slate-100',
     activeClassName: 'border-slate-600 bg-slate-600 text-white hover:bg-slate-700',
@@ -77,15 +77,15 @@ function formatFileSize(bytes: number) {
 }
 
 function getAttachmentName(attachment: TestResultAttachment) {
-  return attachment.originalName || attachment.fileName || attachment.url.split('/').pop() || 'Evidence';
+  return attachment.originalName || attachment.fileName || attachment.url.split('/').pop() || 'Evidência';
 }
 
 function formatUploadDate(value?: string | null) {
   if (!value) {
-    return 'Pending date';
+    return 'Data pendente';
   }
 
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat('pt-BR', {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
@@ -183,12 +183,12 @@ export function TestResultForm({
   return (
     <div className="space-y-3">
       <label className="block text-xs font-medium uppercase text-slate-500">
-        Comment
+        Comentário
         <textarea
           className="mt-2 min-h-20 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm normal-case text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500"
           disabled={disabled || isBusy}
           onChange={(event) => setDraftComment(event.target.value)}
-          placeholder="Notes, observed behavior, or failure detail"
+          placeholder="Notas, comportamento observado ou detalhe da falha"
           value={draftComment}
         />
       </label>
@@ -197,8 +197,8 @@ export function TestResultForm({
         <Paperclip className="h-4 w-4" aria-hidden="true" />
         <span className="truncate">
           {isUploading
-            ? `Uploading ${uploadingFiles.length} file${uploadingFiles.length > 1 ? 's' : ''}`
-            : 'Attach media'}
+            ? `Enviando ${uploadingFiles.length} arquivo${uploadingFiles.length > 1 ? 's' : ''}`
+            : 'Anexar mídia'}
         </span>
         <input
           className="sr-only"
@@ -211,7 +211,7 @@ export function TestResultForm({
 
       {attachments.length > 0 ? (
         <div className="space-y-1.5">
-          <p className="text-xs font-medium uppercase text-slate-500">Current evidence</p>
+          <p className="text-xs font-medium uppercase text-slate-500">Evidências atuais</p>
           <div className="grid gap-1.5">
             {attachments.map((attachment) => (
               <span
@@ -224,14 +224,14 @@ export function TestResultForm({
                   </span>
                   <span className="block truncate text-[11px] text-slate-400">
                     {formatUploadDate(attachment.createdAt)}
-                    {attachment.uploadedBy?.name ? ` by ${attachment.uploadedBy.name}` : ''}
+                    {attachment.uploadedBy?.name ? ` por ${attachment.uploadedBy.name}` : ''}
                   </span>
                 </span>
                 <button
                   className="shrink-0 rounded p-0.5 text-slate-400 hover:bg-red-100 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
                   disabled={disabled || isBusy}
                   onClick={() => void onRemoveAttachment(attachment)}
-                  title="Remove evidence"
+                  title="Remover evidência"
                   type="button"
                 >
                   <X className="h-3 w-3" aria-hidden="true" />

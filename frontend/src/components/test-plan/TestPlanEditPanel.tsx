@@ -58,7 +58,7 @@ export function TestPlanEditPanel({
     };
   }, []);
 
-  const projectName = testPlan.project?.name ?? 'Project';
+  const projectName = testPlan.project?.name ?? 'Projeto';
 
   function updateSection(index: number, field: 'title' | 'description', value: string) {
     setSections((current) =>
@@ -94,47 +94,47 @@ export function TestPlanEditPanel({
     }));
 
     if (!name.trim()) {
-      setError('Name is required.');
+      setError('Nome obrigatório.');
       return;
     }
 
     if (!version.trim()) {
-      setError('Version is required.');
+      setError('Versão obrigatória.');
       return;
     }
 
     if (description.trim().length > 4000) {
-      setError('Description must be 4000 characters or fewer.');
+      setError('A descrição deve ter no máximo 4000 caracteres.');
       return;
     }
 
     if (normalizedSections.length === 0) {
-      setError('Add at least one section.');
+      setError('Adicione pelo menos uma seção.');
       return;
     }
 
     if (normalizedSections.length > 30) {
-      setError('Test plans can have up to 30 sections.');
+      setError('Planos de teste podem ter até 30 seções.');
       return;
     }
 
     if (normalizedSections.some((section) => section.title.length === 0)) {
-      setError('Section title is required.');
+      setError('O título da seção é obrigatório.');
       return;
     }
 
     if (normalizedSections.some((section) => section.title.length > 160)) {
-      setError('Section title must be 160 characters or fewer.');
+      setError('O título da seção deve ter no máximo 160 caracteres.');
       return;
     }
 
     if (normalizedSections.some((section) => section.content.length === 0)) {
-      setError('Section description is required.');
+      setError('A descrição da seção é obrigatória.');
       return;
     }
 
     if (normalizedSections.some((section) => section.content.length > 8000)) {
-      setError('Section description must be 8000 characters or fewer.');
+      setError('A descrição da seção deve ter no máximo 8000 caracteres.');
       return;
     }
 
@@ -150,7 +150,7 @@ export function TestPlanEditPanel({
       });
       onClose();
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Unable to save test plan.');
+      setError(saveError instanceof Error ? saveError.message : 'Não foi possível salvar o plano de teste.');
     } finally {
       setSaving(false);
     }
@@ -166,14 +166,14 @@ export function TestPlanEditPanel({
           </span>
           <div className="min-w-0 flex-1">
             <h2 className="truncate text-sm font-semibold text-slate-950">
-              Edit test plan
+              Editar plano de teste
             </h2>
             <p className="truncate text-xs text-slate-500">{projectName}</p>
           </div>
           <button
             className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
             onClick={onClose}
-            title="Close"
+            title="Fechar"
             type="button"
           >
             <X className="h-4 w-4" aria-hidden="true" />
@@ -183,7 +183,7 @@ export function TestPlanEditPanel({
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
           <div className="grid gap-4 lg:grid-cols-[1fr_12rem]">
             <label className="block text-sm font-medium text-slate-700">
-              Name
+              Nome
               <input
                 className="mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50"
                 disabled={readOnly || saving}
@@ -193,7 +193,7 @@ export function TestPlanEditPanel({
             </label>
 
             <label className="block text-sm font-medium text-slate-700">
-              Version
+              Versão
               <input
                 className="mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50"
                 disabled={readOnly || saving}
@@ -204,7 +204,7 @@ export function TestPlanEditPanel({
           </div>
 
           <label className="mt-4 block text-sm font-medium text-slate-700">
-            Description
+            Descrição
             <textarea
               className="mt-1.5 min-h-24 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50"
               disabled={readOnly || saving}
@@ -215,7 +215,7 @@ export function TestPlanEditPanel({
 
           <section className="mt-5">
             <div className="flex items-center justify-between gap-3">
-              <h3 className="text-sm font-semibold text-slate-950">Sections</h3>
+              <h3 className="text-sm font-semibold text-slate-950">Seções</h3>
               <button
                 className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-600 bg-slate-600 px-3 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={readOnly || saving}
@@ -223,14 +223,14 @@ export function TestPlanEditPanel({
                 type="button"
               >
                 <Plus className="h-4 w-4" aria-hidden="true" />
-                Add section
+                Adicionar seção
               </button>
             </div>
 
             <div className="mt-3 space-y-3">
               {sections.length === 0 ? (
                 <p className="rounded-lg border border-dashed border-slate-300 px-3 py-4 text-sm text-slate-500">
-                  No sections defined.
+                  Nenhuma seção definida.
                 </p>
               ) : null}
 
@@ -248,14 +248,14 @@ export function TestPlanEditPanel({
                       className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50"
                       disabled={readOnly || saving}
                       onChange={(event) => updateSection(index, 'title', event.target.value)}
-                      placeholder="Section title"
+                      placeholder="Título da seção"
                       value={section.title}
                     />
                     <textarea
                       className="min-h-24 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50"
                       disabled={readOnly || saving}
                       onChange={(event) => updateSection(index, 'description', event.target.value)}
-                      placeholder="Section description"
+                      placeholder="Descrição da seção"
                       value={section.description}
                     />
                   </div>
@@ -265,7 +265,7 @@ export function TestPlanEditPanel({
                       className="rounded-lg p-2 text-slate-400 hover:bg-white hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
                       disabled={readOnly || saving || index === 0}
                       onClick={() => moveSection(index, -1)}
-                      title="Move up"
+                      title="Mover para cima"
                       type="button"
                     >
                       <ArrowUp className="h-4 w-4" aria-hidden="true" />
@@ -274,7 +274,7 @@ export function TestPlanEditPanel({
                       className="rounded-lg p-2 text-slate-400 hover:bg-white hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
                       disabled={readOnly || saving || index === sections.length - 1}
                       onClick={() => moveSection(index, 1)}
-                      title="Move down"
+                      title="Mover para baixo"
                       type="button"
                     >
                       <ArrowDown className="h-4 w-4" aria-hidden="true" />
@@ -283,7 +283,7 @@ export function TestPlanEditPanel({
                       className="rounded-lg p-2 text-slate-400 hover:bg-red-100 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-30"
                       disabled={readOnly || saving}
                       onClick={() => removeSection(index)}
-                      title="Remove section"
+                      title="Remover seção"
                       type="button"
                     >
                       <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -304,7 +304,7 @@ export function TestPlanEditPanel({
               onClick={onClose}
               type="button"
             >
-              Cancel
+              Cancelar
             </button>
             <button
               className="inline-flex h-9 items-center gap-2 rounded-lg bg-blue-700 px-4 text-sm font-medium text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
@@ -313,7 +313,7 @@ export function TestPlanEditPanel({
               type="button"
             >
               <Save className="h-4 w-4" aria-hidden="true" />
-              {saving ? 'Saving' : 'Save'}
+              {saving ? 'Salvando' : 'Salvar'}
             </button>
           </div>
         </div>

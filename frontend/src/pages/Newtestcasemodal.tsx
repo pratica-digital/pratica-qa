@@ -132,7 +132,7 @@ function StepRow({ step, index, total, onChange, onRemove }: StepRowProps) {
         disabled={total === 1}
         onClick={() => onRemove(index)}
         tabIndex={-1}
-        title="Remove step"
+        title="Remover passo"
         type="button"
       >
         <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -251,7 +251,7 @@ export function NewTestCaseModal({
       setErrors({});
       setActiveTab('basic');
     } catch (createError) {
-      setSubmitError(createError instanceof Error ? createError.message : 'Unable to create test case.');
+      setSubmitError(createError instanceof Error ? createError.message : 'Não foi possível criar o caso de teste.');
     } finally {
       setSubmitting(false);
     }

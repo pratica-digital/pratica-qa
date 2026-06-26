@@ -17,7 +17,7 @@ function formatUpdatedAt(value?: string) {
     return 'No updates';
   }
 
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat('pt-BR', {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
@@ -105,9 +105,9 @@ export function ProjectDetailPanel({ project, onClose, onDelete }: ProjectDetail
               ariaLabel="Project actions"
               items={[
                 {
-                  label: 'Delete',
+                  label: 'Excluir',
                   onSelect: () => onDelete(projectDetail),
-                  title: 'Delete project',
+                  title: 'Excluir projeto',
                   tone: 'danger',
                 },
               ]}

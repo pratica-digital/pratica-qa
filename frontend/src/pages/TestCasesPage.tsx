@@ -87,7 +87,7 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
       if (fetchError instanceof ApiError && fetchError.status === 401) {
         setError('Your session expired. Sign out and sign in again.');
       } else {
-        setError(fetchError instanceof Error ? fetchError.message : 'Unable to load test cases.');
+        setError(fetchError instanceof Error ? fetchError.message : 'Não foi possível carregar os casos de teste.');
       }
     } finally {
       setIsLoading(false);
@@ -157,7 +157,7 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
       const freshCase = await testCasesApi.get(token, testCase.id);
       setEditingCase(freshCase);
     } catch (openError) {
-      setError(openError instanceof Error ? openError.message : 'Unable to load test case.');
+      setError(openError instanceof Error ? openError.message : 'Não foi possível carregar o caso de teste.');
     }
   }
 
@@ -167,7 +167,7 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
     steps: ReplaceTestStepsPayload,
   ) {
     if (!token) {
-      throw new Error('Authentication is required.');
+      throw new Error('Autenticação obrigatória.');
     }
 
     await testCasesApi.update(token, testCase.id, payload);
@@ -207,7 +207,7 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
       setSuccess('Test case deleted.');
     } catch (deleteError) {
       setCasePendingDelete(null);
-      setError(deleteError instanceof Error ? deleteError.message : 'Unable to delete test case.');
+      setError(deleteError instanceof Error ? deleteError.message : 'Não foi possível excluir o caso de teste.');
     } finally {
       setIsDeleting(false);
     }
@@ -235,7 +235,7 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
             className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-blue-700 px-3 text-sm font-medium text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
             disabled={!canEdit}
             onClick={() => setModalOpen(true)}
-            title={isReadOnly ? 'Viewer mode is read-only' : 'Create test case'}
+            title={isReadOnly ? 'Modo visualizador é somente leitura' : 'Criar caso de teste'}
             type="button"
           >
             <Plus className="h-4 w-4" aria-hidden="true" />
@@ -250,7 +250,7 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
           <input
             className="w-full border-0 bg-transparent p-0 text-sm text-slate-900 outline-none placeholder:text-slate-400"
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search test cases"
+            placeholder="Buscar casos de teste"
             type="search"
             value={search}
           />
@@ -342,14 +342,14 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
                           disabled={!canEdit}
                           items={[
                             {
-                              label: 'Edit',
+                              label: 'Editar',
                               onSelect: () => void handleOpenCase(testCase),
-                              title: 'Edit test case',
+                              title: 'Editar caso de teste',
                             },
                             {
-                              label: 'Delete',
+                              label: 'Excluir',
                               onSelect: () => requestCaseDelete(testCase),
-                              title: 'Delete test case',
+                              title: 'Excluir caso de teste',
                               tone: 'danger',
                             },
                           ]}

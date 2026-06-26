@@ -16,7 +16,7 @@ function getUpdatedAt(project: ProjectSummary) {
     return 'No updates';
   }
 
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat('pt-BR', {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(project.updatedAt));
@@ -47,7 +47,7 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
       if (fetchError instanceof ApiError && fetchError.status === 401) {
         setError('Your session expired. Sign out and sign in again.');
       } else {
-        setError(fetchError instanceof Error ? fetchError.message : 'Unable to load projects.');
+        setError(fetchError instanceof Error ? fetchError.message : 'Não foi possível carregar os projetos.');
       }
     } finally {
       setIsLoading(false);
@@ -122,7 +122,7 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
             className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-blue-700 px-3 text-sm font-medium text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
             disabled={!canManageTestAssets}
             onClick={() => setModalOpen(true)}
-            title={canManageTestAssets ? 'Create project' : 'Requires test management permission'}
+            title={canManageTestAssets ? 'Criar projeto' : 'Requer permissão de gestão de testes'}
             type="button"
           >
             <Plus className="h-4 w-4" aria-hidden="true" />
@@ -137,7 +137,7 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
           <input
             className="w-full border-0 bg-transparent p-0 text-sm text-slate-900 outline-none placeholder:text-slate-400"
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search projects"
+            placeholder="Buscar projetos"
             type="search"
             value={search}
           />
