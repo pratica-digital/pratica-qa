@@ -1,4 +1,4 @@
-import { Filter, ListChecks, Plus, RefreshCw, Search, Tag } from 'lucide-react';
+import { Filter, Plus, RefreshCw, Search, Tag } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../auth/useAuth';
 import { ActionMenu } from '../components/ActionMenu';
@@ -31,7 +31,7 @@ function getSuiteName(testCase: ManagedTestCase, suites: ManagedTestSuite[]) {
   return (
     getSuite(testCase, suites)?.name ??
     testCase.suite?.name ??
-    'Unassigned suite'
+    'Suíte não atribuída'
   );
 }
 
@@ -43,12 +43,8 @@ function getProjectName(testCase: ManagedTestCase, suites: ManagedTestSuite[]) {
     testCase.suite?.project?.name ??
     suite?.projectId ??
     testCase.suite?.projectId ??
-    'Unassigned project'
+    'Projeto não atribuído'
   );
-}
-
-function getSuitePath(testCase: ManagedTestCase, suites: ManagedTestSuite[]) {
-  return `${getProjectName(testCase, suites)} / ${getSuiteName(testCase, suites)}`;
 }
 
 export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
@@ -85,7 +81,7 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
       setSuites(nextSuites);
     } catch (fetchError) {
       if (fetchError instanceof ApiError && fetchError.status === 401) {
-        setError('Your session expired. Sign out and sign in again.');
+        setError('Sua sessão expirou. Saia e entre novamente.');
       } else {
         setError(fetchError instanceof Error ? fetchError.message : 'Não foi possível carregar os casos de teste.');
       }
@@ -217,9 +213,9 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="text-sm font-medium text-slate-500">Case library</p>
+          <p className="text-sm font-medium text-slate-500">Biblioteca de casos</p>
           <h1 className="mt-1 text-2xl font-semibold tracking-normal text-slate-950">
-            Test Cases
+            Casos de Teste
           </h1>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -239,7 +235,7 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
             type="button"
           >
             <Plus className="h-4 w-4" aria-hidden="true" />
-            Test case
+            Caso de teste
           </button>
         </div>
       </div>
@@ -257,7 +253,7 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
         </label>
         <span className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-600">
           <Filter className="h-4 w-4" aria-hidden="true" />
-          {visibleCases.length} shown
+          {visibleCases.length} exibido{visibleCases.length === 1 ? '' : 's'}
         </span>
       </div>
 
@@ -275,7 +271,7 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
 
       {isLoading ? (
         <div className="rounded-lg border border-slate-200 bg-white p-8 text-center text-sm text-slate-500 shadow-sm">
-          Loading test cases
+          Carregando casos de teste
         </div>
       ) : visibleCases.length > 0 ? (
         <>
@@ -283,16 +279,16 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
 
           <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
             <div className="border-b border-slate-200 px-4 py-3">
-              <h2 className="text-sm font-semibold text-slate-950">Case table</h2>
+              <h2 className="text-sm font-semibold text-slate-950">Tabela de casos</h2>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[980px] text-left text-sm">
                 <thead className="bg-slate-100 text-xs font-medium uppercase text-slate-700">
                   <tr>
-                    <th className="px-4 py-3">Case</th>
-                    <th className="px-4 py-3">Project / Suite</th>
+                    <th className="px-4 py-3">Caso</th>
+                    <th className="px-4 py-3">Projeto / Suíte</th>
                     <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">Steps</th>
+                    <th className="px-4 py-3">Passos</th>
                     <th className="px-4 py-3"></th>
                     <th className="px-4 py-3 text-right"></th>
                   </tr>
@@ -364,7 +360,7 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
         </>
       ) : (
         <div className="rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
-          <h2 className="text-sm font-semibold text-slate-950">No test cases found</h2>
+          <h2 className="text-sm font-semibold text-slate-950">Nenhum caso de teste encontrado</h2>
           <p className="mt-1 text-sm text-slate-500">
             Adjust the search or create the first case.
           </p>
@@ -396,7 +392,7 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
           loading={isDeleting}
           onCancel={() => setCasePendingDelete(null)}
           onConfirm={() => void handleDeleteCase()}
-          title="Delete Test Case?"
+          title="Excluir caso de teste?"
         />
       ) : null}
     </div>

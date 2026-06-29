@@ -7,6 +7,7 @@ import {
 import { TestResultStatus, UserRole } from '@prisma/client';
 import { AuthenticatedUser } from '../../auth/types/authenticated-user';
 import { getPagination } from '../../common/dto/pagination-query.dto';
+import { ShortcutFailureStoryService } from '../../shortcut/shortcut-failure-story.service';
 import { TestCasesRepository } from '../test-cases/repositories/test-cases.repository';
 import { TestRunsRepository } from '../test-runs/repositories/test-runs.repository';
 import { AddTestResultAttachmentsDto } from './dto/add-test-result-attachments.dto';
@@ -26,6 +27,7 @@ export class TestResultsService {
     private readonly testResultsRepository: TestResultsRepository,
     private readonly testRunsRepository: TestRunsRepository,
     private readonly testCasesRepository: TestCasesRepository,
+    private readonly shortcutFailureStoryService: ShortcutFailureStoryService,
   ) {}
 
   async create(dto: CreateTestResultDto) {
@@ -36,6 +38,7 @@ export class TestResultsService {
     await this.ensureRunCanContainCase(dto.testRunId, dto.testCaseId);
     const testResult = await this.testResultsRepository.create(dto);
     await this.testRunsRepository.refreshExecutionStatus(testResult.testRunId);
+    await this.shortcutFailureStoryService.createForFailedResult(testResult);
 
     return this.testResultsRepository.findById(testResult.id);
   }
@@ -91,6 +94,7 @@ export class TestResultsService {
     }
 
     await this.testRunsRepository.refreshExecutionStatus(updatedResult.testRunId);
+    await this.shortcutFailureStoryService.createForFailedResult(updatedResult);
 
     return this.testResultsRepository.findById(updatedResult.id);
   }
@@ -114,12 +118,20 @@ export class TestResultsService {
       throw new BadRequestException('Test step does not belong to this test case');
     }
 
-    return this.testResultsRepository.addAttachments(
+    const updatedResult = await this.testResultsRepository.addAttachments(
       id,
       dto.attachments,
       user.id,
       dto.testStepId,
     );
+
+    if (!updatedResult) {
+      throw new NotFoundException('Test result not found');
+    }
+
+    await this.shortcutFailureStoryService.createForFailedResult(updatedResult);
+
+    return this.testResultsRepository.findById(updatedResult.id);
   }
 
   async removeAttachment(id: string, attachmentId: string, user: AuthenticatedUser) {

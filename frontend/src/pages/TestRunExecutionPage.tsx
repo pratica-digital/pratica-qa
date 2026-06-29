@@ -110,7 +110,7 @@ function groupResultsBySuite(run: TestRun, results: TestResult[]) {
   const suiteNames = new Map(
     (run.suites ?? []).map((suite) => [
       suite.testSuiteId,
-      suite.testSuite?.name ?? `Suite ${suite.position}`,
+      suite.testSuite?.name ?? `Suíte ${suite.position}`,
     ]),
   );
 

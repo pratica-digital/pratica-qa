@@ -361,6 +361,12 @@ export class TestRunsRepository {
             status: true,
             completedAt: true,
             assignedToId: true,
+            project: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
         testCase: {

@@ -32,7 +32,7 @@ export function TestPlansPage() {
       setPlans(list);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
-        setError('Your session expired. Sign out and sign in again.');
+        setError('Sua sessão expirou. Saia e entre novamente.');
       } else {
         setError(err instanceof Error ? err.message : 'Não foi possível carregar os planos de teste.');
       }
@@ -48,7 +48,7 @@ export function TestPlansPage() {
 
   function handleCreated(plan: TestPlan) {
     setPlans((current) => [plan, ...current]);
-    setSuccess('Test plan created.');
+    setSuccess('Plano de teste criado.');
   }
 
   async function handleOpenPlan(plan: TestPlan) {
@@ -76,7 +76,7 @@ export function TestPlansPage() {
       current.map((item) => (item.id === testPlan.id ? updatedPlan : item)),
     );
     setEditingPlan(updatedPlan);
-    setSuccess('Test plan updated.');
+    setSuccess('Plano de teste atualizado.');
   }
 
   function requestPlanDelete(testPlan: TestPlan) {
@@ -107,7 +107,7 @@ export function TestPlansPage() {
       }
 
       setPlanPendingDelete(null);
-      setSuccess('Test plan deleted.');
+      setSuccess('Plano de teste excluído.');
     } catch (deleteError) {
       setPlanPendingDelete(null);
       setError(deleteError instanceof Error ? deleteError.message : 'Não foi possível excluir o plano de teste.');
@@ -119,14 +119,14 @@ export function TestPlansPage() {
   const canManageTestAssets = canManageTests(user);
 
   function formatCreatedAt(createdAt?: string) {
-    return createdAt ? new Date(createdAt).toLocaleString() : 'Recently created';
+    return createdAt ? new Date(createdAt).toLocaleString('pt-BR') : 'Criado recentemente';
   }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="mt-1 text-2xl font-semibold text-slate-950">Test Plans</h1>
+          <h1 className="mt-1 text-2xl font-semibold text-slate-950">Planos de Teste</h1>
           <p className="text-sm font-medium text-slate-500">Definir a estratégia, escopo e abordagem dos testes</p>
         </div>
         <div className="flex items-center gap-2">
@@ -143,7 +143,7 @@ export function TestPlansPage() {
             disabled={!canManageTestAssets}
             title={!canManageTestAssets ? 'Requer permissão de gestão de testes' : 'Criar plano de teste'}
           >
-            <Plus className="h-4 w-4" /> New plan
+            <Plus className="h-4 w-4" /> Novo plano
           </button>
         </div>
       </div>
@@ -159,7 +159,7 @@ export function TestPlansPage() {
       ) : null}
 
       {isLoading ? (
-        <div className="rounded-lg border p-8 text-center">Loading test plans</div>
+        <div className="rounded-lg border p-8 text-center">Carregando planos de teste</div>
       ) : plans.length > 0 ? (
         <div className="grid gap-3">
           {plans.map((plan) => (
@@ -174,7 +174,7 @@ export function TestPlansPage() {
                 <div className="min-w-0 flex-1">
                   <h2 className="text-sm font-semibold">{plan.name}</h2>
                   <p className="text-xs text-slate-500">
-                    v{plan.version} - {plan.sections?.length ?? 0} sections
+                    v{plan.version} - {plan.sections?.length ?? 0} seção{(plan.sections?.length ?? 0) === 1 ? '' : 'ões'}
                   </p>
                   {plan.description ? (
                     <p className="mt-2 line-clamp-2 text-sm text-slate-600">{plan.description}</p>
@@ -183,12 +183,12 @@ export function TestPlansPage() {
                 <div className="flex shrink-0 items-center gap-2">
                   <div className="hidden text-xs text-slate-400 sm:block">{formatCreatedAt(plan.createdAt)}</div>
                   <ActionMenu
-                    ariaLabel="Test plan actions"
+                    ariaLabel="Ações do plano de teste"
                     items={[
                       {
                         label: canManageTestAssets ? 'Editar' : 'Visualizar',
                         onSelect: () => setEditingPlan(plan),
-                        title: canManageTestAssets ? 'Editar plano de teste' : 'View test plan',
+                        title: canManageTestAssets ? 'Editar plano de teste' : 'Visualizar plano de teste',
                       },
                       {
                         disabled: !canManageTestAssets,
@@ -207,7 +207,7 @@ export function TestPlansPage() {
           ))}
         </div>
       ) : (
-        <div className="rounded-lg border p-8 text-center">No test plans found</div>
+        <div className="rounded-lg border p-8 text-center">Nenhum plano de teste encontrado</div>
       )}
 
       <NewTestPlanModal open={modalOpen} onClose={() => setModalOpen(false)} onCreated={handleCreated} />
@@ -236,11 +236,11 @@ export function TestPlansPage() {
 
       {planPendingDelete ? (
         <DeleteConfirmationModal
-          description="This will remove the test plan and detach related planning information from future runs."
+          description="Isto removerá o plano de teste e desvinculará as informações de planejamento relacionadas de execuções futuras."
           loading={isDeleting}
           onCancel={() => setPlanPendingDelete(null)}
           onConfirm={() => void handleDeletePlan()}
-          title="Delete Test Plan?"
+          title="Excluir plano de teste?"
         />
       ) : null}
     </div>

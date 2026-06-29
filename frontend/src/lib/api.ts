@@ -17,6 +17,12 @@ import type {
   TestPlan,
   TestResult,
   TestRun,
+  AiExtractedRelease,
+  AiGeneratedTestCase,
+  AiGenerationRecord,
+  AiHistoryItem,
+  AiReleaseAnalysis,
+  AiSettings,
   UserEmailNotificationResponse,
   UpdateTestCasePayload,
   UpdateTestPlanPayload,
@@ -605,4 +611,89 @@ export const testResultsApi = {
       body: payload,
     },
   ),
+};
+
+export const aiTestGeneratorApi = {
+  extract: (token: string, file: File) => {
+    const formData = new FormData();
+    formData.set('file', file);
+
+    return apiRequest<AiExtractedRelease>('/ai-test-generator/extract', {
+      method: 'POST',
+      token,
+      body: formData,
+    });
+  },
+  analyze: (token: string, payload: { releaseNotes: string; releaseTitle?: string; fileName?: string }) =>
+    apiRequest<{
+      releaseHash: string;
+      provider: string;
+      model: string;
+      analysis: AiReleaseAnalysis;
+    }>('/ai-test-generator/analyze', {
+      method: 'POST',
+      token,
+      body: payload,
+    }),
+  generate: (
+    token: string,
+    payload: {
+      releaseNotes: string;
+      releaseTitle?: string;
+      fileName?: string;
+      useCache?: boolean;
+      analysis?: AiReleaseAnalysis;
+    },
+  ) =>
+    apiRequest<AiGenerationRecord>('/ai-test-generator/generate', {
+      method: 'POST',
+      token,
+      body: payload,
+    }),
+  runAction: (
+    token: string,
+    payload: {
+      action: 'improve' | 'negative-cases' | 'regression' | 'test-data' | 'explain-change';
+      testCase: AiGeneratedTestCase;
+      context?: string;
+    },
+  ) =>
+    apiRequest<unknown>('/ai-test-generator/actions', {
+      method: 'POST',
+      token,
+      body: payload,
+    }),
+  saveCases: (
+    token: string,
+    payload: {
+      suiteId: string;
+      generationId?: string;
+      cases: AiGeneratedTestCase[];
+      selectedCaseIds?: string[];
+    },
+  ) =>
+    apiRequest<{ count: number; created: ManagedTestCase[] }>('/ai-test-generator/save', {
+      method: 'POST',
+      token,
+      body: payload,
+    }),
+  history: (token: string, params: { page?: number; limit?: number } = {}) =>
+    apiRequest<PaginatedResponse<AiHistoryItem>>(
+      withQuery('/ai-test-generator/history', { page: params.page, limit: params.limit ?? 50 }),
+      { token },
+    ),
+  getHistory: (token: string, id: string) =>
+    apiRequest<AiGenerationRecord>(`/ai-test-generator/history/${id}`, { token }),
+  regenerate: (token: string, id: string) =>
+    apiRequest<AiGenerationRecord>(`/ai-test-generator/history/${id}/regenerate`, {
+      method: 'POST',
+      token,
+    }),
+  getSettings: (token: string) => apiRequest<AiSettings>('/ai-test-generator/settings', { token }),
+  updateSettings: (token: string, payload: AiSettings) =>
+    apiRequest<AiSettings>('/ai-test-generator/settings', {
+      method: 'PUT',
+      token,
+      body: payload,
+    }),
 };

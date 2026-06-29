@@ -49,6 +49,9 @@ const pageTitles: Record<PageId, string> = {
   'test-suites': pageLabels['test-suites'],
   'test-cases': pageLabels['test-cases'],
   'test-runs': pageLabels['test-runs'],
+  'ai-test-generator': 'AI Test Generator',
+  'ai-history': 'AI Test Generator',
+  'ai-settings': 'AI Test Generator',
   users: pageLabels.users,
   profile: pageLabels.profile,
 };

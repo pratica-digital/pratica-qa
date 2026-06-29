@@ -60,12 +60,12 @@ export function TestSuiteEditPanel({
     const parsedPosition = Number(position);
 
     if (!name.trim()) {
-      setError('Suite name is required.');
+      setError('Nome da suíte obrigatório.');
       return;
     }
 
     if (!Number.isInteger(parsedPosition) || parsedPosition < 0) {
-      setError('Position must be a positive number.');
+      setError('A posição deve ser um número positivo.');
       return;
     }
 
@@ -99,16 +99,16 @@ export function TestSuiteEditPanel({
           </span>
           <div className="min-w-0 flex-1">
             <h2 className="truncate text-sm font-semibold text-slate-950">
-              Edit test suite
+              Editar suíte de teste
             </h2>
             <p className="truncate text-xs text-slate-500">
-              {suite.project?.name ?? 'Project'}
+              {suite.project?.name ?? 'Projeto'}
             </p>
           </div>
           <button
             className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
             onClick={onClose}
-            title="Close"
+            title="Fechar"
             type="button"
           >
             <X className="h-4 w-4" aria-hidden="true" />
@@ -118,7 +118,7 @@ export function TestSuiteEditPanel({
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
           <div className="grid gap-4 sm:grid-cols-[1fr_10rem]">
             <label className="block text-sm font-medium text-slate-700">
-              Name
+              Nome
               <input
                 className="mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50"
                 disabled={readOnly || saving}
@@ -128,7 +128,7 @@ export function TestSuiteEditPanel({
             </label>
 
             <label className="block text-sm font-medium text-slate-700">
-              Position
+              Posição
               <input
                 className="mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50"
                 disabled={readOnly || saving}
@@ -142,16 +142,16 @@ export function TestSuiteEditPanel({
 
           <section className="mt-5">
             <div className="flex items-center justify-between gap-3">
-              <h3 className="text-sm font-semibold text-slate-950">Case order</h3>
+              <h3 className="text-sm font-semibold text-slate-950">Ordem dos casos</h3>
               <span className="text-xs font-medium text-slate-500">
-                {orderedCases.length} cases
+                {orderedCases.length} caso{orderedCases.length === 1 ? '' : 's'}
               </span>
             </div>
 
             <div className="mt-3 space-y-2">
               {orderedCases.length === 0 ? (
                 <p className="rounded-lg border border-dashed border-slate-300 px-3 py-4 text-sm text-slate-500">
-                  No cases in this suite.
+                  Nenhum caso nesta suíte.
                 </p>
               ) : null}
 
@@ -174,7 +174,7 @@ export function TestSuiteEditPanel({
                       className="rounded-lg p-2 text-slate-400 hover:bg-white hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
                       disabled={readOnly || saving || index === 0}
                       onClick={() => moveCase(index, -1)}
-                      title="Move up"
+                      title="Mover para cima"
                       type="button"
                     >
                       <ArrowUp className="h-4 w-4" aria-hidden="true" />
@@ -183,7 +183,7 @@ export function TestSuiteEditPanel({
                       className="rounded-lg p-2 text-slate-400 hover:bg-white hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
                       disabled={readOnly || saving || index === orderedCases.length - 1}
                       onClick={() => moveCase(index, 1)}
-                      title="Move down"
+                      title="Mover para baixo"
                       type="button"
                     >
                       <ArrowDown className="h-4 w-4" aria-hidden="true" />
@@ -204,7 +204,7 @@ export function TestSuiteEditPanel({
               onClick={onClose}
               type="button"
             >
-              Cancel
+              Cancelar
             </button>
             <button
               className="inline-flex h-9 items-center gap-2 rounded-lg bg-blue-700 px-4 text-sm font-medium text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
@@ -213,7 +213,7 @@ export function TestSuiteEditPanel({
               type="button"
             >
               <Save className="h-4 w-4" aria-hidden="true" />
-              {saving ? 'Saving' : 'Save'}
+              {saving ? 'Salvando' : 'Salvar'}
             </button>
           </div>
         </div>

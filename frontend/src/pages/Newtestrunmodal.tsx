@@ -69,22 +69,22 @@ const TEST_TYPE_OPTIONS: Array<{
   {
     type: 'SMOKE',
     label: 'Smoke',
-    description: 'Critical checks before deeper execution',
+    description: 'Checagens críticas antes da execução detalhada',
   },
   {
     type: 'FUNCIONAL',
     label: 'Funcional',
-    description: 'Feature behavior and acceptance coverage',
+    description: 'Comportamento das funcionalidades e cobertura de aceite',
   },
   {
     type: 'REGRESSAO',
     label: 'Regressão',
-    description: 'Existing flows that must keep working',
+    description: 'Fluxos existentes que precisam continuar funcionando',
   },
   {
     type: 'ROBUSTEZ',
     label: 'Robustez',
-    description: 'Edge cases, resilience, and stress scenarios',
+    description: 'Cenários de limite, resiliência e estresse',
   },
 ];
 
@@ -248,19 +248,19 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
     const nextErrors: TestRunFormErrors = {};
 
     if (!form.name.trim()) {
-      nextErrors.name = 'Name is required';
+      nextErrors.name = 'Nome obrigatório';
     }
 
     if (!form.planId) {
-      nextErrors.planId = 'Select a test plan';
+      nextErrors.planId = 'Selecione um plano de teste';
     }
 
     if (!form.assignedToId) {
-      nextErrors.assignedToId = 'Select an assignee';
+      nextErrors.assignedToId = 'Selecione um responsável';
     }
 
     if (selectedTestTypes.length === 0) {
-      nextErrors.testTypes = 'Select at least one test type';
+      nextErrors.testTypes = 'Selecione pelo menos um tipo de teste';
     }
 
     const hasSuiteOutsideSelectedTypes = Object.values(suiteAssignments).some(
@@ -268,7 +268,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
     );
 
     if (hasSuiteOutsideSelectedTypes) {
-      nextErrors.suites = 'Every suite must be linked to a selected test type';
+      nextErrors.suites = 'Toda suíte deve estar vinculada a um tipo de teste selecionado';
     }
 
     return nextErrors;
@@ -284,7 +284,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
     }
 
     if (!token) {
-      setLoadError('Authentication required');
+      setLoadError('Autenticação obrigatória');
       return;
     }
 
@@ -351,8 +351,8 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
   );
 
   const tabs: Array<{ id: TabId; label: string }> = [
-    { id: 'info', label: 'Setup' },
-    { id: 'suites', label: `Types (${selectedTestTypes.length})` },
+    { id: 'info', label: 'Configuração' },
+    { id: 'suites', label: `Tipos (${selectedTestTypes.length})` },
   ];
 
   return createPortal(
@@ -366,13 +366,13 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
             <Play className="h-4 w-4" aria-hidden="true" />
           </span>
           <div className="min-w-0 flex-1">
-            <h2 className="text-sm font-semibold text-slate-950">New test run</h2>
-            <p className="truncate text-xs text-slate-400">Configure an execution session</p>
+            <h2 className="text-sm font-semibold text-slate-950">Nova execução</h2>
+            <p className="truncate text-xs text-slate-400">Configure uma sessão de execução</p>
           </div>
           <button
             className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
             onClick={onClose}
-            title="Close modal"
+            title="Fechar modal"
             type="button"
           >
             <X className="h-4 w-4" aria-hidden="true" />
@@ -419,7 +419,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
           {/* Tab: Info */}
           {!isLoadingData && activeTab === 'info' ? (
             <div className="space-y-4">
-              <Field label="Run name" required>
+              <Field label="Nome da execução" required>
                 <Input
                   onChange={(event) => setField('name', event.target.value)}
                   placeholder="Smoke test - Release v2.4"
@@ -432,7 +432,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
                 ) : null}
               </Field>
 
-              <Field label="Test plan" required hint="The run will be linked to this test plan">
+              <Field label="Plano de teste" required hint="A execução será vinculada a este plano">
                 <div className="relative">
                   <ClipboardList className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <select
@@ -441,7 +441,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
                     onChange={(event) => setField('planId', event.target.value)}
                     value={form.planId}
                   >
-                    <option value="">Select plan...</option>
+                    <option value="">Selecione o plano...</option>
                     {testPlans.map((plan) => (
                       <option key={plan.id} value={plan.id}>
                         {plan.name} (v{plan.version})
@@ -457,7 +457,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
                 ) : null}
               </Field>
 
-              <Field label="Assignee" required hint="QA user responsible for this run">
+              <Field label="Responsável" required hint="Usuário de QA responsável por esta execução">
                 <div className="relative">
                   <UserRound className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <select
@@ -465,7 +465,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
                     onChange={(event) => setField('assignedToId', event.target.value)}
                     value={form.assignedToId}
                   >
-                    <option value="">Select QA...</option>
+                    <option value="">Selecione QA...</option>
                     {assigneeOptions.map((qaUser) => (
                       <option key={qaUser.id} value={qaUser.id}>
                         {qaUser.name}
@@ -481,7 +481,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
                 ) : null}
               </Field>
 
-              <Field label="Planned date" hint="Optional planned execution date">
+              <Field label="Data planejada" hint="Data planejada opcional para execução">
                 <div className="relative">
                   <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <input
@@ -493,11 +493,11 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
                 </div>
               </Field>
 
-              <Field label="Description" hint="Goal or scope for this execution">
+              <Field label="Descrição" hint="Objetivo ou escopo desta execução">
                 <textarea
                   className="w-full resize-none rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                   onChange={(event) => setField('description', event.target.value)}
-                  placeholder="Smoke coverage for the release"
+                  placeholder="Cobertura smoke da release"
                   rows={3}
                   value={form.description}
                 />
@@ -510,9 +510,9 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
             <div className="space-y-5">
               <div className="space-y-3">
                 <div>
-                  <p className="text-sm font-medium text-slate-950">Test types</p>
+                  <p className="text-sm font-medium text-slate-950">Tipos de teste</p>
                   <p className="mt-1 text-xs text-slate-500">
-                    Select one or more test strategies. Suites are added inside each selected type.
+                    Selecione uma ou mais estratégias de teste. As suítes são adicionadas dentro de cada tipo selecionado.
                   </p>
                 </div>
 
@@ -561,7 +561,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
 
               {selectedTestTypes.length === 0 ? (
                 <p className="rounded-lg border border-dashed border-slate-300 px-3 py-4 text-sm text-slate-500">
-                  Select a test type to start organizing suites.
+                  Selecione um tipo de teste para começar a organizar as suítes.
                 </p>
               ) : null}
 
@@ -585,7 +585,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
                             {option.label}
                           </h3>
                           <p className="mt-1 text-xs text-slate-500">
-                            {assignedSuites.length} suite(s), {assignedCaseCount} cases
+                            {assignedSuites.length} suíte(s), {assignedCaseCount} caso(s)
                           </p>
                         </div>
                         <div className="flex gap-2">
@@ -600,7 +600,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
                               value=""
                             >
                               <option value="">
-                                {unassignedSuites.length === 0 ? 'No suites available' : 'Add suite...'}
+                                {unassignedSuites.length === 0 ? 'Nenhuma suíte disponível' : 'Adicionar suíte...'}
                               </option>
                               {unassignedSuites.map((suite) => (
                                 <option key={suite.id} value={suite.id}>
@@ -616,14 +616,14 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
                             onClick={() => clearTypeSuites(type)}
                             type="button"
                           >
-                            Clear
+                            Limpar
                           </button>
                         </div>
                       </div>
 
                       {assignedSuites.length === 0 ? (
                         <p className="mt-3 rounded-lg border border-dashed border-slate-300 px-3 py-3 text-xs text-slate-500">
-                          This type has no suites yet.
+                          Este tipo ainda não possui suítes.
                         </p>
                       ) : (
                         <div className="mt-3 grid gap-2">
@@ -638,13 +638,13 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
                                   {suite.name}
                                 </p>
                                 <p className="text-xs text-slate-400">
-                                  {suite._count?.testCases || 0} cases
+                                  {suite._count?.testCases || 0} caso(s)
                                 </p>
                               </div>
                               <button
                                 className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
                                 onClick={() => removeSuiteAssignment(suite.id)}
-                                title={`Remove ${suite.name}`}
+                                title={`Remover ${suite.name}`}
                                 type="button"
                               >
                                 <X className="h-4 w-4" aria-hidden="true" />
@@ -664,15 +664,15 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
                     <span className="font-semibold text-slate-950">
                       {selectedTestTypes.length}
                     </span>{' '}
-                    type(s) selected with{' '}
+                    tipo(s) selecionado(s) com{' '}
                     <span className="font-semibold text-slate-950">
                       {selectedSuiteOptions.length}
                     </span>{' '}
-                    suite(s) and{' '}
+                    suíte(s) e{' '}
                     <span className="font-semibold text-slate-950">
                       {totalCasesSelected}
                     </span>{' '}
-                    cases
+                    caso(s)
                   </p>
                 </div>
               ) : null}
@@ -684,8 +684,8 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
         <div className="flex shrink-0 items-center justify-between gap-2 border-t border-slate-200 px-5 py-4">
           <p className="text-xs text-slate-400">
             {selectedTestTypes.length > 0
-              ? `${selectedTestTypes.length} type(s), ${selectedSuiteOptions.length} suite(s), ${totalCasesSelected} cases`
-              : 'No test types selected'}
+              ? `${selectedTestTypes.length} tipo(s), ${selectedSuiteOptions.length} suíte(s), ${totalCasesSelected} caso(s)`
+              : 'Nenhum tipo de teste selecionado'}
           </p>
           <div className="flex gap-2">
             <button
@@ -693,7 +693,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
               onClick={onClose}
               type="button"
             >
-              Cancel
+              Cancelar
             </button>
             <button
               className="inline-flex h-9 items-center gap-2 rounded-lg bg-blue-700 px-4 text-sm font-medium text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
@@ -704,12 +704,12 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
               {submitting ? (
                 <>
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                  Creating
+                  Criando
                 </>
               ) : (
                 <>
                   <Play className="h-4 w-4" aria-hidden="true" />
-                  Create run
+                  Criar execução
                 </>
               )}
             </button>

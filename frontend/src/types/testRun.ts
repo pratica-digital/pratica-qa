@@ -153,6 +153,7 @@ export type ManagedTestCase = {
   preconditions?: string;
   expectedResult: string;
   status: TestCaseStatus;
+  priority?: TestPriority;
   severity?: TestSeverity;
   version?: number;
   tags: string[];
@@ -178,6 +179,10 @@ export type TestResult = {
   comment?: string;
   attachments?: TestResultAttachment[];
   legacyAttachments?: string[];
+  shortcutCreatedAt?: string | null;
+  shortcutStoryId?: string | null;
+  shortcutStoryName?: string | null;
+  shortcutStoryUrl?: string | null;
   executedAt?: string | null;
   executedBy?: AuthUser | null;
   lastModifiedBy?: AuthUser | null;
@@ -371,6 +376,7 @@ export type UpdateTestCasePayload = Partial<{
   description: string;
   expectedResult: string;
   status: TestCaseStatus;
+  priority: TestPriority;
   severity: TestSeverity;
 }>;
 
@@ -388,8 +394,136 @@ export type CreateTestCasePayload = {
   description?: string;
   expectedResult?: string;
   status?: TestCaseStatus;
+  priority?: TestPriority;
   severity?: TestSeverity;
   steps?: ReplaceTestStepsPayload['steps'];
+};
+
+export type AiProviderName = 'openrouter';
+
+export type AiSettings = {
+  id?: string;
+  provider: AiProviderName;
+  model: string;
+  endpoint: string;
+  temperature: number;
+  maxTokens: number;
+  timeoutSeconds: number;
+  retries: number;
+  streaming: boolean;
+  promptBase: string;
+  promptUser: string;
+  updatedById?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type AiReleaseSection = {
+  title: string;
+  present: boolean;
+};
+
+export type AiExtractedRelease = {
+  fileName: string;
+  mimeType: string;
+  size: number;
+  hash: string;
+  text: string;
+  sections: AiReleaseSection[];
+};
+
+export type AiReleaseChange = {
+  id: string;
+  modulo: string;
+  tipo: string;
+  descricao: string;
+  categoria: string;
+  impacto: string;
+  origem: string;
+  trecho_release: string;
+  prioridade: 'baixa' | 'media' | 'alta' | 'critica';
+  riscos: string[];
+  funcionalidades_afetadas: string[];
+  dependencias: string[];
+};
+
+export type AiReleaseAnalysis = {
+  modulo_principal: string;
+  resumo: string;
+  changes: AiReleaseChange[];
+};
+
+export type AiGeneratedStep = {
+  descricao: string;
+  resultado_esperado?: string;
+};
+
+export type AiGeneratedTestCase = {
+  id: string;
+  titulo: string;
+  descricao: string;
+  pre_condicoes: string;
+  passos: AiGeneratedStep[];
+  resultado_esperado: string;
+  prioridade: string;
+  severidade: string;
+  categoria: string;
+  modulo: string;
+  tipo_teste: string;
+  teste_positivo: string;
+  teste_negativo: string;
+  regressao: string;
+  automacao: string;
+  risco: string;
+  dados_teste: string[];
+  funcionalidades_afetadas: string[];
+  origem_release: string;
+  trecho_release: string;
+  complexidade: string;
+  probabilidade_regressao: string;
+};
+
+export type AiRegressionSuiteItem = {
+  case_id: string;
+  titulo: string;
+  risco: string;
+  justificativa: string;
+};
+
+export type AiCoverage = {
+  novas_funcionalidades: number;
+  melhorias: number;
+  correcoes: number;
+  eventos: number;
+};
+
+export type AiGenerationRecord = {
+  id: string;
+  releaseTitle: string;
+  fileName: string;
+  releaseHash: string;
+  releaseText: string;
+  analysis: AiReleaseAnalysis;
+  testCases: AiGeneratedTestCase[];
+  regressionSuite: AiRegressionSuiteItem[];
+  coverage: AiCoverage;
+  provider: string;
+  model: string;
+  status: string;
+  durationMs?: number | null;
+  casesCreated: number;
+  createdById?: string | null;
+  errorMessage?: string;
+  createdAt: string;
+  updatedAt: string;
+  cached?: boolean;
+};
+
+export type AiHistoryItem = Omit<
+  AiGenerationRecord,
+  'releaseText' | 'analysis' | 'testCases' | 'regressionSuite' | 'coverage'
+> & {
+  testCaseCount: number;
 };
 
 export type UpdateTestSuitePayload = Partial<{

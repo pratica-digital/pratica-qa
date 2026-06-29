@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { canManageTests } from '../auth/permissions';
 import { useAuth } from '../auth/useAuth';
 import { ActionMenu } from '../components/ActionMenu';
-import { TestRunStatusBadge, UserRoleBadge } from '../components/badges';
+import { UserRoleBadge } from '../components/badges';
 import { DeleteConfirmationModal } from '../components/DeleteConfirmationModal';
 import { ApiError, testRunsApi } from '../lib/api';
 import type { AuthUser, TestRun } from '../types/testRun';
@@ -29,7 +29,7 @@ function getResultProgress(testRun: TestRun) {
 
 function getUpdatedAt(testRun: TestRun) {
   if (!testRun.updatedAt) {
-    return 'No updates';
+    return 'Sem atualizações';
   }
 
   return new Intl.DateTimeFormat('pt-BR', {
@@ -73,7 +73,7 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
       setUsers(assignableUsers.filter((item) => item.status !== 'INACTIVE' && item.role === 'QA'));
     } catch (fetchError) {
       if (fetchError instanceof ApiError && fetchError.status === 401) {
-        setError('Your session expired. Sign out and sign in again.');
+        setError('Sua sessão expirou. Saia e entre novamente.');
       } else {
         setError(fetchError instanceof Error ? fetchError.message : 'Não foi possível carregar as execuções.');
       }
@@ -144,7 +144,7 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
       if (user) {
         setAssignedTestRuns(nextRuns.filter((testRun) => testRun.assignedToId === user.id));
       }
-      setSuccess('Test run assignment updated.');
+      setSuccess('Atribuição da execução atualizada.');
     } catch (assignError) {
       setError(assignError instanceof Error ? assignError.message : 'Não foi possível atribuir a execução.');
     } finally {
@@ -157,7 +157,7 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
 
     setTestRuns(nextRuns);
     setScope('all');
-    setSuccess('Test run created.');
+    setSuccess('Execução criada.');
 
     if (user) {
       setAssignedTestRuns(nextRuns.filter((item) => item.assignedToId === user.id));
@@ -208,7 +208,7 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
       }
 
       setRunPendingDelete(null);
-      setSuccess('Test run deleted.');
+      setSuccess('Execução excluída.');
     } catch (deleteError) {
       setRunPendingDelete(null);
       setError(deleteError instanceof Error ? deleteError.message : 'Não foi possível excluir a execução.');
@@ -221,9 +221,9 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="text-sm font-medium text-slate-500">Execution queue</p>
+          <p className="text-sm font-medium text-slate-500">Fila de execuções</p>
           <h1 className="mt-1 text-2xl font-semibold tracking-normal text-slate-950">
-            Test Runs
+            Execuções
           </h1>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -234,7 +234,7 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
               type="button"
             >
               <Plus className="h-4 w-4" aria-hidden="true" />
-              Test run
+              Execução
             </button>
           ) : null}
           <button
@@ -260,7 +260,7 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
             onClick={() => setScope('mine')}
             type="button"
           >
-            My TestRuns
+            Minhas execuções
           </button>
           <button
             className={`h-8 flex-1 rounded-md px-3 text-sm font-medium sm:flex-none ${
@@ -271,7 +271,7 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
             onClick={() => setScope('all')}
             type="button"
           >
-            All TestRuns
+            Todas as execuções
           </button>
         </div>
 
@@ -288,7 +288,7 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
           </label>
           <span className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-600">
             <Filter className="h-4 w-4" aria-hidden="true" />
-            {visibleRuns.length} shown
+            {visibleRuns.length} exibida{visibleRuns.length === 1 ? '' : 's'}
           </span>
         </div>
       </div>
@@ -307,7 +307,7 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
 
       {isLoading ? (
         <div className="rounded-lg border border-slate-200 bg-white p-8 text-center text-sm text-slate-500 shadow-sm">
-          Loading test runs
+          Carregando execuções
         </div>
       ) : visibleRuns.length > 0 ? (
         <section className="grid gap-3">
@@ -338,7 +338,7 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
                     </h2>
                     
                     <p className="mt-2 text-xs text-slate-500">
-                      Updated {getUpdatedAt(testRun)}
+                      Atualizado em {getUpdatedAt(testRun)}
                     </p>
                   </div>
 
@@ -358,7 +358,7 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
                     <div className="mt-3 flex items-center justify-between gap-3">
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium text-slate-950">
-                          {testRun.assignedTo?.name ?? 'Unassigned'}
+                          {testRun.assignedTo?.name ?? 'Não atribuído'}
                         </p>
                         
                       </div>
@@ -381,7 +381,7 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
                           value={testRun.assignedToId}
                         >
                           {users.length === 0 ? (
-                            <option value={testRun.assignedToId}>No QA users</option>
+                            <option value={testRun.assignedToId}>Nenhum usuário QA</option>
                           ) : null}
                           {users.map((assignableUser) => (
                             <option key={assignableUser.id} value={assignableUser.id}>
@@ -410,12 +410,12 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
                       ) : (
                         <Eye className="h-4 w-4" aria-hidden="true" />
                       )}
-                      {openingRunId === testRun.id ? 'Opening' : canExecute ? ' ' : 'Visualizar'}
+                      {openingRunId === testRun.id ? 'Abrindo' : canExecute ? ' ' : 'Visualizar'}
                     </button>
 
                     {canManageTestAssets ? (
                       <ActionMenu
-                        ariaLabel="Test run actions"
+                        ariaLabel="Ações da execução"
                         items={[
                           {
                             label: 'Excluir',
@@ -434,7 +434,7 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
         </section>
       ) : (
         <div className="rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
-          <h2 className="text-sm font-semibold text-slate-950">No test runs found</h2>
+          <h2 className="text-sm font-semibold text-slate-950">Nenhuma execução encontrada</h2>
           <p className="mt-1 text-sm text-slate-500">
             Adjust the filter or refresh the queue.
           </p>
@@ -454,7 +454,7 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
           loading={isDeleting}
           onCancel={() => setRunPendingDelete(null)}
           onConfirm={() => void handleDeleteRun()}
-          title="Delete Test Run?"
+          title="Excluir execução?"
         />
       ) : null}
     </div>

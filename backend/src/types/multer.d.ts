@@ -2,8 +2,11 @@ declare module 'multer' {
   import type { Request } from 'express';
 
   type MulterFile = {
+    buffer?: Buffer;
+    fieldname?: string;
     mimetype: string;
     originalname: string;
+    size?: number;
   };
 
   type FileFilterCallback = (error: Error | null, acceptFile: boolean) => void;
@@ -22,4 +25,6 @@ declare module 'multer' {
     destination: (req: Request, file: MulterFile, callback: DestinationCallback) => void;
     filename: (req: Request, file: MulterFile, callback: FilenameCallback) => void;
   }): unknown;
+
+  export function memoryStorage(): unknown;
 }

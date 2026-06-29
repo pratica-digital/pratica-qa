@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useAuth } from '../auth/useAuth';
 import type { PageId } from '../data/workspace';
+import { AiTestGeneratorModulePage } from '../pages/AiTestGeneratorModulePage';
 import { DashboardPage } from '../pages/DashboardPage';
 import { ProfilePage } from '../pages/ProfilePage';
 import { ProjectsPage } from '../pages/ProjectsPage';
@@ -18,6 +19,7 @@ import { TestRunReportPage } from '../pages/TestRunReportPage';
 const createActionLabels: Partial<Record<PageId, string>> = {};
 
 const hideTopNavPageTitle: PageId[] = ['projects', 'test-plans', 'test-suites', 'test-cases', 'test-runs'];
+const aiPages: PageId[] = ['ai-test-generator', 'ai-history', 'ai-settings'];
 
 export function AppShell() {
   const { user } = useAuth();
@@ -28,7 +30,17 @@ export function AppShell() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const canAccessPage = useCallback(
-    (pageId: PageId) => pageId !== 'users' || user?.role === 'ADMIN',
+    (pageId: PageId) => {
+      if (pageId === 'users') {
+        return user?.role === 'ADMIN';
+      }
+
+      if (aiPages.includes(pageId)) {
+        return user?.role === 'ADMIN' || user?.role === 'QA';
+      }
+
+      return true;
+    },
     [user?.role],
   );
 
@@ -90,6 +102,12 @@ export function AppShell() {
             onOpenRun={handleOpenRun}
           />
         );
+      case 'ai-test-generator':
+        return <AiTestGeneratorModulePage initialTab="generate" />;
+      case 'ai-history':
+        return <AiTestGeneratorModulePage initialTab="history" />;
+      case 'ai-settings':
+        return <AiTestGeneratorModulePage initialTab="settings" />;
       case 'users':
         return <UsersPage />;
       case 'profile':

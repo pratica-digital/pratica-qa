@@ -99,6 +99,43 @@ function statusLabel(status?: TestResultStatus | null) {
   return testResultStatusLabel(status);
 }
 
+function isExternalHttpUrl(value?: string | null) {
+  return Boolean(value && /^https?:\/\//i.test(value.trim()));
+}
+
+function getShortcutStoryLabel(result: TestResult) {
+  return result.shortcutStoryName?.trim() || `[FAIL] ${result.testCase.title}`;
+}
+
+function ShortcutStorySection({ result }: { result: TestResult }) {
+  if (result.status !== 'FAILED') {
+    return null;
+  }
+
+  const storyUrl = result.shortcutStoryUrl?.trim();
+
+  return (
+    <div className="rounded-lg border border-red-100 bg-red-50 px-3 py-2">
+      <p className="text-xs font-semibold uppercase tracking-wide text-red-700">
+        Shortcut Story
+      </p>
+      {isExternalHttpUrl(storyUrl) ? (
+        <a
+          className="mt-1 inline-flex items-center gap-1.5 text-sm font-medium text-red-800 underline-offset-2 hover:underline"
+          href={storyUrl}
+          rel="noopener noreferrer"
+          target="_blank"
+        >
+          {getShortcutStoryLabel(result)}
+          <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+        </a>
+      ) : (
+        <p className="mt-1 text-sm text-slate-600">Story do Shortcut nao disponivel.</p>
+      )}
+    </div>
+  );
+}
+
 function EvidenceAttachmentCard({ attachment }: { attachment: TestResultAttachment }) {
   const assetUrl = resolveApiAssetUrl(getAttachmentUrl(attachment));
   const name = getAttachmentName(attachment);
@@ -416,6 +453,8 @@ function TestCaseAccordion({ result }: { result: TestResult }) {
               <p className="text-sm text-slate-700">{result.comment}</p>
             </div>
           )}
+
+          <ShortcutStorySection result={result} />
 
           {result.attachments && result.attachments.length > 0 && (
             <div>

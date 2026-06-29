@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
 import {
+  Bot,
   ClipboardList,
   FolderOpen,
   LayoutDashboard,
@@ -18,6 +19,9 @@ export type PageId =
   | 'test-suites'
   | 'test-cases'
   | 'test-runs'
+  | 'ai-test-generator'
+  | 'ai-history'
+  | 'ai-settings'
   | 'users'
   | 'profile';
 
@@ -61,11 +65,12 @@ export type TestCase = {
 
 export const navigationItems: NavigationItem[] = [
   { id: 'dashboard', label: 'Painel', icon: LayoutDashboard },
-  { id: 'projects', label: 'Projetos', icon: FolderOpen },
+  { id: 'projects', label: 'Equipamentos', icon: FolderOpen },
   { id: 'test-plans', label: 'Planos de Teste', icon: ClipboardList },
   { id: 'test-suites', label: 'Suítes de Teste', icon: Layers3 },
   { id: 'test-cases', label: 'Casos de Teste', icon: ListChecks },
   { id: 'test-runs', label: 'Execuções', icon: PlaySquare },
+  { id: 'ai-test-generator', label: 'AI Test Generator', icon: Bot, roles: ['ADMIN', 'QA'] },
   { id: 'users', label: 'Usuários', icon: UsersRound, roles: ['ADMIN'] },
   { id: 'profile', label: 'Perfil', icon: UserRound },
 ];
@@ -73,7 +78,7 @@ export const navigationItems: NavigationItem[] = [
 export const projects: Project[] = [
   {
     key: 'WEB',
-    name: 'Customer Web App',
+    name: 'App Web do Cliente',
     owner: 'Marina Lima',
     status: 'Active',
     suites: 12,
@@ -83,7 +88,7 @@ export const projects: Project[] = [
   },
   {
     key: 'API',
-    name: 'Public API',
+    name: 'API Pública',
     owner: 'Rafael Costa',
     status: 'At risk',
     suites: 8,
@@ -93,20 +98,20 @@ export const projects: Project[] = [
   },
   {
     key: 'MOB',
-    name: 'Mobile Checkout',
+    name: 'Checkout Mobile',
     owner: 'Aline Santos',
     status: 'Active',
     suites: 6,
     cases: 119,
     passRate: 88,
-    updatedAt: 'May 24',
+    updatedAt: '24 de mai.',
   },
 ];
 
 export const testSuites: TestSuite[] = [
   {
-    name: 'Authentication',
-    project: 'Customer Web App',
+    name: 'Autenticação',
+    project: 'App Web do Cliente',
     status: 'Active',
     coverage: 96,
     cases: 42,
@@ -115,7 +120,7 @@ export const testSuites: TestSuite[] = [
   },
   {
     name: 'Checkout',
-    project: 'Mobile Checkout',
+    project: 'Checkout Mobile',
     status: 'Active',
     coverage: 84,
     cases: 56,
@@ -123,8 +128,8 @@ export const testSuites: TestSuite[] = [
     owner: 'Aline Santos',
   },
   {
-    name: 'Rate limits',
-    project: 'Public API',
+    name: 'Limites de uso',
+    project: 'API Pública',
     status: 'Draft',
     coverage: 61,
     cases: 28,
@@ -132,8 +137,8 @@ export const testSuites: TestSuite[] = [
     owner: 'Rafael Costa',
   },
   {
-    name: 'Reporting',
-    project: 'Customer Web App',
+    name: 'Relatórios',
+    project: 'App Web do Cliente',
     status: 'Active',
     coverage: 73,
     cases: 34,
@@ -145,8 +150,8 @@ export const testSuites: TestSuite[] = [
 export const testCases: TestCase[] = [
   {
     id: 'TC-1042',
-    title: 'User signs in with a valid email and password',
-    suite: 'Authentication',
+    title: 'Usuário entra com e-mail e senha válidos',
+    suite: 'Autenticação',
     priority: 'High',
     status: 'Ready',
     steps: 5,
@@ -154,8 +159,8 @@ export const testCases: TestCase[] = [
   },
   {
     id: 'TC-1087',
-    title: 'Password reset link expires after configured window',
-    suite: 'Authentication',
+    title: 'Link de redefinição de senha expira no prazo configurado',
+    suite: 'Autenticação',
     priority: 'Medium',
     status: 'Needs review',
     steps: 6,
@@ -163,7 +168,7 @@ export const testCases: TestCase[] = [
   },
   {
     id: 'TC-1210',
-    title: 'Checkout keeps cart state after payment failure',
+    title: 'Checkout mantém o carrinho após falha no pagamento',
     suite: 'Checkout',
     priority: 'High',
     status: 'Ready',
@@ -172,8 +177,8 @@ export const testCases: TestCase[] = [
   },
   {
     id: 'TC-1294',
-    title: 'API responds with headers for quota limit',
-    suite: 'Rate limits',
+    title: 'API responde com cabeçalhos de limite de cota',
+    suite: 'Limites de uso',
     priority: 'Low',
     status: 'Draft',
     steps: 4,
@@ -182,8 +187,8 @@ export const testCases: TestCase[] = [
 ];
 
 export const activityItems = [
-  'Checkout run completed with 7 failures',
-  'Authentication suite gained 5 new cases',
-  'Public API project moved into risk review',
-  'Mobile smoke run passed 38 of 42 cases',
+  'Execução de checkout concluída com 7 falhas',
+  'Suíte de autenticação recebeu 5 novos casos',
+  'Projeto API Pública entrou em revisão de risco',
+  'Smoke mobile aprovou 38 de 42 casos',
 ];

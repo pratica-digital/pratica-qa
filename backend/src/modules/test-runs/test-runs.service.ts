@@ -7,6 +7,7 @@ import {
 import { TestRunTestType, UserRole, UserStatus } from '@prisma/client';
 import { AuthenticatedUser } from '../../auth/types/authenticated-user';
 import { getPagination } from '../../common/dto/pagination-query.dto';
+import { ShortcutFailureStoryService } from '../../shortcut/shortcut-failure-story.service';
 import { TestPlansRepository } from '../test-plans/repositories/test-plans.repository';
 import { TestSuitesRepository } from '../test-suites/repositories/test-suites.repository';
 import { UsersRepository } from '../users/repositories/users.repository';
@@ -30,6 +31,7 @@ export class TestRunsService {
     private readonly testPlansRepository: TestPlansRepository,
     private readonly testSuitesRepository: TestSuitesRepository,
     private readonly usersRepository: UsersRepository,
+    private readonly shortcutFailureStoryService: ShortcutFailureStoryService,
   ) {}
 
   async create(dto: CreateTestRunDto) {
@@ -143,6 +145,8 @@ export class TestRunsService {
     if (!result) {
       throw new NotFoundException('Test result not found in this test run');
     }
+
+    await this.shortcutFailureStoryService.createForFailedResult(result);
 
     return result;
   }
