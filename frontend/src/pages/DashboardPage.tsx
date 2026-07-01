@@ -1,13 +1,10 @@
 import type { ReactNode } from 'react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Activity,
-  AlertTriangle,
   ArrowUpRight,
   BarChart3,
-  CheckCircle2,
   ClipboardList,
-  Clock3,
   FolderOpen,
   Layers3,
   ListChecks,
@@ -22,16 +19,8 @@ import {
 } from 'lucide-react';
 import { canManageTests } from '../auth/permissions';
 import { useAuth } from '../auth/useAuth';
-import {
-  CaseStatusBadge,
-  PriorityBadge,
-  ProjectStatusBadge,
-  SuiteStatusBadge,
-  TestResultStatusBadge,
-  TestRunStatusBadge,
-} from '../components/badges';
+import { TestResultStatusBadge } from '../components/badges';
 import { DeleteConfirmationModal } from '../components/DeleteConfirmationModal';
-import { ExpandableCard } from '../components/dashboard/ExpandableCard';
 import { ProjectDetailPanel } from '../components/projects/ProjectDetailPanel';
 import { TestPlanDetailPanel } from '../components/test-plan/TestPlanDetailPanel';
 import { TestSuiteDetailPanel } from '../components/test-suites/TestSuiteDetailPanel';
@@ -39,7 +28,6 @@ import {
   ApiError,
   projectsApi,
   reportsApi,
-  testCasesApi,
   testPlansApi,
   testResultsApi,
   testRunsApi,
@@ -55,7 +43,6 @@ import type {
   ProjectSummary,
   TestPlan,
   TestResult,
-  TestResultStatus,
   TestRun,
 } from '../types/testRun';
 
@@ -87,24 +74,13 @@ type DashboardData = {
   totals: DashboardTotals;
 };
 
-type ProjectPreview = {
-  suites: ManagedTestSuite[];
-  plans: TestPlan[];
-  runs: TestRun[];
-};
-
-type SuitePreview = {
-  cases: ManagedTestCase[];
-  runs: TestRun[];
-};
-
 type MetricKey = 'passed' | 'failed' | 'pending';
 
 const dashboardPeriodOptions: Array<{ label: string; value: DashboardPeriod }> = [
-  { label: 'Last 30 days', value: '30d' },
-  { label: 'Last 90 days', value: '90d' },
-  { label: 'Last 6 months', value: '6m' },
-  { label: 'Last 12 months', value: '12m' },
+  { label: 'Últimos 30 dias', value: '30d' },
+  { label: 'Últimos 90 dias', value: '90d' },
+  { label: 'Últimos 6 meses', value: '6m' },
+  { label: 'Últimos 12 meses', value: '12m' },
 ];
 
 type DashboardDeleteTarget =
@@ -145,17 +121,6 @@ const metricToneClasses = {
   slate: 'border-slate-200 bg-slate-50 text-slate-700',
 };
 
-function formatDate(value?: string | null) {
-  if (!value) {
-    return 'No date';
-  }
-
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(value));
-}
-
 function getRunStats(testRun: TestRun) {
   const results = testRun.results ?? [];
   const passed = results.filter((result) => result.status === 'PASSED').length;
@@ -175,86 +140,12 @@ function getRunStats(testRun: TestRun) {
   };
 }
 
-function getResultCount(results: TestResult[], status: TestResultStatus) {
-  return results.filter((result) => result.status === status).length;
-}
-
-function groupRunResults(run: TestRun) {
-  const suiteNames = new Map(
-    (run.suites ?? []).map((suite) => [
-      suite.testSuiteId,
-      suite.testSuite?.name ?? `Suite ${suite.position}`,
-    ]),
-  );
-  const suiteOrder = new Map(
-    (run.suites ?? []).map((suite) => [suite.testSuiteId, suite.position]),
-  );
-  const groups = new Map<string, TestResult[]>();
-
-  (run.results ?? []).forEach((result) => {
-    const suiteId = result.testCase.suiteId ?? 'without-suite';
-    groups.set(suiteId, [...(groups.get(suiteId) ?? []), result]);
-  });
-
-  return [...groups.entries()]
-    .map(([suiteId, results]) => ({
-      suiteId,
-      suiteName: suiteNames.get(suiteId) ?? 'Unassigned suite',
-      order: suiteOrder.get(suiteId) ?? Number.MAX_SAFE_INTEGER,
-      results,
-    }))
-    .sort((left, right) => left.order - right.order || left.suiteName.localeCompare(right.suiteName));
-}
-
-function getSuiteExecutionSummary(suiteId: string, runs: TestRun[]) {
-  const results = runs.flatMap((run) =>
-    (run.results ?? []).filter((result) => result.testCase.suiteId === suiteId),
-  );
-
-  return {
-    total: results.length,
-    passed: getResultCount(results, 'PASSED'),
-    failed: getResultCount(results, 'FAILED'),
-    pending: getResultCount(results, 'PENDING'),
-  };
-}
-
-function getProjectCaseCount(projectId: string, suites: ManagedTestSuite[]) {
-  return suites
-    .filter((suite) => suite.projectId === projectId)
-    .reduce((total, suite) => total + (suite._count?.testCases ?? 0), 0);
-}
-
 function getSuiteName(suiteId: string | undefined, suites: ManagedTestSuite[]) {
   if (!suiteId) {
-    return 'Unassigned suite';
+    return 'Suíte não atribuída';
   }
 
-  return suites.find((suite) => suite.id === suiteId)?.name ?? 'Suite';
-}
-
-function SectionHeader({
-  actionLabel,
-  children,
-  onAction,
-}: {
-  actionLabel: string;
-  children: string;
-  onAction: () => void;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <h2 className="text-sm font-semibold text-slate-950">{children}</h2>
-      <button
-        className="inline-flex h-8 items-center gap-1 rounded-lg px-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-950"
-        onClick={onAction}
-        type="button"
-      >
-        {actionLabel}
-        <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
-      </button>
-    </div>
-  );
+  return suites.find((suite) => suite.id === suiteId)?.name ?? 'Suíte';
 }
 
 function LoadingBlock({ label }: { label: string }) {
@@ -303,11 +194,19 @@ function DashboardMetricCard({
       : (delta.direction === 'up' && !inverseDelta) || (delta.direction === 'down' && inverseDelta)
         ? 'text-emerald-600'
         : 'text-red-600';
-  const deltaSign = delta && delta.value > 0 ? '+' : '';
+  const deltaSign =
+    !delta || delta.direction === 'flat'
+      ? ''
+      : delta.direction === 'up'
+        ? '+'
+        : '-';
+  const deltaPercent = delta
+    ? new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 }).format(Math.abs(delta.percent))
+    : '';
 
   return (
     <button
-      className={`group rounded-lg border bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50 ${
+      className={`group rounded-lg border bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50 ${
         active
           ? 'border-slate-950 ring-2 ring-slate-200'
           : 'border-slate-200'
@@ -315,25 +214,35 @@ function DashboardMetricCard({
       onClick={onClick}
       type="button"
     >
-      <div className="flex items-start justify-between gap-3">
-        <span className={`flex h-9 w-9 items-center justify-center rounded-lg border ${metricToneClasses[tone]}`}>
-          <Icon className="h-4 w-4" aria-hidden="true" />
-        </span>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className={`flex h-8 w-9 items-center justify-center rounded-lg border ${metricToneClasses[tone]}`}>
+            <Icon className="h-4 w-4" aria-hidden="true" />
+          </span>
+
+          <p className="text-sm text-slate-500">{label}</p>
+        </div>
+
         <ArrowUpRight className="h-4 w-4 text-slate-400 transition group-hover:text-slate-700" />
       </div>
-      <p className="mt-4 text-sm text-slate-500">{label}</p>
-      <p className="mt-1 text-2xl font-semibold tracking-normal text-slate-950">
+
+      <p className="mt-1 text-center text-2xl font-semibold tracking-normal text-slate-950">
         {value}
       </p>
-      {delta ? (
-        <p className={`mt-2 text-xs font-medium ${deltaTone}`}>
-          {deltaSign}
-          {delta.value} in {periodLabel ?? 'selected period'}
-        </p>
+
+      {description ? <p className="mt-2 text-xs text-slate-500">{description}</p> : null}
+
+      {delta || periodLabel ? (
+        <div className="mt-4 flex items-center justify-between gap-3 text-xs">
+          <span className="truncate text-slate-400">{periodLabel}</span>
+          {delta ? (
+            <span className={`shrink-0 font-medium ${deltaTone}`}>
+              {deltaSign}
+              {deltaPercent}%
+            </span>
+          ) : null}
+        </div>
       ) : null}
-      <p className="mt-2 line-clamp-2 min-h-10 text-xs text-slate-500">
-        {description}
-      </p>
     </button>
   );
 }
@@ -376,7 +285,7 @@ function ResultPreviewList({
               {result.testCase.title}
             </span>
             <span className="mt-1 block text-xs text-slate-500">
-              {result.testRun?.name ?? 'Run unavailable'}
+              {result.testRun?.name ?? 'Execução indisponível'}
             </span>
             {result.comment ? (
               <span className="mt-2 block line-clamp-2 text-sm text-slate-600">
@@ -385,7 +294,7 @@ function ResultPreviewList({
             ) : null}
           </span>
           <span className="inline-flex items-center justify-end gap-2 text-sm font-medium text-slate-600">
-            {openingRunId === result.testRun?.id ? 'Opening' : 'Open run'}
+            {openingRunId === result.testRun?.id ? 'Abrindo' : 'Abrir execução'}
             <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
           </span>
         </button>
@@ -645,7 +554,7 @@ function ResultDistributionChart({ data }: { data: DashboardAnalytics['resultDis
     { color: '#059669', label: 'Passou', tone: 'bg-emerald-100 text-emerald-800', value: data.passed },
     { color: '#dc2626', label: 'Falhou', tone: 'bg-red-100 text-red-800', value: data.failed },
     { color: '#d97706', label: 'Bloqueado', tone: 'bg-amber-100 text-amber-800', value: data.blocked },
-    { color: '#475569', label: 'Nao executado', tone: 'bg-slate-100 text-slate-700', value: data.notExecuted },
+    { color: '#475569', label: 'Não executado', tone: 'bg-slate-100 text-slate-700', value: data.notExecuted },
   ];
   const total = segments.reduce((sum, segment) => sum + segment.value, 0);
   const radius = 72;
@@ -813,7 +722,7 @@ function RecentActivityPanel({ data }: { data: DashboardAnalytics['recentActivit
     {
       accent: 'bg-blue-600',
       label: 'Execucoes realizadas',
-      note: 'Test runs com atividade nos ultimos 30 dias.',
+      note: 'Execuções com atividade nos últimos 30 dias.',
       tone: 'bg-blue-100 text-blue-800',
       value: data.executions,
     },
@@ -827,7 +736,7 @@ function RecentActivityPanel({ data }: { data: DashboardAnalytics['recentActivit
     {
       accent: 'bg-red-600',
       label: 'Falhas encontradas',
-      note: 'Resultados marcados como falha nos ultimos 30 dias.',
+      note: 'Resultados marcados como falha nos últimos 30 dias.',
       tone: 'bg-red-100 text-red-800',
       value: data.failures,
     },
@@ -884,12 +793,7 @@ export function DashboardPage({ onNavigate, onOpenRun }: DashboardPageProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
   const [activeMetric, setActiveMetric] = useState<MetricKey | null>(null);
-  const [projectPreviews, setProjectPreviews] = useState<Record<string, ProjectPreview>>({});
-  const [suitePreviews, setSuitePreviews] = useState<Record<string, SuitePreview>>({});
-  const [planDetails, setPlanDetails] = useState<Record<string, TestPlan>>({});
-  const [loadingPreviewIds, setLoadingPreviewIds] = useState<Record<string, boolean>>({});
   const [selectedProject, setSelectedProject] = useState<ProjectSummary | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<TestPlan | null>(null);
   const [selectedSuiteDetail, setSelectedSuiteDetail] = useState<{
@@ -957,9 +861,9 @@ export function DashboardPage({ onNavigate, onOpenRun }: DashboardPageProps) {
       });
     } catch (fetchError) {
       if (fetchError instanceof ApiError && fetchError.status === 401) {
-        setError('Your session expired. Sign out and sign in again.');
+        setError('Sua sessão expirou. Saia e entre novamente.');
       } else {
-        setError(fetchError instanceof Error ? fetchError.message : 'Unable to load dashboard.');
+        setError(fetchError instanceof Error ? fetchError.message : 'Não foi possível carregar o painel.');
       }
     } finally {
       setIsLoading(false);
@@ -974,223 +878,6 @@ export function DashboardPage({ onNavigate, onOpenRun }: DashboardPageProps) {
     return () => window.clearTimeout(timeoutId);
   }, [fetchDashboard]);
 
-  const recentProjects = data.projects.slice(0, 6);
-  const recentSuites = data.suites.slice(0, 5);
-  const recentPlans = data.plans.slice(0, 5);
-  const recentRuns = data.runs.slice(0, 5);
-
-  const caseCountByProjectId = useMemo(() => {
-    return data.projects.reduce<Record<string, number>>((counts, project) => {
-      counts[project.id] = getProjectCaseCount(project.id, data.suites);
-      return counts;
-    }, {});
-  }, [data.projects, data.suites]);
-
-  const setPreviewLoading = useCallback((key: string, isPreviewLoading: boolean) => {
-    setLoadingPreviewIds((current) => ({
-      ...current,
-      [key]: isPreviewLoading,
-    }));
-  }, []);
-
-  const loadProjectPreview = useCallback(
-    async (projectId: string) => {
-      if (!token || projectPreviews[projectId]) {
-        return;
-      }
-
-      const loadingKey = `project:${projectId}`;
-      setPreviewLoading(loadingKey, true);
-
-      try {
-        const [suitesPage, plansPage, runsPage] = await Promise.all([
-          testSuitesApi.listPage(token, { projectId, limit: 6 }),
-          testPlansApi.listPage(token, { projectId, limit: 6 }),
-          testRunsApi.listPage(token, { projectId, limit: 6 }),
-        ]);
-
-        setProjectPreviews((current) => ({
-          ...current,
-          [projectId]: {
-            suites: suitesPage.data,
-            plans: plansPage.data,
-            runs: runsPage.data,
-          },
-        }));
-      } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : 'Unable to load project preview.');
-      } finally {
-        setPreviewLoading(loadingKey, false);
-      }
-    },
-    [projectPreviews, setPreviewLoading, token],
-  );
-
-  const loadSuitePreview = useCallback(
-    async (suite: ManagedTestSuite) => {
-      if (!token || suitePreviews[suite.id]) {
-        return;
-      }
-
-      const loadingKey = `suite:${suite.id}`;
-      setPreviewLoading(loadingKey, true);
-
-      try {
-        const [casesPage, runsPage] = await Promise.all([
-          testCasesApi.listPage(token, { suiteId: suite.id, limit: 10 }),
-          testRunsApi.listPage(token, { projectId: suite.projectId, limit: 10 }),
-        ]);
-
-        setSuitePreviews((current) => ({
-          ...current,
-          [suite.id]: {
-            cases: casesPage.data,
-            runs: runsPage.data,
-          },
-        }));
-      } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : 'Unable to load suite preview.');
-      } finally {
-        setPreviewLoading(loadingKey, false);
-      }
-    },
-    [setPreviewLoading, suitePreviews, token],
-  );
-
-  const loadPlanDetail = useCallback(
-    async (plan: TestPlan) => {
-      if (!token || planDetails[plan.id]) {
-        return;
-      }
-
-      const loadingKey = `plan:${plan.id}`;
-      setPreviewLoading(loadingKey, true);
-
-      try {
-        const nextPlan = await testPlansApi.get(token, plan.id);
-        setPlanDetails((current) => ({
-          ...current,
-          [plan.id]: nextPlan,
-        }));
-      } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : 'Unable to load test plan.');
-      } finally {
-        setPreviewLoading(loadingKey, false);
-      }
-    },
-    [planDetails, setPreviewLoading, token],
-  );
-
-  const loadRunDetail = useCallback(
-    async (run: TestRun) => {
-      if (!token) {
-        return;
-      }
-
-      const loadingKey = `run:${run.id}`;
-      setPreviewLoading(loadingKey, true);
-
-      try {
-        const nextRun = await testRunsApi.get(token, run.id);
-        setData((current) => ({
-          ...current,
-          runs: current.runs.map((item) => (item.id === nextRun.id ? nextRun : item)),
-        }));
-      } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : 'Unable to load test run.');
-      } finally {
-        setPreviewLoading(loadingKey, false);
-      }
-    },
-    [setPreviewLoading, token],
-  );
-
-  function toggleCard(key: string) {
-    setExpandedCards((current) => ({
-      ...current,
-      [key]: !current[key],
-    }));
-  }
-
-  function handleProjectToggle(project: ProjectSummary) {
-    const key = `project:${project.id}`;
-    const willExpand = !expandedCards[key];
-    toggleCard(key);
-
-    if (willExpand) {
-      void loadProjectPreview(project.id);
-    }
-  }
-
-  function handleSuiteToggle(suite: ManagedTestSuite) {
-    const key = `suite:${suite.id}`;
-    const willExpand = !expandedCards[key];
-    toggleCard(key);
-
-    if (willExpand) {
-      void loadSuitePreview(suite);
-    }
-  }
-
-  function handlePlanToggle(plan: TestPlan) {
-    const key = `plan:${plan.id}`;
-    const willExpand = !expandedCards[key];
-    toggleCard(key);
-
-    if (willExpand) {
-      void loadPlanDetail(plan);
-    }
-  }
-
-  function handleRunToggle(run: TestRun) {
-    const key = `run:${run.id}`;
-    const willExpand = !expandedCards[key];
-    toggleCard(key);
-
-    if (willExpand) {
-      void loadRunDetail(run);
-    }
-  }
-
-  async function handleOpenPlan(plan: TestPlan) {
-    if (!token) {
-      setSelectedPlan(plan);
-      return;
-    }
-
-    try {
-      const freshPlan = await testPlansApi.get(token, plan.id);
-      setSelectedPlan(freshPlan);
-      setPlanDetails((current) => ({ ...current, [plan.id]: freshPlan }));
-    } catch (openError) {
-      setError(openError instanceof Error ? openError.message : 'Unable to open test plan.');
-    }
-  }
-
-  async function handleOpenSuite(suite: ManagedTestSuite) {
-    if (!token) {
-      setSelectedSuiteDetail({
-        suite,
-        cases: suitePreviews[suite.id]?.cases ?? [],
-      });
-      return;
-    }
-
-    try {
-      const [freshSuite, casesPage] = await Promise.all([
-        testSuitesApi.get(token, suite.id),
-        testCasesApi.listPage(token, { suiteId: suite.id, limit: 100 }),
-      ]);
-
-      setSelectedSuiteDetail({
-        suite: freshSuite,
-        cases: casesPage.data,
-      });
-    } catch (openError) {
-      setError(openError instanceof Error ? openError.message : 'Unable to open test suite.');
-    }
-  }
-
   async function handleOpenRun(run: TestRun) {
     if (!token) {
       onOpenRun(run);
@@ -1203,7 +890,7 @@ export function DashboardPage({ onNavigate, onOpenRun }: DashboardPageProps) {
       const freshRun = await testRunsApi.get(token, run.id);
       onOpenRun(freshRun);
     } catch (openError) {
-      setError(openError instanceof Error ? openError.message : 'Unable to open test run.');
+      setError(openError instanceof Error ? openError.message : 'Não foi possível abrir a execução.');
     } finally {
       setOpeningRunId(null);
     }
@@ -1220,7 +907,7 @@ export function DashboardPage({ onNavigate, onOpenRun }: DashboardPageProps) {
       const freshRun = await testRunsApi.get(token, result.testRun.id);
       onOpenRun(freshRun);
     } catch (openError) {
-      setError(openError instanceof Error ? openError.message : 'Unable to open failed test run.');
+      setError(openError instanceof Error ? openError.message : 'Não foi possível abrir a execução com falha.');
     } finally {
       setOpeningRunId(null);
     }
@@ -1259,17 +946,11 @@ export function DashboardPage({ onNavigate, onOpenRun }: DashboardPageProps) {
             projects: Math.max(0, current.totals.projects - 1),
           },
         }));
-        setProjectPreviews((current) => {
-          const next = { ...current };
-          delete next[target.item.id];
-          return next;
-        });
-
         if (selectedProject?.id === target.item.id) {
           setSelectedProject(null);
         }
 
-        setSuccess('Project deleted.');
+        setSuccess('Projeto excluído.');
       }
 
       if (target.type === 'suite') {
@@ -1291,28 +972,11 @@ export function DashboardPage({ onNavigate, onOpenRun }: DashboardPageProps) {
             suites: Math.max(0, current.totals.suites - 1),
           },
         }));
-        setSuitePreviews((current) => {
-          const next = { ...current };
-          delete next[target.item.id];
-          return next;
-        });
-        setProjectPreviews((current) =>
-          Object.fromEntries(
-            Object.entries(current).map(([projectId, preview]) => [
-              projectId,
-              {
-                ...preview,
-                suites: preview.suites.filter((suite) => suite.id !== target.item.id),
-              },
-            ]),
-          ),
-        );
-
         if (selectedSuiteDetail?.suite.id === target.item.id) {
           setSelectedSuiteDetail(null);
         }
 
-        setSuccess('Test suite deleted.');
+        setSuccess('Suíte de teste excluída.');
       }
 
       if (target.type === 'plan') {
@@ -1325,28 +989,11 @@ export function DashboardPage({ onNavigate, onOpenRun }: DashboardPageProps) {
             plans: Math.max(0, current.totals.plans - 1),
           },
         }));
-        setPlanDetails((current) => {
-          const next = { ...current };
-          delete next[target.item.id];
-          return next;
-        });
-        setProjectPreviews((current) =>
-          Object.fromEntries(
-            Object.entries(current).map(([projectId, preview]) => [
-              projectId,
-              {
-                ...preview,
-                plans: preview.plans.filter((plan) => plan.id !== target.item.id),
-              },
-            ]),
-          ),
-        );
-
         if (selectedPlan?.id === target.item.id) {
           setSelectedPlan(null);
         }
 
-        setSuccess('Test plan deleted.');
+        setSuccess('Plano de teste excluído.');
       }
 
       if (target.type === 'run') {
@@ -1374,36 +1021,14 @@ export function DashboardPage({ onNavigate, onOpenRun }: DashboardPageProps) {
             runs: Math.max(0, current.totals.runs - 1),
           },
         }));
-        setProjectPreviews((current) =>
-          Object.fromEntries(
-            Object.entries(current).map(([projectId, preview]) => [
-              projectId,
-              {
-                ...preview,
-                runs: preview.runs.filter((run) => run.id !== target.item.id),
-              },
-            ]),
-          ),
-        );
-        setSuitePreviews((current) =>
-          Object.fromEntries(
-            Object.entries(current).map(([suiteId, preview]) => [
-              suiteId,
-              {
-                ...preview,
-                runs: preview.runs.filter((run) => run.id !== target.item.id),
-              },
-            ]),
-          ),
-        );
-        setSuccess('Test run deleted.');
+        setSuccess('Execução excluída.');
       }
 
       setDeleteTarget(null);
       void fetchDashboard();
     } catch (deleteError) {
       setDeleteTarget(null);
-      setError(deleteError instanceof Error ? deleteError.message : 'Unable to delete item.');
+      setError(deleteError instanceof Error ? deleteError.message : 'Não foi possível excluir o item.');
     } finally {
       setIsDeleting(false);
     }
@@ -1420,28 +1045,28 @@ export function DashboardPage({ onNavigate, onOpenRun }: DashboardPageProps) {
 
   const activeMetricTitle =
     activeMetric === 'passed'
-      ? 'Latest passed executions'
+      ? 'Últimas execuções aprovadas'
       : activeMetric === 'failed'
         ? 'Latest failed executions'
-        : 'Pending executions';
+        : 'Execuções pendentes';
 
   const deleteModalTitle =
     deleteTarget?.type === 'project'
-      ? 'Delete Project?'
+      ? 'Excluir projeto?'
       : deleteTarget?.type === 'suite'
-        ? 'Delete Test Suite?'
+        ? 'Excluir suíte de teste?'
         : deleteTarget?.type === 'plan'
-          ? 'Delete Test Plan?'
-          : 'Delete Test Run?';
+          ? 'Excluir plano de teste?'
+          : 'Excluir execução?';
 
   const deleteModalDescription =
     deleteTarget?.type === 'project'
-      ? 'This will remove the project and all related suites, test cases, test plans, and test runs.'
+      ? 'Isto removerá o projeto e todas as suítes, casos de teste, planos e execuções relacionados.'
       : deleteTarget?.type === 'suite'
-        ? 'This will remove the suite and its related test cases from the dashboard.'
+        ? 'Isto removerá a suíte e os casos de teste relacionados do painel.'
         : deleteTarget?.type === 'plan'
-          ? 'This will remove the test plan from planning dashboards and related lists.'
-          : 'This will remove the test run and its execution results from the dashboard.';
+          ? 'Isto removerá o plano de teste dos painéis de planejamento e listas relacionadas.'
+          : 'Isto removerá a execução e seus resultados do painel.';
 
   return (
     <div className="space-y-6">
@@ -1496,7 +1121,7 @@ export function DashboardPage({ onNavigate, onOpenRun }: DashboardPageProps) {
         <DashboardMetricCard
           delta={analytics?.metricDeltas.suites}
           icon={Layers3}
-          label="Total Test Suites"
+          label="Total de Suítes"
           onClick={() => onNavigate('test-suites')}
           periodLabel={analytics?.periodLabel}
           tone="emerald"
@@ -1505,7 +1130,7 @@ export function DashboardPage({ onNavigate, onOpenRun }: DashboardPageProps) {
         <DashboardMetricCard
           delta={analytics?.metricDeltas.cases}
           icon={ListChecks}
-          label="Total Test Cases"
+          label="Total de Casos"
           onClick={() => onNavigate('test-cases')}
           periodLabel={analytics?.periodLabel}
           tone="amber"
@@ -1514,7 +1139,7 @@ export function DashboardPage({ onNavigate, onOpenRun }: DashboardPageProps) {
         <DashboardMetricCard
           delta={analytics?.metricDeltas.plans}
           icon={ClipboardList}
-          label="Total Test Plans"
+          label="Total de Planos"
           onClick={() => onNavigate('test-plans')}
           periodLabel={analytics?.periodLabel}
           tone="violet"
@@ -1524,7 +1149,7 @@ export function DashboardPage({ onNavigate, onOpenRun }: DashboardPageProps) {
           delta={analytics?.metricDeltas.runs}
           
           icon={PlaySquare}
-          label="Total Test Runs"
+          label="Total de Execuções"
           onClick={() => onNavigate('test-runs')}
           periodLabel={analytics?.periodLabel}
           tone="slate"
@@ -1540,14 +1165,14 @@ export function DashboardPage({ onNavigate, onOpenRun }: DashboardPageProps) {
             <button
               className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
               onClick={() => setActiveMetric(null)}
-              title="Close preview"
+              title="Fechar prévia"
               type="button"
             >
               <XCircle className="h-4 w-4" aria-hidden="true" />
             </button>
           </div>
           <ResultPreviewList
-            emptyLabel="No executions found for this status."
+            emptyLabel="Nenhuma execução encontrada para este status."
             onOpenRun={(result) => void handleOpenResultRun(result)}
             openingRunId={openingRunId}
             results={activeMetricResults}
@@ -1571,7 +1196,7 @@ export function DashboardPage({ onNavigate, onOpenRun }: DashboardPageProps) {
           <section className="grid gap-6 lg:grid-cols-2">
             <ChartCard
               icon={BarChart3}
-              subtitle={`${analytics.periodLabel} - volume de test runs`}
+              subtitle={`${analytics.periodLabel} - volume de execuções`}
               title="Execuções por Mês"
             >
               <MonthlyExecutionsChart data={analytics.monthlyExecutions} />
@@ -1607,7 +1232,7 @@ export function DashboardPage({ onNavigate, onOpenRun }: DashboardPageProps) {
       )}
 
       {isLoading ? (
-        <LoadingBlock label="Loading dashboard data" />
+        <LoadingBlock label="Carregando dados do painel" />
       ) : null}
 
 
@@ -1615,7 +1240,7 @@ export function DashboardPage({ onNavigate, onOpenRun }: DashboardPageProps) {
 
         <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold text-slate-950">Execution Summary</h2>
+            <h2 className="text-sm font-semibold text-slate-950">Resumo das Execuções</h2>
             <Activity className="h-4 w-4 text-slate-400" aria-hidden="true" />
           </div>
           <div className="mt-5 grid grid-cols-4 gap-3 text-center">
@@ -1623,25 +1248,25 @@ export function DashboardPage({ onNavigate, onOpenRun }: DashboardPageProps) {
               <p className="text-2xl font-semibold text-slate-950">
                 {data.totals.passed}
               </p>
-              <p className="mt-1 text-xs text-slate-500">Passed</p>
+              <p className="mt-1 text-xs text-slate-500">Aprovados</p>
             </div>
             <div>
               <p className="text-2xl font-semibold text-slate-950">
                 {data.totals.failed}
               </p>
-              <p className="mt-1 text-xs text-slate-500">Failed</p>
+              <p className="mt-1 text-xs text-slate-500">Falhas</p>
             </div>
             <div>
               <p className="text-2xl font-semibold text-slate-950">
                 {data.pendingResults.filter((result) => result.testRun?.status === 'IN_PROGRESS').length}
               </p>
-              <p className="mt-1 text-xs text-slate-500">Active</p>
+              <p className="mt-1 text-xs text-slate-500">Ativos</p>
             </div>
             <div>
               <p className="text-2xl font-semibold text-slate-950">
                 {data.totals.pending}
               </p>
-              <p className="mt-1 text-xs text-slate-500">Pending</p>
+              <p className="mt-1 text-xs text-slate-500">Pendentes</p>
             </div>
           </div>
           <div className="mt-5 space-y-2">

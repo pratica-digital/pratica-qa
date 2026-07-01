@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Filter, Layers3, Plus, RefreshCw, Search } from 'lucide-react';
+import { Filter, Plus, RefreshCw, Search } from 'lucide-react';
 import { canManageTests } from '../auth/permissions';
 import { useAuth } from '../auth/useAuth';
 import { ActionMenu } from '../components/ActionMenu';
@@ -70,10 +70,10 @@ function getSuiteCases(
 
 function getUpdatedAt(suite: ManagedTestSuite) {
   if (!suite.updatedAt) {
-    return 'No updates';
+    return 'Sem atualizações';
   }
 
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat('pt-BR', {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(suite.updatedAt));
@@ -120,9 +120,9 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
       setProjects(nextProjects);
     } catch (fetchError) {
       if (fetchError instanceof ApiError && fetchError.status === 401) {
-        setError('Your session expired. Sign out and sign in again.');
+        setError('Sua sessão expirou. Saia e entre novamente.');
       } else {
-        setError(fetchError instanceof Error ? fetchError.message : 'Unable to load test suites.');
+        setError(fetchError instanceof Error ? fetchError.message : 'Não foi possível carregar as suítes de teste.');
       }
     } finally {
       setIsLoading(false);
@@ -175,7 +175,7 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
 
     const createdSuite = await testSuitesApi.create(token, payload);
     setSuites((current) => [createdSuite, ...current]);
-    setSuccess('Test suite created.');
+    setSuccess('Suíte de teste criada.');
   }
 
   async function handleSaveSuite(
@@ -184,7 +184,7 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
     orderedCaseIds: string[],
   ) {
     if (!token) {
-      throw new Error('Authentication is required.');
+      throw new Error('Autenticação obrigatória.');
     }
 
     const updatedSuite = await testSuitesApi.update(token, suite.id, payload);
@@ -199,7 +199,7 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
     setCaseOrder(nextOrder);
     writeCaseOrder(nextOrder);
     setEditingSuite({ ...suite, ...updatedSuite });
-    setSuccess('Test suite updated.');
+    setSuccess('Suíte de teste atualizada.');
   }
 
   async function handleOpenSuite(suite: ManagedTestSuite) {
@@ -212,7 +212,7 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
       const freshSuite = await testSuitesApi.get(token, suite.id);
       setSelectedSuite(freshSuite);
     } catch (openError) {
-      setError(openError instanceof Error ? openError.message : 'Unable to load test suite.');
+      setError(openError instanceof Error ? openError.message : 'Não foi possível carregar a suíte de teste.');
     }
   }
 
@@ -222,7 +222,7 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
     steps: ReplaceTestStepsPayload,
   ) {
     if (!token) {
-      throw new Error('Authentication is required.');
+      throw new Error('Autenticação obrigatória.');
     }
 
     await testCasesApi.update(token, testCase.id, payload);
@@ -275,10 +275,10 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
       }
 
       setSuitePendingDelete(null);
-      setSuccess('Test suite deleted.');
+      setSuccess('Suíte de teste excluída.');
     } catch (deleteError) {
       setSuitePendingDelete(null);
-      setError(deleteError instanceof Error ? deleteError.message : 'Unable to delete test suite.');
+      setError(deleteError instanceof Error ? deleteError.message : 'Não foi possível excluir a suíte de teste.');
     } finally {
       setIsDeleting(false);
     }
@@ -315,7 +315,7 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
       setSuccess('Test case deleted.');
     } catch (deleteError) {
       setCasePendingDelete(null);
-      setError(deleteError instanceof Error ? deleteError.message : 'Unable to delete test case.');
+      setError(deleteError instanceof Error ? deleteError.message : 'Não foi possível excluir o caso de teste.');
     } finally {
       setIsDeleting(false);
     }
@@ -327,7 +327,7 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
         <div>
           
           <h1 className="mt-1 text-2xl font-semibold tracking-normal text-slate-950">
-            Test Suites
+            Suítes de Teste
           </h1>
           <p className="text-sm font-medium text-slate-500">Conjunto de testes que validam uma funcionalidade específica do sistema</p>
         </div>
@@ -343,12 +343,12 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
           <button
             className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-blue-700 px-3 text-sm font-medium text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
             disabled={!canManageTestAssets}
-            title={isReadOnly ? 'Viewer mode is read-only' : 'Create suite'}
+            title={isReadOnly ? 'Modo visualizador é somente leitura' : 'Criar suíte'}
             type="button"
             onClick={() => setModalOpen(true)}
           >
             <Plus className="h-4 w-4" aria-hidden="true" />
-            Suite
+            Suíte
           </button>
         </div>
       </div>
@@ -359,14 +359,14 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
           <input
             className="w-full border-0 bg-transparent p-0 text-sm text-slate-900 outline-none placeholder:text-slate-400"
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search suites"
+            placeholder="Buscar suítes"
             type="search"
             value={search}
           />
         </label>
         <span className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-600">
           <Filter className="h-4 w-4" aria-hidden="true" />
-          {visibleSuites.length} shown
+          {visibleSuites.length} exibida{visibleSuites.length === 1 ? '' : 's'}
         </span>
       </div>
 
@@ -384,24 +384,24 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
 
       {isLoading ? (
         <div className="rounded-lg border border-slate-200 bg-white p-8 text-center text-sm text-slate-500 shadow-sm">
-          Loading test suites
+          Carregando suítes de teste
         </div>
       ) : visibleSuites.length > 0 ? (
         <>
 
           <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
             <div className="border-b border-slate-200 px-4 py-3">
-              <h2 className="text-sm font-semibold text-slate-950">Suite matrix</h2>
+              <h2 className="text-sm font-semibold text-slate-950">Matriz de suítes</h2>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[820px] text-left text-sm">
                 <thead className="bg-slate-100 text-xs font-medium uppercase text-slate-700">
                   <tr>
-                    <th className="px-4 py-3">Suite</th>
-                    <th className="px-4 py-3">Project</th>
-                    <th className="px-4 py-3">Position</th>
-                    <th className="px-4 py-3">Cases</th>
-                    <th className="px-4 py-3">Updated</th>
+                    <th className="px-4 py-3">Suíte</th>
+                    <th className="px-4 py-3">Projeto</th>
+                    <th className="px-4 py-3">Posição</th>
+                    <th className="px-4 py-3">Casos</th>
+                    <th className="px-4 py-3">Atualizado</th>
                     <th className="px-4 py-3 text-right"></th>
                   </tr>
                 </thead>
@@ -428,18 +428,18 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
                       </td>
                       <td className="px-4 py-3 text-right">
                         <ActionMenu
-                          ariaLabel="Test suite actions"
+                          ariaLabel="Ações da suíte de teste"
                           disabled={!canManageTestAssets}
                           items={[
                             {
-                              label: 'Edit',
+                              label: 'Editar',
                               onSelect: () => setEditingSuite(suite),
-                              title: 'Edit test suite',
+                              title: 'Editar suíte de teste',
                             },
                             {
-                              label: 'Delete',
+                              label: 'Excluir',
                               onSelect: () => requestSuiteDelete(suite),
-                              title: 'Delete test suite',
+                              title: 'Excluir suíte de teste',
                               tone: 'danger',
                             },
                           ]}
@@ -454,7 +454,7 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
         </>
       ) : (
         <div className="rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
-          <h2 className="text-sm font-semibold text-slate-950">No test suites found</h2>
+          <h2 className="text-sm font-semibold text-slate-950">Nenhuma suíte de teste encontrada</h2>
           <p className="mt-1 text-sm text-slate-500">
             Adjust the search or create the first suite.
           </p>
@@ -511,7 +511,7 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
           loading={isDeleting}
           onCancel={() => setSuitePendingDelete(null)}
           onConfirm={() => void handleDeleteSuite()}
-          title="Delete Test Suite?"
+          title="Excluir suíte de teste?"
         />
       ) : null}
 
@@ -521,7 +521,7 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
           loading={isDeleting}
           onCancel={() => setCasePendingDelete(null)}
           onConfirm={() => void handleDeleteCase()}
-          title="Delete Test Case?"
+          title="Excluir caso de teste?"
         />
       ) : null}
     </div>

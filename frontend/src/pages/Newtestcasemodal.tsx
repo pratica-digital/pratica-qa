@@ -124,7 +124,7 @@ function StepRow({ step, index, total, onChange, onRemove }: StepRowProps) {
       <input
         className="h-10 flex-1 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
         onChange={(event) => onChange(index, event.target.value)}
-        placeholder={`Step ${index + 1} description`}
+        placeholder={`Descrição do passo ${index + 1}`}
         value={step.description}
       />
       <button
@@ -132,7 +132,7 @@ function StepRow({ step, index, total, onChange, onRemove }: StepRowProps) {
         disabled={total === 1}
         onClick={() => onRemove(index)}
         tabIndex={-1}
-        title="Remove step"
+        title="Remover passo"
         type="button"
       >
         <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -202,19 +202,19 @@ export function NewTestCaseModal({
     const nextErrors: TestCaseFormErrors = {};
 
     if (!form.title.trim()) {
-      nextErrors.title = 'Title is required';
+      nextErrors.title = 'Título obrigatório';
     }
 
     if (!form.suiteId) {
-      nextErrors.suiteId = !hasSuiteOptions ? 'Create a suite before creating a test case' : 'Select a suite';
+      nextErrors.suiteId = !hasSuiteOptions ? 'Crie uma suíte antes de criar um caso de teste' : 'Selecione uma suíte';
     }
 
     if (!form.expectedResult.trim()) {
-      nextErrors.expectedResult = 'Expected result is required';
+      nextErrors.expectedResult = 'Resultado esperado obrigatório';
     }
 
     if (steps.some((step) => !step.description.trim())) {
-      nextErrors.steps = 'All steps need a description';
+      nextErrors.steps = 'Todos os passos precisam de descrição';
     }
 
     return nextErrors;
@@ -251,15 +251,15 @@ export function NewTestCaseModal({
       setErrors({});
       setActiveTab('basic');
     } catch (createError) {
-      setSubmitError(createError instanceof Error ? createError.message : 'Unable to create test case.');
+      setSubmitError(createError instanceof Error ? createError.message : 'Não foi possível criar o caso de teste.');
     } finally {
       setSubmitting(false);
     }
   }
 
   const tabs: Array<{ id: TabId; label: string }> = [
-    { id: 'basic', label: 'Details' },
-    { id: 'steps', label: `Steps (${steps.length})` },
+    { id: 'basic', label: 'Detalhes' },
+    { id: 'steps', label: `Passos (${steps.length})` },
   ];
 
   return createPortal(
@@ -271,13 +271,13 @@ export function NewTestCaseModal({
             <ListChecks className="h-4 w-4" aria-hidden="true" />
           </span>
           <div className="min-w-0 flex-1">
-            <h2 className="text-sm font-semibold text-slate-950">New test case</h2>
-            <p className="truncate text-xs text-slate-400">Define the scenario and execution steps</p>
+            <h2 className="text-sm font-semibold text-slate-950">Novo caso de teste</h2>
+            <p className="truncate text-xs text-slate-400">Defina o cenário e os passos de execução</p>
           </div>
           <button
             className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
             onClick={onClose}
-            title="Close modal"
+            title="Fechar modal"
             type="button"
           >
             <X className="h-4 w-4" aria-hidden="true" />
@@ -309,10 +309,10 @@ export function NewTestCaseModal({
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
           {activeTab === 'basic' ? (
             <div className="space-y-4">
-              <Field label="Case title" required>
+              <Field label="Título do caso" required>
                 <Input
                   onChange={(event) => setField('title', event.target.value)}
-                  placeholder="User signs in with valid credentials"
+                  placeholder="Usuário entra com credenciais válidas"
                   value={form.title}
                 />
                 {errors.title ? (
@@ -322,13 +322,13 @@ export function NewTestCaseModal({
                 ) : null}
               </Field>
 
-              <Field label="Suite" required>
+              <Field label="Suíte" required>
                 <SelectField
                   onChange={(event) => setField('suiteId', event.target.value)}
                   value={form.suiteId}
                 >
                   <option value="">
-                    {!hasSuiteOptions ? 'No suites available' : 'Select suite...'}
+                    {!hasSuiteOptions ? 'Nenhuma suíte disponível' : 'Selecione a suíte...'}
                   </option>
                   {suiteOptions.map((suite) => (
                     <option key={suite.id} value={suite.id}>
@@ -345,24 +345,24 @@ export function NewTestCaseModal({
 
               {selectedSuite ? (
                 <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-                  Project: <span className="font-medium text-slate-900">{selectedSuite.projectName}</span>
+                  Projeto: <span className="font-medium text-slate-900">{selectedSuite.projectName}</span>
                   <span className="mx-2 text-slate-300">/</span>
-                  Suite: <span className="font-medium text-slate-900">{selectedSuite.name}</span>
+                  Suíte: <span className="font-medium text-slate-900">{selectedSuite.name}</span>
                 </div>
               ) : null}
 
-              <Field label="Description" hint="Context and preconditions for this case">
+              <Field label="Descrição" hint="Contexto e pré-condições deste caso">
                 <Textarea
                   onChange={(event) => setField('description', event.target.value)}
-                  placeholder="Describe setup, preconditions, or useful notes"
+                  placeholder="Descreva setup, pré-condições ou observações úteis"
                   value={form.description}
                 />
               </Field>
 
-              <Field label="Expected result" required hint="What should happen at the end of execution">
+              <Field label="Resultado esperado" required hint="O que deve acontecer ao final da execução">
                 <Textarea
                   onChange={(event) => setField('expectedResult', event.target.value)}
-                  placeholder="The user lands on the dashboard and sees a success state"
+                  placeholder="O usuário chega ao painel e vê um estado de sucesso"
                   value={form.expectedResult}
                 />
                 {errors.expectedResult ? (
@@ -399,7 +399,7 @@ export function NewTestCaseModal({
                 type="button"
               >
                 <Plus className="h-3.5 w-3.5" aria-hidden="true" />
-                Add step
+                Adicionar passo
               </button>
             </div>
           ) : null}
@@ -407,7 +407,7 @@ export function NewTestCaseModal({
 
         <div className="flex shrink-0 items-center justify-between gap-2 border-t border-slate-200 px-5 py-4">
           <p className="text-xs text-slate-400">
-            {submitError || `${steps.length} ${steps.length === 1 ? 'step' : 'steps'} defined`}
+            {submitError || `${steps.length} passo${steps.length === 1 ? '' : 's'} definido${steps.length === 1 ? '' : 's'}`}
           </p>
           <div className="flex gap-2">
             <button
@@ -415,7 +415,7 @@ export function NewTestCaseModal({
               onClick={onClose}
               type="button"
             >
-              Cancel
+              Cancelar
             </button>
             <button
               className="inline-flex h-9 items-center gap-2 rounded-lg bg-blue-700 px-4 text-sm font-medium text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
@@ -426,12 +426,12 @@ export function NewTestCaseModal({
               {submitting ? (
                 <>
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                  Creating
+                  Criando
                 </>
               ) : (
                 <>
                   <ListChecks className="h-4 w-4" aria-hidden="true" />
-                  Create case
+                  Criar caso
                 </>
               )}
             </button>

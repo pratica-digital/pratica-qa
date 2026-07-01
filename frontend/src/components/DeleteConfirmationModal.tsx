@@ -44,7 +44,7 @@ export function DeleteConfirmationModal({
           <div className="min-w-0">
             <h2 className="text-base font-semibold text-slate-950">{title}</h2>
             <p className="mt-1 text-sm font-medium text-red-600">
-              This action cannot be undone
+              Esta ação não pode ser desfeita
             </p>
           </div>
         </div>
@@ -62,7 +62,7 @@ export function DeleteConfirmationModal({
             onClick={onCancel}
             type="button"
           >
-            Cancel
+            Cancelar
           </button>
           <button
             className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 text-sm font-medium text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
@@ -71,7 +71,7 @@ export function DeleteConfirmationModal({
             type="button"
           >
             <Trash2 className="h-4 w-4" aria-hidden="true" />
-            {loading ? 'Deleting' : 'Delete'}
+            {loading ? 'Excluindo' : 'Excluir'}
           </button>
         </div>
       </div>

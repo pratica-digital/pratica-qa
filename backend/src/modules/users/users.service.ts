@@ -41,7 +41,7 @@ export class UsersService {
     this.ensureEmail(dto.email);
 
     const firstAccessToken = this.generateToken();
-    const tokenExpiresAt = this.getExpirationDate('FIRST_ACCESS_TOKEN_EXPIRES_IN_MINUTES', 1440);
+    const tokenExpiresAt = this.getExpirationDate('FIRST_ACCESS_TOKEN_EXPIRES_IN_MINUTES');
     const user = await this.usersRepository.create({
       name: dto.name,
       email: dto.email,
@@ -261,7 +261,7 @@ export class UsersService {
     this.ensureEmail(existingUser.email);
 
     const resetToken = this.generateToken();
-    const tokenExpiresAt = this.getExpirationDate('PASSWORD_RESET_TOKEN_EXPIRES_IN_MINUTES', 30);
+    const tokenExpiresAt = this.getExpirationDate('PASSWORD_RESET_TOKEN_EXPIRES_IN_MINUTES');
     const user = await this.usersRepository.update(id, {
       password: await this.hashPassword(this.generateUnusablePassword()),
       firstAccess: true,
@@ -361,13 +361,13 @@ export class UsersService {
     return randomBytes(48).toString('hex');
   }
 
-  private getExpirationDate(configKey: string, fallbackMinutes: number) {
-    const minutes = this.configService.get<number>(configKey, fallbackMinutes);
+  private getExpirationDate(configKey: string) {
+    const minutes = this.configService.getOrThrow<number>(configKey);
     return new Date(Date.now() + minutes * 60 * 1000);
   }
 
   private buildPasswordSetupLink(email: string, token: string) {
-    const url = new URL(this.configService.get<string>('APP_FRONTEND_URL', 'http://localhost:5173'));
+    const url = new URL(this.configService.getOrThrow<string>('FRONTEND_URL'));
     url.searchParams.set('mode', 'reset');
     url.searchParams.set('email', email);
     url.searchParams.set('token', token);

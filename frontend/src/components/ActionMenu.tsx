@@ -17,7 +17,7 @@ type ActionMenuProps = {
   items: ActionMenuItem[];
 };
 
-export function ActionMenu({ ariaLabel = 'Actions', disabled = false, items }: ActionMenuProps) {
+export function ActionMenu({ ariaLabel = 'Ações', disabled = false, items }: ActionMenuProps) {
   const [open, setOpen] = useState(false);
   const [menuStyle, setMenuStyle] = useState<CSSProperties>({});
   const buttonRef = useRef<HTMLButtonElement>(null);

@@ -16,10 +16,10 @@ type TestSuiteDetailPanelProps = {
 
 function formatUpdatedAt(value?: string) {
   if (!value) {
-    return 'No updates';
+    return 'Sem atualizações';
   }
 
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat('pt-BR', {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
@@ -59,19 +59,19 @@ export function TestSuiteDetailPanel({
             </p>
           </div>
           <ActionMenu
-            ariaLabel="Test suite actions"
+            ariaLabel="Ações da suíte de teste"
             items={[
               {
-                label: 'Edit',
+                label: 'Editar',
                 onSelect: onEdit,
-                title: 'Edit test suite',
+                title: 'Editar suíte de teste',
               },
               ...(onDelete
                 ? [
                     {
-                      label: 'Delete',
+                      label: 'Excluir',
                       onSelect: onDelete,
-                      title: 'Delete test suite',
+                      title: 'Excluir suíte de teste',
                       tone: 'danger' as const,
                     },
                   ]
@@ -81,7 +81,7 @@ export function TestSuiteDetailPanel({
           <button
             className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
             onClick={onClose}
-            title="Close"
+            title="Fechar"
             type="button"
           >
             <X className="h-4 w-4" aria-hidden="true" />
@@ -91,34 +91,34 @@ export function TestSuiteDetailPanel({
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
           <section className="grid gap-3 md:grid-cols-[1fr_12rem_12rem]">
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-              <p className="text-xs font-medium uppercase text-slate-500">Project / Suite</p>
+              <p className="text-xs font-medium uppercase text-slate-500">Projeto / Suíte</p>
               <p className="mt-2 text-sm font-medium text-slate-950">
                 {suite.project?.name ?? suite.projectId}
               </p>
               <p className="mt-1 text-sm text-slate-600">{suite.name}</p>
               <p className="mt-3 text-xs text-slate-500">
-                Updated {formatUpdatedAt(suite.updatedAt)}
+                Atualizado {formatUpdatedAt(suite.updatedAt)}
               </p>
             </div>
             <div className="rounded-lg border border-slate-200 bg-white p-3">
-              <p className="text-xs text-slate-500">Cases</p>
+              <p className="text-xs text-slate-500">Casos</p>
               <p className="mt-1 text-2xl font-semibold text-slate-950">{cases.length}</p>
             </div>
             <div className="rounded-lg border border-slate-200 bg-white p-3">
-              <p className="text-xs text-slate-500">Updated</p>
+              <p className="text-xs text-slate-500">Atualizado</p>
               <p className="mt-1 text-sm font-medium text-slate-950">{formatUpdatedAt(suite.updatedAt)}</p>
             </div>
           </section>
 
           <section className="mt-5">
             <div className="flex items-center justify-between gap-3">
-              <h3 className="text-sm font-semibold text-slate-950">Test cases</h3>
+              <h3 className="text-sm font-semibold text-slate-950">Casos de teste</h3>
             </div>
 
             <div className="mt-3 space-y-2">
               {cases.length === 0 ? (
                 <p className="rounded-lg border border-dashed border-slate-300 px-3 py-4 text-sm text-slate-500">
-                  No cases in this suite.
+                  Nenhum caso nesta suíte.
                 </p>
               ) : null}
 

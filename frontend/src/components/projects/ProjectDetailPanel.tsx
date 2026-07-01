@@ -14,10 +14,10 @@ type ProjectDetailPanelProps = {
 
 function formatUpdatedAt(value?: string) {
   if (!value) {
-    return 'No updates';
+    return 'Sem atualizações';
   }
 
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat('pt-BR', {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
@@ -70,7 +70,7 @@ export function ProjectDetailPanel({ project, onClose, onDelete }: ProjectDetail
         setRuns(nextRuns);
       } catch (loadError) {
         if (mounted) {
-          setError(loadError instanceof Error ? loadError.message : 'Unable to load project details.');
+          setError(loadError instanceof Error ? loadError.message : 'Não foi possível carregar os detalhes do projeto.');
         }
       } finally {
         if (mounted) {
@@ -102,12 +102,12 @@ export function ProjectDetailPanel({ project, onClose, onDelete }: ProjectDetail
           </div>
           {onDelete ? (
             <ActionMenu
-              ariaLabel="Project actions"
+              ariaLabel="Ações do projeto"
               items={[
                 {
-                  label: 'Delete',
+                  label: 'Excluir',
                   onSelect: () => onDelete(projectDetail),
-                  title: 'Delete project',
+                  title: 'Excluir projeto',
                   tone: 'danger',
                 },
               ]}
@@ -116,7 +116,7 @@ export function ProjectDetailPanel({ project, onClose, onDelete }: ProjectDetail
           <button
             className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
             onClick={onClose}
-            title="Close"
+            title="Fechar"
             type="button"
           >
             <X className="h-4 w-4" aria-hidden="true" />
@@ -132,22 +132,22 @@ export function ProjectDetailPanel({ project, onClose, onDelete }: ProjectDetail
 
           <section className="grid gap-3 md:grid-cols-4">
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 md:col-span-2">
-              <p className="text-xs font-medium uppercase text-slate-500">Project info</p>
+              <p className="text-xs font-medium uppercase text-slate-500">Informações do projeto</p>
               <p className="mt-2 text-sm text-slate-700">
-                {projectDetail.description || 'No description'}
+                {projectDetail.description || 'Sem descrição'}
               </p>
               <p className="mt-3 text-xs text-slate-500">
-                Updated {formatUpdatedAt(projectDetail.updatedAt)}
+                Atualizado {formatUpdatedAt(projectDetail.updatedAt)}
               </p>
             </div>
             <div className="rounded-lg border border-slate-200 bg-white p-3">
-              <p className="text-xs text-slate-500">Suites</p>
+              <p className="text-xs text-slate-500">Suítes</p>
               <p className="mt-1 text-2xl font-semibold text-slate-950">
                 {projectDetail._count?.suites ?? suites.length}
               </p>
             </div>
             <div className="rounded-lg border border-slate-200 bg-white p-3">
-              <p className="text-xs text-slate-500">Plans / Runs</p>
+              <p className="text-xs text-slate-500">Planos / Execuções</p>
               <p className="mt-1 text-2xl font-semibold text-slate-950">
                 {projectDetail._count?.testPlans ?? plans.length}/{projectDetail._count?.testRuns ?? runs.length}
               </p>
@@ -156,7 +156,7 @@ export function ProjectDetailPanel({ project, onClose, onDelete }: ProjectDetail
 
           {isLoading ? (
             <p className="mt-5 rounded-lg border border-slate-200 bg-white px-3 py-4 text-center text-sm text-slate-500">
-              Loading project details
+              Carregando detalhes do projeto
             </p>
           ) : null}
 
@@ -164,12 +164,12 @@ export function ProjectDetailPanel({ project, onClose, onDelete }: ProjectDetail
             <section>
               <div className="flex items-center gap-2">
                 <Layers3 className="h-4 w-4 text-slate-400" aria-hidden="true" />
-                <h3 className="text-sm font-semibold text-slate-950">Test suites</h3>
+                <h3 className="text-sm font-semibold text-slate-950">Suítes de teste</h3>
               </div>
               <div className="mt-3 space-y-2">
                 {suites.length === 0 ? (
                   <p className="rounded-lg border border-dashed border-slate-300 px-3 py-4 text-sm text-slate-500">
-                    No suites.
+                    Nenhuma suíte.
                   </p>
                 ) : null}
                 {suites.map((suite) => (
@@ -179,7 +179,7 @@ export function ProjectDetailPanel({ project, onClose, onDelete }: ProjectDetail
                   >
                     <p className="text-sm font-medium text-slate-950">{suite.name}</p>
                     <p className="mt-1 text-xs text-slate-500">
-                      {suite._count?.testCases ?? 0} cases
+                      {suite._count?.testCases ?? 0} caso{(suite._count?.testCases ?? 0) === 1 ? '' : 's'}
                     </p>
                   </article>
                 ))}
@@ -189,12 +189,12 @@ export function ProjectDetailPanel({ project, onClose, onDelete }: ProjectDetail
             <section>
               <div className="flex items-center gap-2">
                 <ClipboardList className="h-4 w-4 text-slate-400" aria-hidden="true" />
-                <h3 className="text-sm font-semibold text-slate-950">Test plans</h3>
+                <h3 className="text-sm font-semibold text-slate-950">Planos de teste</h3>
               </div>
               <div className="mt-3 space-y-2">
                 {plans.length === 0 ? (
                   <p className="rounded-lg border border-dashed border-slate-300 px-3 py-4 text-sm text-slate-500">
-                    No plans.
+                    Nenhum plano.
                   </p>
                 ) : null}
                 {plans.map((plan) => (
@@ -214,12 +214,12 @@ export function ProjectDetailPanel({ project, onClose, onDelete }: ProjectDetail
             <section>
               <div className="flex items-center gap-2">
                 <PlaySquare className="h-4 w-4 text-slate-400" aria-hidden="true" />
-                <h3 className="text-sm font-semibold text-slate-950">Test runs</h3>
+                <h3 className="text-sm font-semibold text-slate-950">Execuções</h3>
               </div>
               <div className="mt-3 space-y-2">
                 {runs.length === 0 ? (
                   <p className="rounded-lg border border-dashed border-slate-300 px-3 py-4 text-sm text-slate-500">
-                    No runs.
+                    Nenhuma execução.
                   </p>
                 ) : null}
                 {runs.map((run) => (

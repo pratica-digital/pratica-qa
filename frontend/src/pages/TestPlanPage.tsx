@@ -13,10 +13,10 @@ type ProjectsPageProps = {
 
 function getUpdatedAt(project: ProjectSummary) {
   if (!project.updatedAt) {
-    return 'No updates';
+    return 'Sem atualizações';
   }
 
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat('pt-BR', {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(project.updatedAt));
@@ -45,9 +45,9 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
       setProjects(nextProjects);
     } catch (fetchError) {
       if (fetchError instanceof ApiError && fetchError.status === 401) {
-        setError('Your session expired. Sign out and sign in again.');
+        setError('Sua sessão expirou. Saia e entre novamente.');
       } else {
-        setError(fetchError instanceof Error ? fetchError.message : 'Unable to load projects.');
+        setError(fetchError instanceof Error ? fetchError.message : 'Não foi possível carregar os projetos.');
       }
     } finally {
       setIsLoading(false);
@@ -96,16 +96,16 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
 
     const createdProject = await projectsApi.create(token, payload);
     setProjects((current) => [createdProject, ...current]);
-    setSuccess('Project created.');
+    setSuccess('Projeto criado.');
   }
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="text-sm font-medium text-slate-500">Portfolio</p>
+          <p className="text-sm font-medium text-slate-500">Portfólio</p>
           <h1 className="mt-1 text-2xl font-semibold tracking-normal text-slate-950">
-            Projects
+            Projetos
           </h1>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -116,17 +116,17 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
             type="button"
           >
             <RefreshCw className="h-4 w-4" aria-hidden="true" />
-            Refresh
+            Atualizar
           </button>
           <button
             className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-blue-700 px-3 text-sm font-medium text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
             disabled={!canManageTestAssets}
             onClick={() => setModalOpen(true)}
-            title={canManageTestAssets ? 'Create project' : 'Requires test management permission'}
+            title={canManageTestAssets ? 'Criar projeto' : 'Requer permissão de gestão de testes'}
             type="button"
           >
             <Plus className="h-4 w-4" aria-hidden="true" />
-            Project
+            Projeto
           </button>
         </div>
       </div>
@@ -137,14 +137,14 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
           <input
             className="w-full border-0 bg-transparent p-0 text-sm text-slate-900 outline-none placeholder:text-slate-400"
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search projects"
+            placeholder="Buscar projetos"
             type="search"
             value={search}
           />
         </label>
         <span className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-600">
           <Filter className="h-4 w-4" aria-hidden="true" />
-          {visibleProjects.length} shown
+          {visibleProjects.length} exibido{visibleProjects.length === 1 ? '' : 's'}
         </span>
       </div>
 
@@ -162,7 +162,7 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
 
       {isLoading ? (
         <div className="rounded-lg border border-slate-200 bg-white p-8 text-center text-sm text-slate-500 shadow-sm">
-          Loading projects
+          Carregando projetos
         </div>
       ) : visibleProjects.length > 0 ? (
         <>
@@ -189,7 +189,7 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
                   <button
                     className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-50"
                     disabled={!canManageTestAssets}
-                    title="Project actions"
+                    title="Ações do projeto"
                     type="button"
                   >
                     <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
@@ -204,19 +204,19 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
                     <p className="font-semibold text-slate-950">
                       {project._count?.suites ?? 0}
                     </p>
-                    <p className="text-xs text-slate-500">Suites</p>
+                    <p className="text-xs text-slate-500">Suítes</p>
                   </div>
                   <div>
                     <p className="font-semibold text-slate-950">
                       {project._count?.testRuns ?? 0}
                     </p>
-                    <p className="text-xs text-slate-500">Runs</p>
+                    <p className="text-xs text-slate-500">Execuções</p>
                   </div>
                   <div>
                     <p className="font-semibold text-slate-950">
                       {project._count?.testPlans ?? 0}
                     </p>
-                    <p className="text-xs text-slate-500">Plans</p>
+                    <p className="text-xs text-slate-500">Planos</p>
                   </div>
                 </div>
               </article>
@@ -225,19 +225,19 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
 
           <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
             <div className="border-b border-slate-200 px-4 py-3">
-              <h2 className="text-sm font-semibold text-slate-950">Project inventory</h2>
+              <h2 className="text-sm font-semibold text-slate-950">Inventário de projetos</h2>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[760px] text-left text-sm">
                 <thead className="bg-slate-100 text-xs font-medium uppercase text-slate-700">
                   <tr>
-                    <th className="px-4 py-3">Project</th>
-                    <th className="px-4 py-3">Key</th>
+                    <th className="px-4 py-3">Projeto</th>
+                    <th className="px-4 py-3">Chave</th>
                     <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">Suites</th>
-                    <th className="px-4 py-3">Runs</th>
-                    <th className="px-4 py-3">Plans</th>
-                    <th className="px-4 py-3">Updated</th>
+                    <th className="px-4 py-3">Suítes</th>
+                    <th className="px-4 py-3">Execuções</th>
+                    <th className="px-4 py-3">Planos</th>
+                    <th className="px-4 py-3">Atualizado</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
@@ -274,9 +274,9 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
         </>
       ) : (
         <div className="rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
-          <h2 className="text-sm font-semibold text-slate-950">No projects found</h2>
+          <h2 className="text-sm font-semibold text-slate-950">Nenhum projeto encontrado</h2>
           <p className="mt-1 text-sm text-slate-500">
-            Create a project before adding suites or test cases.
+            Crie um projeto antes de adicionar suítes ou casos de teste.
           </p>
         </div>
       )}

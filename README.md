@@ -21,6 +21,14 @@ Modern QA Test Management Platform.
 
 ## Setup
 
+Create environment files from the templates before running the apps:
+
+```bash
+cp .env.example .env
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
+```
+
 Backend only:
 
 ```bash
@@ -31,16 +39,31 @@ npm run build
 npm run start:dev
 ```
 
+Frontend only:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
 Docker:
 
 ```bash
 docker compose up --build
 ```
 
+Production migrations:
+
+```bash
+cd backend
+npm run prisma:migrate:deploy
+```
+
 Health check:
 
 ```bash
-GET http://localhost:3000/api/health
+GET ${BACKEND_URL}/api/health
 ```
 
 Prisma:

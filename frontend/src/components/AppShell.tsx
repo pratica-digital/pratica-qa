@@ -1,34 +1,60 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../auth/useAuth';
 import type { PageId } from '../data/workspace';
+import { AiTestGeneratorModulePage } from '../pages/AiTestGeneratorModulePage';
 import { DashboardPage } from '../pages/DashboardPage';
 import { ProfilePage } from '../pages/ProfilePage';
 import { ProjectsPage } from '../pages/ProjectsPage';
 import { TestCasesPage } from '../pages/TestCasesPage';
 import { TestRunExecutionPage } from '../pages/TestRunExecutionPage';
+import { TestRunReportPage } from '../pages/TestRunReportPage';
 import { TestRunsPage } from '../pages/TestRunsPage';
 import { TestSuitesPage } from '../pages/TestSuitesPage';
 import { TestPlansPage } from '../pages/TestPlansPage';
 import { UsersPage } from '../pages/UsersPage';
 import type { TestRun } from '../types/testRun';
 import { Sidebar } from './Sidebar';
+import { SidebarProvider } from './SidebarContext';
 import { TopNav } from './TopNav';
-import { TestRunReportPage } from '../pages/TestRunReportPage';
+import { useSidebar } from './useSidebar';
 
 const createActionLabels: Partial<Record<PageId, string>> = {};
 
 const hideTopNavPageTitle: PageId[] = ['projects', 'test-plans', 'test-suites', 'test-cases', 'test-runs'];
+const aiPages: PageId[] = ['ai-test-generator', 'ai-history', 'ai-settings'];
 
 export function AppShell() {
+  return (
+    <SidebarProvider>
+      <AppShellContent />
+    </SidebarProvider>
+  );
+}
+
+function AppShellContent() {
   const { user } = useAuth();
+  const { collapseSidebar, isCollapsed } = useSidebar();
   const [activePage, setActivePage] = useState<PageId>('dashboard');
   const [selectedTestRun, setSelectedTestRun] = useState<TestRun | null>(null);
   const [reportRunId, setReportRunId] = useState<string | null>(null);
   const [createActionEventId, setCreateActionEventId] = useState(0);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const previousRunStateRef = useRef<{ id: string | null; status: TestRun['status'] | null }>({
+    id: null,
+    status: null,
+  });
 
   const canAccessPage = useCallback(
-    (pageId: PageId) => pageId !== 'users' || user?.role === 'ADMIN',
+    (pageId: PageId) => {
+      if (pageId === 'users') {
+        return user?.role === 'ADMIN';
+      }
+
+      if (aiPages.includes(pageId)) {
+        return user?.role === 'ADMIN' || user?.role === 'QA';
+      }
+
+      return true;
+    },
     [user?.role],
   );
 
@@ -52,6 +78,25 @@ export function AppShell() {
       setReportRunId(null);
     }
   }, []);
+
+  useEffect(() => {
+    const previousRunState = previousRunStateRef.current;
+    const currentRunId = selectedTestRun?.id ?? null;
+    const currentRunStatus = selectedTestRun?.status ?? null;
+
+    if (
+      currentRunId &&
+      currentRunStatus === 'IN_PROGRESS' &&
+      (previousRunState.id !== currentRunId || previousRunState.status !== 'IN_PROGRESS')
+    ) {
+      collapseSidebar();
+    }
+
+    previousRunStateRef.current = {
+      id: currentRunId,
+      status: currentRunStatus,
+    };
+  }, [collapseSidebar, selectedTestRun?.id, selectedTestRun?.status]);
 
   const page = useMemo(() => {
   if (reportRunId) {
@@ -90,6 +135,12 @@ export function AppShell() {
             onOpenRun={handleOpenRun}
           />
         );
+      case 'ai-test-generator':
+        return <AiTestGeneratorModulePage key="ai-test-generator" initialTab="generate" />;
+      case 'ai-history':
+        return <AiTestGeneratorModulePage key="ai-history" initialTab="history" />;
+      case 'ai-settings':
+        return <AiTestGeneratorModulePage key="ai-settings" initialTab="settings" />;
       case 'users':
         return <UsersPage />;
       case 'profile':
@@ -106,11 +157,13 @@ export function AppShell() {
     <div className="min-h-screen bg-slate-50 text-slate-950">
       <Sidebar
         activePage={effectiveActivePage}
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
         onNavigate={handleNavigate}
       />
-      <div className="lg:pl-72">
+      <div
+        className={`transition-[padding] duration-200 ease-in-out ${
+          isCollapsed ? 'lg:pl-20' : 'lg:pl-72'
+        }`}
+      >
         <TopNav
           activePage={effectiveActivePage}
           createActionLabel={createActionLabel}
@@ -122,7 +175,6 @@ export function AppShell() {
           }
           onNavigate={handleNavigate}
           onOpenRun={handleOpenRun}
-          onOpenSidebar={() => setIsSidebarOpen(true)}
         />
         <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">{page}</main>
       </div>

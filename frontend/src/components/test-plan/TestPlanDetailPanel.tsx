@@ -13,10 +13,10 @@ type TestPlanDetailPanelProps = {
 
 function formatUpdatedAt(value?: string) {
   if (!value) {
-    return 'No updates';
+    return 'Sem atualizações';
   }
 
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat('pt-BR', {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
@@ -47,23 +47,23 @@ export function TestPlanDetailPanel({ testPlan, onClose, onDelete, onEdit }: Tes
               {testPlan.name}
             </h2>
             <p className="truncate text-xs text-slate-500">
-              v{testPlan.version} - {testPlan.project?.name ?? 'Project'}
+              v{testPlan.version} - {testPlan.project?.name ?? 'Projeto'}
             </p>
           </div>
           <ActionMenu
-            ariaLabel="Test plan actions"
+            ariaLabel="Ações do plano de teste"
             items={[
               {
-                label: 'Edit',
+                label: 'Editar',
                 onSelect: onEdit,
-                title: 'Edit test plan',
+                title: 'Editar plano de teste',
               },
               ...(onDelete
                 ? [
                     {
-                      label: 'Delete',
+                      label: 'Excluir',
                       onSelect: onDelete,
-                      title: 'Delete test plan',
+                      title: 'Excluir plano de teste',
                       tone: 'danger' as const,
                     },
                   ]
@@ -73,7 +73,7 @@ export function TestPlanDetailPanel({ testPlan, onClose, onDelete, onEdit }: Tes
           <button
             className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
             onClick={onClose}
-            title="Close"
+            title="Fechar"
             type="button"
           >
             <X className="h-4 w-4" aria-hidden="true" />
@@ -83,16 +83,16 @@ export function TestPlanDetailPanel({ testPlan, onClose, onDelete, onEdit }: Tes
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
           <section className="grid gap-3 md:grid-cols-[1fr_12rem]">
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-              <p className="text-xs font-medium uppercase text-slate-500">Plan info</p>
+              <p className="text-xs font-medium uppercase text-slate-500">Informações do plano</p>
               <p className="mt-2 text-sm text-slate-700">
-                {testPlan.description || 'No description'}
+                {testPlan.description || 'Sem descrição'}
               </p>
               <p className="mt-3 text-xs text-slate-500">
-                Updated {formatUpdatedAt(testPlan.updatedAt)}
+                Atualizado {formatUpdatedAt(testPlan.updatedAt)}
               </p>
             </div>
             <div className="rounded-lg border border-slate-200 bg-white p-3">
-              <p className="text-xs text-slate-500">Sections</p>
+              <p className="text-xs text-slate-500">Seções</p>
               <p className="mt-1 text-2xl font-semibold text-slate-950">
                 {sections.length}
               </p>
@@ -100,11 +100,11 @@ export function TestPlanDetailPanel({ testPlan, onClose, onDelete, onEdit }: Tes
           </section>
 
           <section className="mt-5">
-            <h3 className="text-sm font-semibold text-slate-950">Sections</h3>
+            <h3 className="text-sm font-semibold text-slate-950">Seções</h3>
             <div className="mt-3 space-y-3">
               {sections.length === 0 ? (
                 <p className="rounded-lg border border-dashed border-slate-300 px-3 py-4 text-sm text-slate-500">
-                  No sections defined.
+                  Nenhuma seção definida.
                 </p>
               ) : null}
 

@@ -168,6 +168,10 @@ model TestResult {
   status            TestResultStatus       @default(PENDING)
   comment           String                 @default("")
   legacyAttachments String[]               @default([]) @map("attachments")
+  shortcutStoryId    String?
+  shortcutStoryUrl   String?
+  shortcutStoryName   String?
+  shortcutCreatedAt   DateTime?
   executedAt        DateTime?
   createdAt         DateTime               @default(now())
   updatedAt         DateTime               @updatedAt
@@ -182,6 +186,7 @@ model TestResult {
   @@index([testCaseId])
   @@index([status])
   @@index([lastModifiedById])
+  @@index([shortcutStoryId])
   @@map("test_results")
 }
 
@@ -315,6 +320,52 @@ model Requirement {
   @@unique([projectId, referenceKey])
   @@index([projectId])
   @@map("requirements")
+}
+
+model AiGeneration {
+  id              String   @id @default(uuid()) @db.Uuid
+  releaseTitle    String   @default("")
+  fileName        String   @default("")
+  releaseHash     String
+  releaseText     String   @db.Text
+  analysis        Json     @default("{}")
+  testCases       Json     @default("[]")
+  regressionSuite Json     @default("[]")
+  coverage        Json     @default("{}")
+  provider        String
+  model           String
+  status          String   @default("COMPLETED")
+  durationMs      Int?
+  casesCreated    Int      @default(0)
+  createdById     String?  @db.Uuid
+  errorMessage    String   @default("")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([releaseHash])
+  @@index([provider, model])
+  @@index([status])
+  @@index([createdAt])
+  @@map("ai_generations")
+}
+
+model AiConfiguration {
+  id             String   @id @default("default")
+  provider       String
+  model          String
+  endpoint       String   @default("")
+  temperature    Float
+  maxTokens      Int
+  timeoutSeconds Int
+  retries        Int
+  streaming      Boolean  @default(false)
+  promptBase     String   @db.Text
+  promptUser     String   @db.Text
+  updatedById    String?  @db.Uuid
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("ai_configurations")
 }
 
 enum ProjectStatus {

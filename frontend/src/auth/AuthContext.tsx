@@ -91,7 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const changePassword = useCallback(
     async (currentPassword: string, newPassword: string) => {
       if (!token) {
-        throw new Error('Session expired');
+        throw new Error('Sessão expirada');
       }
 
       const updatedUser = await authApi.changePassword(token, currentPassword, newPassword);
@@ -103,7 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const updateProfile = useCallback(
     async (payload: { name: string; email: string }) => {
       if (!token) {
-        throw new Error('Session expired');
+        throw new Error('Sessão expirada');
       }
 
       const updatedUser = await usersApi.updateMe(token, payload);

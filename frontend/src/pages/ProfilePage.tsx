@@ -25,9 +25,9 @@ export function ProfilePage() {
 
     try {
       await updateProfile({ name, email });
-      setProfileMessage('Profile saved.');
+      setProfileMessage('Perfil salvo.');
     } catch (profileError) {
-      setError(profileError instanceof Error ? profileError.message : 'Unable to save profile');
+      setError(profileError instanceof Error ? profileError.message : 'Não foi possível salvar o perfil.');
     } finally {
       setIsSavingProfile(false);
     }
@@ -46,7 +46,7 @@ export function ProfilePage() {
     }
 
     if (newPassword !== confirmPassword) {
-      setError('Passwords do not match.');
+      setError('As senhas não coincidem.');
       return;
     }
 
@@ -57,9 +57,9 @@ export function ProfilePage() {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-      setPasswordMessage('Password changed.');
+      setPasswordMessage('Senha alterada.');
     } catch (passwordError) {
-      setError(passwordError instanceof Error ? passwordError.message : 'Unable to change password');
+      setError(passwordError instanceof Error ? passwordError.message : 'Não foi possível alterar a senha.');
     } finally {
       setIsSavingPassword(false);
     }
@@ -69,8 +69,8 @@ export function ProfilePage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm font-medium uppercase text-blue-800">Account</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-normal text-slate-950">Profile</h1>
+          <p className="text-sm font-medium uppercase text-blue-800">Conta</p>
+          <h1 className="mt-1 text-2xl font-semibold tracking-normal text-slate-950">Perfil</h1>
         </div>
         <div className="flex flex-wrap gap-2">
           {user?.role ? <UserRoleBadge role={user.role} /> : null}
@@ -93,12 +93,12 @@ export function ProfilePage() {
             <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
               <UserRound className="h-5 w-5" aria-hidden="true" />
             </span>
-            <h2 className="text-base font-semibold text-slate-950">Personal data</h2>
+            <h2 className="text-base font-semibold text-slate-950">Dados pessoais</h2>
           </div>
 
           <div className="mt-5 space-y-4">
             <label className="block text-sm font-medium text-slate-700">
-              Name
+              Nome
               <input
                 className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                 onChange={(event) => setName(event.target.value)}
@@ -108,7 +108,7 @@ export function ProfilePage() {
             </label>
 
             <label className="block text-sm font-medium text-slate-700">
-              Email
+              E-mail
               <span className="mt-1 flex h-10 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500">
                 <Mail className="h-4 w-4 text-slate-400" aria-hidden="true" />
                 <input
@@ -134,7 +134,7 @@ export function ProfilePage() {
             type="submit"
           >
             <Save className="h-4 w-4" aria-hidden="true" />
-            {isSavingProfile ? 'Saving' : 'Save'}
+            {isSavingProfile ? 'Salvando' : 'Salvar'}
           </button>
         </form>
 
@@ -146,12 +146,12 @@ export function ProfilePage() {
             <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
               <KeyRound className="h-5 w-5" aria-hidden="true" />
             </span>
-            <h2 className="text-base font-semibold text-slate-950">Password</h2>
+            <h2 className="text-base font-semibold text-slate-950">Senha</h2>
           </div>
 
           <div className="mt-5 space-y-4">
             <label className="block text-sm font-medium text-slate-700">
-              Current password
+              Senha atual
               <input
                 autoComplete="current-password"
                 className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
@@ -163,7 +163,7 @@ export function ProfilePage() {
             </label>
 
             <label className="block text-sm font-medium text-slate-700">
-              New password
+              Nova senha
               <input
                 autoComplete="new-password"
                 className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
@@ -176,7 +176,7 @@ export function ProfilePage() {
             </label>
 
             <label className="block text-sm font-medium text-slate-700">
-              Confirm password
+              Confirmar senha
               <input
                 autoComplete="new-password"
                 className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
@@ -201,7 +201,7 @@ export function ProfilePage() {
             type="submit"
           >
             <KeyRound className="h-4 w-4" aria-hidden="true" />
-            {isSavingPassword ? 'Saving' : 'Change password'}
+            {isSavingPassword ? 'Salvando' : 'Alterar senha'}
           </button>
         </form>
       </div>

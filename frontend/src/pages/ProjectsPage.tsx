@@ -32,6 +32,9 @@ type ProjectsPageProps = {
   createActionEventId?: number;
 };
 
+type ProjectStatusFilter = 'ALL' | ProjectStatus;
+type ProjectCategoryFilter = 'ALL' | ProjectCategory;
+
 type ProjectForm = {
   name: string;
   description: string;
@@ -55,10 +58,10 @@ const maxImageSize = 5 * 1024 * 1024;
 
 function getUpdatedAt(project: ProjectSummary) {
   if (!project.updatedAt) {
-    return 'No updates';
+    return 'Sem atualizações';
   }
 
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat('pt-BR', {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(project.updatedAt));
@@ -165,19 +168,19 @@ function ProjectFormModal({
     const nextErrors: ProjectFormErrors = {};
 
     if (!form.name.trim()) {
-      nextErrors.name = 'Name is required';
+      nextErrors.name = 'Nome obrigatório';
     }
 
     if (!form.category) {
-      nextErrors.category = 'Category is required';
+      nextErrors.category = 'Categoria obrigatória';
     }
 
     if (form.imageFile && !acceptedImageTypes.includes(form.imageFile.type)) {
-      nextErrors.imageFile = 'Use JPG, PNG, WEBP, or GIF';
+      nextErrors.imageFile = 'Formatos aceitos: JPG, PNG, WEBP ou GIF';
     }
 
     if (form.imageFile && form.imageFile.size > maxImageSize) {
-      nextErrors.imageFile = 'Image must be 5 MB or smaller';
+      nextErrors.imageFile = 'A imagem deve ter no máximo 5 MB';
     }
 
     return nextErrors;
@@ -242,7 +245,7 @@ function ProjectFormModal({
 
       onClose();
     } catch (projectError) {
-      setSubmitError(projectError instanceof Error ? projectError.message : 'Unable to save project.');
+      setSubmitError(projectError instanceof Error ? projectError.message : 'Não foi possível salvar o projeto.');
     } finally {
       setSubmitting(false);
     }
@@ -258,16 +261,16 @@ function ProjectFormModal({
             </span>
             <div className="min-w-0 flex-1">
               <h2 className="text-sm font-semibold text-slate-950">
-                {isEditing ? 'Edit project' : 'New project'}
+                {isEditing ? 'Editar projeto' : 'Novo projeto'}
               </h2>
               <p className="truncate text-xs text-slate-400">
-                {isEditing ? 'Update project details and cover' : 'Create the QA workspace container'}
+                {isEditing ? 'Atualize os detalhes e a capa do projeto' : 'Crie o espaço de trabalho de QA'}
               </p>
             </div>
             <button
               className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
               onClick={onClose}
-              title="Close modal"
+              title="Fechar modal"
               type="button"
             >
               <X className="h-4 w-4" aria-hidden="true" />
@@ -275,7 +278,7 @@ function ProjectFormModal({
           </div>
 
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-5">
-            <Field label="Project cover" hint="JPG, PNG, WEBP, or GIF up to 5 MB">
+            <Field label="Capa do projeto" hint="JPG, PNG, WEBP ou GIF até 5 MB">
               <div className="overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
                 {previewUrl ? (
                   <img alt="" className="w-full max-h-72 object-contain bg-slate-100" src={previewUrl} />
@@ -299,7 +302,7 @@ function ProjectFormModal({
                   type="button"
                 >
                   <Upload className="h-4 w-4" aria-hidden="true" />
-                  Upload image
+                  Enviar imagem
                 </button>
                 {previewUrl ? (
                   <button
@@ -308,7 +311,7 @@ function ProjectFormModal({
                     type="button"
                   >
                     <Trash2 className="h-4 w-4" aria-hidden="true" />
-                    Remove image
+                    Remover imagem
                   </button>
                 ) : null}
               </div>
@@ -319,11 +322,11 @@ function ProjectFormModal({
               ) : null}
             </Field>
 
-            <Field label="Project name" required>
+            <Field label="Nome do projeto" required>
               <input
                 className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                 onChange={(event) => setField('name', event.target.value)}
-                placeholder="Customer Web App"
+                placeholder="App Web do Cliente"
                 value={form.name}
               />
               {errors.name ? (
@@ -333,23 +336,23 @@ function ProjectFormModal({
               ) : null}
             </Field>
 
-            <Field label="Description" hint="Optional scope or product context">
+            <Field label="Descrição" hint="Escopo ou contexto do produto, opcional">
               <textarea
                 className="w-full resize-none rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                 onChange={(event) => setField('description', event.target.value)}
-                placeholder="Primary QA project for the customer web experience"
+                placeholder="Projeto principal de QA para a experiência web do cliente"
                 rows={3}
                 value={form.description}
               />
             </Field>
 
-            <Field label="Category" required>
+            <Field label="Categoria" required>
               <select
                 className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                 onChange={(event) => setField('category', event.target.value as ProjectCategory)}
                 value={form.category}
               >
-                <option value="">Select a category</option>
+                <option value="">Selecione uma categoria</option>
                 <option value="BAKERY_OVENS">Fornos de Panificação</option>
                 <option value="COMBI_OVENS">Fornos Combinados</option>
                 <option value="SPEED_OVENS">Speed Ovens</option>
@@ -368,8 +371,8 @@ function ProjectFormModal({
                   onChange={(event) => setField('status', event.target.value as ProjectStatus)}
                   value={form.status}
                 >
-                  <option value="ACTIVE">Active</option>
-                  <option value="ARCHIVED">Archived</option>
+                  <option value="ACTIVE">Ativo</option>
+                  <option value="ARCHIVED">Arquivado</option>
                 </select>
               </Field>
             ) : null}
@@ -384,7 +387,7 @@ function ProjectFormModal({
                 onClick={onClose}
                 type="button"
               >
-                Cancel
+                Cancelar
               </button>
               <button
                 className="inline-flex h-9 items-center gap-2 rounded-lg bg-blue-700 px-4 text-sm font-medium text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
@@ -393,7 +396,7 @@ function ProjectFormModal({
                 type="button"
               >
                 <FolderOpen className="h-4 w-4" aria-hidden="true" />
-                {submitting ? 'Saving' : isEditing ? 'Save changes' : 'Create project'}
+                {submitting ? 'Salvando' : isEditing ? 'Salvar alterações' : 'Criar projeto'}
               </button>
             </div>
           </div>
@@ -437,22 +440,22 @@ function ProjectDetailsPanel({
             <div className="min-w-0 flex-1">
               <h2 className="truncate text-sm font-semibold text-slate-950">{project.name}</h2>
               <p className="truncate text-xs text-slate-500">
-                Updated {getUpdatedAt(project)}
+                Atualizado {getUpdatedAt(project)}
               </p>
             </div>
             {canManage ? (
               <ActionMenu
-                ariaLabel="Project actions"
+                ariaLabel="Ações do projeto"
                 items={[
                   {
-                    label: 'Edit',
+                    label: 'Editar',
                     onSelect: () => onEdit(project),
-                    title: 'Edit project',
+                    title: 'Editar projeto',
                   },
                   {
-                    label: 'Delete',
+                    label: 'Excluir',
                     onSelect: () => onDelete(project),
-                    title: 'Delete project',
+                    title: 'Excluir projeto',
                     tone: 'danger',
                   },
                 ]}
@@ -461,7 +464,7 @@ function ProjectDetailsPanel({
             <button
               className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
               onClick={onClose}
-              title="Close"
+              title="Fechar"
               type="button"
             >
               <X className="h-4 w-4" aria-hidden="true" />
@@ -473,22 +476,22 @@ function ProjectDetailsPanel({
 
             <section className="mt-5 grid gap-3 md:grid-cols-4">
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 md:col-span-2">
-                <p className="text-xs font-medium uppercase text-slate-500">Project info</p>
+                <p className="text-xs font-medium uppercase text-slate-500">Informações do projeto</p>
                 <p className="mt-2 text-sm text-slate-700">
-                  {project.description || 'No description'}
+                  {project.description || 'Sem descrição'}
                 </p>
                 <p className="mt-3 text-xs text-slate-500">
                   {project.status ? <ProjectStatusBadge status={project.status} /> : null}
                 </p>
               </div>
               <div className="rounded-lg border border-slate-200 bg-white p-3">
-                <p className="text-xs text-slate-500">Suites</p>
+                <p className="text-xs text-slate-500">Suítes</p>
                 <p className="mt-1 text-2xl font-semibold text-slate-950">
                   {project._count?.suites ?? 0}
                 </p>
               </div>
               <div className="rounded-lg border border-slate-200 bg-white p-3">
-                <p className="text-xs text-slate-500">Plans / Runs</p>
+                <p className="text-xs text-slate-500">Planos / Execuções</p>
                 <p className="mt-1 text-2xl font-semibold text-slate-950">
                   {project._count?.testPlans ?? 0}/{project._count?.testRuns ?? 0}
                 </p>
@@ -507,6 +510,9 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
   const canManageTestAssets = canManageTests(user);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [search, setSearch] = useState('');
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<ProjectCategoryFilter>('ALL');
+  const [statusFilter, setStatusFilter] = useState<ProjectStatusFilter>('ALL');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<ProjectSummary | null>(null);
   const [selectedProject, setSelectedProject] = useState<ProjectSummary | null>(null);
@@ -529,9 +535,9 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
       setProjects(nextProjects);
     } catch (fetchError) {
       if (fetchError instanceof ApiError && fetchError.status === 401) {
-        setError('Your session expired. Sign out and sign in again.');
+        setError('Sua sessão expirou. Saia e entre novamente.');
       } else {
-        setError(fetchError instanceof Error ? fetchError.message : 'Unable to load projects.');
+        setError(fetchError instanceof Error ? fetchError.message : 'Não foi possível carregar os projetos.');
       }
     } finally {
       setIsLoading(false);
@@ -559,19 +565,40 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
   const visibleProjects = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
 
-    if (!normalizedSearch) {
-      return projects;
-    }
-
     return projects.filter((project) => {
-      const searchable = [project.name, project.description, project.status]
+      const category = project.category ?? 'BAKERY_OVENS';
+      const status = project.status ?? 'ACTIVE';
+
+      if (categoryFilter !== 'ALL' && category !== categoryFilter) {
+        return false;
+      }
+
+      if (statusFilter !== 'ALL' && status !== statusFilter) {
+        return false;
+      }
+
+      if (!normalizedSearch) {
+        return true;
+      }
+
+      const searchable = [
+        project.name,
+        project.description,
+        status,
+        PROJECT_CATEGORY_MAP[category],
+      ]
         .filter(Boolean)
         .join(' ')
         .toLowerCase();
 
       return searchable.includes(normalizedSearch);
     });
-  }, [projects, search]);
+  }, [categoryFilter, projects, search, statusFilter]);
+
+  const activeFilterCount = useMemo(
+    () => Number(categoryFilter !== 'ALL') + Number(statusFilter !== 'ALL'),
+    [categoryFilter, statusFilter],
+  );
 
   const projectsByCategory = useMemo(() => {
     const grouped: Record<ProjectCategory, ProjectSummary[]> = {
@@ -595,7 +622,7 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
 
     const createdProject = await projectsApi.create(token, payload);
     setProjects((current) => [createdProject, ...current]);
-    setSuccess('Project created.');
+    setSuccess('Projeto criado.');
   }
 
   async function handleUpdate(project: ProjectSummary, payload: UpdateProjectPayload) {
@@ -613,7 +640,7 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
       setSelectedProject(updatedProject);
     }
 
-    setSuccess('Project updated.');
+    setSuccess('Projeto atualizado.');
   }
 
   function requestProjectEdit(project: ProjectSummary) {
@@ -646,10 +673,10 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
       }
 
       setProjectPendingDelete(null);
-      setSuccess('Project deleted.');
+      setSuccess('Projeto excluído.');
     } catch (deleteError) {
       setProjectPendingDelete(null);
-      setError(deleteError instanceof Error ? deleteError.message : 'Unable to delete project.');
+      setError(deleteError instanceof Error ? deleteError.message : 'Não foi possível excluir o projeto.');
     } finally {
       setIsDeleting(false);
     }
@@ -660,7 +687,7 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="mt-1 text-2xl font-semibold tracking-normal text-slate-950">
-            Projetos
+            Equipamentos
           </h1>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -677,11 +704,11 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
             className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-blue-700 px-3 text-sm font-medium text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
             disabled={!canManageTestAssets}
             onClick={() => setModalOpen(true)}
-            title={canManageTestAssets ? 'Create project' : 'Requires test management permission'}
+            title={canManageTestAssets ? 'Criar projeto' : 'Requer permissão de gestão de testes'}
             type="button"
           >
             <Plus className="h-4 w-4" aria-hidden="true" />
-            Project
+            Equipamentos
           </button>
         </div>
       </div>
@@ -692,15 +719,12 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
           <input
             className="w-full border-0 bg-transparent p-0 text-sm text-slate-900 outline-none placeholder:text-slate-400"
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search projects"
+            placeholder="Buscar"
             type="search"
             value={search}
           />
         </label>
-        <span className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-600">
-          <Filter className="h-4 w-4" aria-hidden="true" />
-          {visibleProjects.length} shown
-        </span>
+        
       </div>
 
       {error ? (
@@ -717,7 +741,7 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
 
       {isLoading ? (
         <div className="rounded-lg border border-slate-200 bg-white p-8 text-center text-sm text-slate-500 shadow-sm">
-          Loading projects
+          Carregando projetos
         </div>
       ) : visibleProjects.length > 0 ? (
         <>
@@ -735,7 +759,7 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
                     {PROJECT_CATEGORY_MAP[category]}
                   </h2>
                   <span className="inline-flex h-8 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-600">
-                    {projectsInCategory.length} {projectsInCategory.length === 1 ? 'project' : 'projects'}
+                    {projectsInCategory.length} {projectsInCategory.length === 1 ? 'Equipamento' : 'Equipamentos'}
                   </span>
                 </div>
 
@@ -760,18 +784,18 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
                         </div>
                         <div className="flex shrink-0 items-center gap-1">
                           <ActionMenu
-                            ariaLabel="Project actions"
+                            ariaLabel="Ações do projeto"
                             disabled={!canManageTestAssets}
                             items={[
                               {
-                                label: 'Edit',
+                                label: 'Editar',
                                 onSelect: () => requestProjectEdit(project),
-                                title: 'Edit project',
+                                title: 'Editar projeto',
                               },
                               {
-                                label: 'Delete',
+                                label: 'Excluir',
                                 onSelect: () => requestProjectDelete(project),
-                                title: 'Delete project',
+                                title: 'Excluir projeto',
                                 tone: 'danger',
                               },
                             ]}
@@ -785,19 +809,19 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
                           <p className="font-semibold text-slate-950">
                             {project._count?.suites ?? 0}
                           </p>
-                          <p className="text-xs text-slate-500">Suites</p>
+                          <p className="text-xs text-slate-500">Suítes</p>
                         </div>
                         <div>
                           <p className="font-semibold text-slate-950">
                             {project._count?.testRuns ?? 0}
                           </p>
-                          <p className="text-xs text-slate-500">Runs</p>
+                          <p className="text-xs text-slate-500">Execuções</p>
                         </div>
                         <div>
                           <p className="font-semibold text-slate-950">
                             {project._count?.testPlans ?? 0}
                           </p>
-                          <p className="text-xs text-slate-500">Plans</p>
+                          <p className="text-xs text-slate-500">Planos</p>
                         </div>
                       </div>
                     </article>
@@ -809,19 +833,19 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
 
           <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
             <div className="border-b border-slate-200 px-4 py-3">
-              <h2 className="text-sm font-semibold text-slate-950">Project inventory</h2>
+              <h2 className="text-sm font-semibold text-slate-950">Inventário de projetos</h2>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[760px] text-left text-sm">
                 <thead className="bg-slate-100 text-xs font-medium uppercase text-slate-700">
                   <tr>
-                    <th className="px-4 py-3">Project</th>
-                    <th className="px-4 py-3">Category</th>
+                    <th className="px-4 py-3">Equipamento</th>
+                    <th className="px-4 py-3">Categoria</th>
                     <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">Suites</th>
-                    <th className="px-4 py-3">Runs</th>
-                    <th className="px-4 py-3">Plans</th>
-                    <th className="px-4 py-3">Updated</th>
+                    <th className="px-4 py-3">Suítes</th>
+                    <th className="px-4 py-3">Execuções</th>
+                    <th className="px-4 py-3">Planos</th>
+                    <th className="px-4 py-3">Atualizado</th>
                     <th className="px-4 py-3 text-right"></th>
                   </tr>
                 </thead>
@@ -858,18 +882,18 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
                       </td>
                       <td className="px-4 py-3 text-right">
                         <ActionMenu
-                          ariaLabel="Project actions"
+                          ariaLabel="Ações do projeto"
                           disabled={!canManageTestAssets}
                           items={[
                             {
-                              label: 'Edit',
+                              label: 'Editar',
                               onSelect: () => requestProjectEdit(project),
-                              title: 'Edit project',
+                              title: 'Editar projeto',
                             },
                             {
-                              label: 'Delete',
+                              label: 'Excluir',
                               onSelect: () => requestProjectDelete(project),
-                              title: 'Delete project',
+                              title: 'Excluir projeto',
                               tone: 'danger',
                             },
                           ]}
@@ -884,9 +908,9 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
         </>
       ) : (
         <div className="rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
-          <h2 className="text-sm font-semibold text-slate-950">No projects found</h2>
+          <h2 className="text-sm font-semibold text-slate-950">Nenhum projeto encontrado</h2>
           <p className="mt-1 text-sm text-slate-500">
-            Create a project before adding suites or test cases.
+            Crie um projeto antes de adicionar suítes ou casos de teste.
           </p>
         </div>
       )}
@@ -926,11 +950,11 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
 
       {projectPendingDelete ? (
         <DeleteConfirmationModal
-          description="This will remove the project and all related suites, test cases, test plans, and test runs."
+          description="Isso removerá o projeto e todas as suítes, casos de teste, planos de teste e execuções relacionados."
           loading={isDeleting}
           onCancel={() => setProjectPendingDelete(null)}
           onConfirm={() => void handleDeleteProject()}
-          title="Delete Project?"
+          title="Excluir projeto?"
         />
       ) : null}
     </div>

@@ -18,9 +18,10 @@ import {
   XCircle,
 } from 'lucide-react';
 import { useCallback, useState } from 'react';
-import type { TestResult, TestResultAttachment, TestRun } from '../types/testRun';
+import type { TestResult, TestResultAttachment, TestResultStatus, TestRun } from '../types/testRun';
 import { useTestRunReport } from "../hooks/useTestRunReport";
 import { resolveApiAssetUrl } from '../lib/api';
+import { testResultStatusLabel, testRunStatusLabel } from '../lib/labels';
 import praticaLogoUrl from '../assets/pratica-logo.png';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -66,7 +67,7 @@ function getAttachmentName(attachment: TestResultAttachment) {
   return (
     attachment.originalName ||
     attachment.fileName ||
-    decodeURIComponent(getAttachmentUrl(attachment).split('/').pop() ?? 'Evidencia')
+    decodeURIComponent(getAttachmentUrl(attachment).split('/').pop() ?? 'Evidência')
   );
 }
 
@@ -94,8 +95,45 @@ function attachmentMeta(attachment: TestResultAttachment) {
   return parts.join(' - ');
 }
 
-function statusLabel(status?: string | null) {
-  return status === 'PENDING' ? 'Not Run' : status ?? 'Not Run';
+function statusLabel(status?: TestResultStatus | null) {
+  return testResultStatusLabel(status);
+}
+
+function isExternalHttpUrl(value?: string | null) {
+  return Boolean(value && /^https?:\/\//i.test(value.trim()));
+}
+
+function getShortcutStoryLabel(result: TestResult) {
+  return result.shortcutStoryName?.trim() || `[FAIL] ${result.testCase.title}`;
+}
+
+function ShortcutStorySection({ result }: { result: TestResult }) {
+  if (result.status !== 'FAILED') {
+    return null;
+  }
+
+  const storyUrl = result.shortcutStoryUrl?.trim();
+
+  return (
+    <div className="rounded-lg border border-red-100 bg-red-50 px-3 py-2">
+      <p className="text-xs font-semibold uppercase tracking-wide text-red-700">
+        Shortcut Story
+      </p>
+      {isExternalHttpUrl(storyUrl) ? (
+        <a
+          className="mt-1 inline-flex items-center gap-1.5 text-sm font-medium text-red-800 underline-offset-2 hover:underline"
+          href={storyUrl}
+          rel="noopener noreferrer"
+          target="_blank"
+        >
+          {getShortcutStoryLabel(result)}
+          <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+        </a>
+      ) : (
+        <p className="mt-1 text-sm text-slate-600">Story do Shortcut nao disponivel.</p>
+      )}
+    </div>
+  );
 }
 
 function EvidenceAttachmentCard({ attachment }: { attachment: TestResultAttachment }) {
@@ -154,7 +192,7 @@ function EvidenceAttachmentCard({ attachment }: { attachment: TestResultAttachme
             href={assetUrl}
             rel="noreferrer"
             target="_blank"
-            title="Abrir evidencia"
+            title="Abrir evidência"
           >
             <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
           </a>
@@ -162,7 +200,7 @@ function EvidenceAttachmentCard({ attachment }: { attachment: TestResultAttachme
             className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
             download={name}
             href={assetUrl}
-            title="Baixar evidencia"
+            title="Baixar evidência"
           >
             <Download className="h-3.5 w-3.5" aria-hidden="true" />
           </a>
@@ -233,7 +271,7 @@ const STATUS_CONFIG: Record<
   }
 > = {
   PASSED: {
-    label: 'Passed',
+    label: 'Aprovado',
     icon: CheckCircle2,
     cardBg: 'bg-emerald-100',
     cardBorder: 'border-emerald-200',
@@ -245,7 +283,7 @@ const STATUS_CONFIG: Record<
     dot: 'bg-emerald-600',
   },
   FAILED: {
-    label: 'Failed',
+    label: 'Falhou',
     icon: XCircle,
     cardBg: 'bg-red-100',
     cardBorder: 'border-red-200',
@@ -257,7 +295,7 @@ const STATUS_CONFIG: Record<
     dot: 'bg-red-600',
   },
   SKIPPED: {
-    label: 'Skipped',
+    label: 'Ignorado',
     icon: MinusCircle,
     cardBg: 'bg-amber-100',
     cardBorder: 'border-amber-200',
@@ -269,7 +307,7 @@ const STATUS_CONFIG: Record<
     dot: 'bg-amber-400',
   },
   PENDING: {
-    label: 'Not Run',
+    label: 'Não executado',
     icon: Clock,
     cardBg: 'bg-slate-50',
     cardBorder: 'border-slate-200',
@@ -376,7 +414,7 @@ function TestCaseAccordion({ result }: { result: TestResult }) {
           {tc.steps && tc.steps.length > 0 && (
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">
-                Steps
+                Passos
               </p>
               <ol className="space-y-2">
                 {tc.steps.map((step) => (
@@ -416,10 +454,12 @@ function TestCaseAccordion({ result }: { result: TestResult }) {
             </div>
           )}
 
+          <ShortcutStorySection result={result} />
+
           {result.attachments && result.attachments.length > 0 && (
             <div>
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                Evidencias
+                Evidências
               </p>
               <div className="grid gap-2 sm:grid-cols-2">
                 {result.attachments.map((attachment) => (
@@ -432,7 +472,7 @@ function TestCaseAccordion({ result }: { result: TestResult }) {
           {result.history && result.history.length > 0 && (
             <div>
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                Historico de alteracoes
+                Histórico de alterações
               </p>
               <div className="space-y-2">
                 {result.history.map((entry) => (
@@ -446,10 +486,10 @@ function TestCaseAccordion({ result }: { result: TestResult }) {
                     <p className="mt-1 text-xs text-slate-500">
                       {entry.actor?.name ?? 'Sistema'}
                       {entry.addedAttachments?.length
-                        ? ` adicionou ${entry.addedAttachments.length} evidencia(s)`
+                        ? ` adicionou ${entry.addedAttachments.length} evidência(s)`
                         : ''}
                       {entry.removedAttachments?.length
-                        ? ` removeu ${entry.removedAttachments.length} evidencia(s)`
+                        ? ` removeu ${entry.removedAttachments.length} evidência(s)`
                         : ''}
                     </p>
                     {entry.newComment && entry.newComment !== entry.previousComment ? (
@@ -568,10 +608,10 @@ async function generatePDF(testRun: TestRun, results: TestResult[]) {
   };
 
   const STATUS_LABELS: Record<StatusGroup, string> = {
-    PASSED:  'Passed',
-    FAILED:  'Failed',
-    SKIPPED: 'Skipped',
-    PENDING: 'Not Run',
+    PASSED:  'Aprovado',
+    FAILED:  'Falhou',
+    SKIPPED: 'Ignorado',
+    PENDING: 'Não executado',
   };
 
   const ORDER: StatusGroup[] = ['FAILED', 'PASSED', 'SKIPPED', 'PENDING'];
@@ -585,13 +625,21 @@ async function generatePDF(testRun: TestRun, results: TestResult[]) {
 
   function fr(x: number, yy: number, w: number, h: number, color: [number, number, number], r = 0) {
     doc.setFillColor(...color);
-    r > 0 ? doc.roundedRect(x, yy, w, h, r, r, 'F') : doc.rect(x, yy, w, h, 'F');
+    if (r > 0) {
+      doc.roundedRect(x, yy, w, h, r, r, 'F');
+    } else {
+      doc.rect(x, yy, w, h, 'F');
+    }
   }
 
   function sr(x: number, yy: number, w: number, h: number, color: [number, number, number], lw = 0.25, r = 0) {
     doc.setDrawColor(...color);
     doc.setLineWidth(lw);
-    r > 0 ? doc.roundedRect(x, yy, w, h, r, r, 'S') : doc.rect(x, yy, w, h, 'S');
+    if (r > 0) {
+      doc.roundedRect(x, yy, w, h, r, r, 'S');
+    } else {
+      doc.rect(x, yy, w, h, 'S');
+    }
   }
 
   // Registra coordenadas y de início de cada seção de status (para TOC / links internos)
@@ -657,7 +705,7 @@ async function generatePDF(testRun: TestRun, results: TestResult[]) {
   sf('bold', 24, C.white);
   doc.text('Relatório de', margin, 28);
   sf('bold', 24, C.lime);
-  doc.text('Test Run', margin, 40);
+  doc.text('Execução', margin, 40);
 
   // Linha divisória branca
   doc.setDrawColor(255, 255, 255);
@@ -688,7 +736,7 @@ async function generatePDF(testRun: TestRun, results: TestResult[]) {
     ['Projeto',            testRun.project?.name ?? '—'],
     ['Plano de Teste',     testRun.testPlan ? `${testRun.testPlan.name} v${testRun.testPlan.version}` : '—'],
     ['Tipo de Teste',      typeLabel],
-    ['Status',             testRun.status],
+    ['Status',             testRunStatusLabel(testRun.status)],
     ['Responsável',        testRun.assignedTo?.name ?? '—'],
     ['Início',             fmt(testRun.startedAt)],
     ['Conclusão',          fmt(testRun.completedAt)],
@@ -724,17 +772,16 @@ async function generatePDF(testRun: TestRun, results: TestResult[]) {
   const skipped = results.filter((r) => r.status === 'SKIPPED').length;
   const notRun  = results.filter((r) => r.status === 'PENDING').length;
   const total   = results.length;
-  const passRate = total > 0 ? Math.round((passed / total) * 100) : 0;
 
   // KPI cards — 4 colunas
   // Nota: jsPDF não suporta links internos entre páginas via doc.link().
   // Os cards terão visual de "clicável" (ícone de seta) como indicador visual,
   // mas a navegação interna não é tecnicamente possível com esta biblioteca.
   const kpiItems = [
-    { label: 'Passed',  value: passed,  status: 'PASSED'  as StatusGroup },
-    { label: 'Failed',  value: failed,  status: 'FAILED'  as StatusGroup },
-    { label: 'Skipped', value: skipped, status: 'SKIPPED' as StatusGroup },
-    { label: 'Not Run', value: notRun,  status: 'PENDING' as StatusGroup },
+    { label: 'Aprovados',      value: passed,  status: 'PASSED'  as StatusGroup },
+    { label: 'Falhas',         value: failed,  status: 'FAILED'  as StatusGroup },
+    { label: 'Ignorados',      value: skipped, status: 'SKIPPED' as StatusGroup },
+    { label: 'Não executados', value: notRun,  status: 'PENDING' as StatusGroup },
   ];
 
   const cardW = (contentW - 9) / 4;
@@ -1122,7 +1169,7 @@ export function TestRunReportPage({ testRunId, onBack }: TestRunReportPageProps)
         <div className="border-b border-slate-100 bg-slate-50 px-5 py-3 flex items-center gap-2">
           <FileText className="h-4 w-4 text-slate-400" />
           <span className="text-sm font-semibold text-slate-700">
-            Informações do Run
+            Informações da execução
           </span>
         </div>
         <div className="grid grid-cols-2 gap-x-6 gap-y-4 p-5 sm:grid-cols-3 lg:grid-cols-4">
@@ -1213,10 +1260,10 @@ export function TestRunReportPage({ testRunId, onBack }: TestRunReportPageProps)
           </div>
           <div className="mt-2 flex flex-wrap gap-4">
             {[
-              { label: 'Passed', count: summary.passed, dot: 'bg-emerald-600' },
-              { label: 'Failed', count: summary.failed, dot: 'bg-red-600' },
-              { label: 'Skipped', count: summary.skipped, dot: 'bg-amber-400' },
-              { label: 'Not Run', count: summary.notRun, dot: 'bg-slate-400' },
+              { label: 'Aprovados', count: summary.passed, dot: 'bg-emerald-600' },
+              { label: 'Falhas', count: summary.failed, dot: 'bg-red-600' },
+              { label: 'Ignorados', count: summary.skipped, dot: 'bg-amber-400' },
+              { label: 'Não executados', count: summary.notRun, dot: 'bg-slate-400' },
             ].map(({ label, count, dot }) => (
               <div key={label} className="flex items-center gap-1.5">
                 <span className={`h-2 w-2 rounded-full ${dot}`} />
@@ -1236,7 +1283,7 @@ export function TestRunReportPage({ testRunId, onBack }: TestRunReportPageProps)
             Nenhum caso de teste encontrado
           </p>
           <p className="mt-1 text-sm text-slate-500">
-            Este test run ainda não possui resultados registrados.
+            Esta execução ainda não possui resultados registrados.
           </p>
         </div>
       ) : (

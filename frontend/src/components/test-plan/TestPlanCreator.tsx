@@ -79,17 +79,17 @@ export function TestPlanCreator({ onCreated }: Props) {
 
   async function handleCreate() {
     if (!token) {
-      setError('Authentication required');
+      setError('Autenticação obrigatória');
       return;
     }
 
     if (!projectId) {
-      setError('Select a project');
+      setError('Selecione um projeto');
       return;
     }
 
     if (!name.trim() || !version.trim()) {
-      setError('Name and version are required');
+      setError('Nome e versão são obrigatórios');
       return;
     }
 
@@ -99,32 +99,32 @@ export function TestPlanCreator({ onCreated }: Props) {
     }));
 
     if (normalizedSections.length === 0) {
-      setError('Add at least one section');
+      setError('Adicione pelo menos uma seção');
       return;
     }
 
     if (normalizedSections.length > 30) {
-      setError('Test plans can have up to 30 sections');
+      setError('Planos de teste podem ter até 30 seções');
       return;
     }
 
     if (normalizedSections.some((section) => section.title.length === 0)) {
-      setError('Section title is required');
+      setError('O título da seção é obrigatório');
       return;
     }
 
     if (normalizedSections.some((section) => section.title.length > 160)) {
-      setError('Section title must be 160 characters or fewer');
+      setError('O título da seção deve ter no máximo 160 caracteres');
       return;
     }
 
     if (normalizedSections.some((section) => section.content.length === 0)) {
-      setError('Section content is required');
+      setError('O conteúdo da seção é obrigatório');
       return;
     }
 
     if (normalizedSections.some((section) => section.content.length > 8000)) {
-      setError('Section content must be 8000 characters or fewer');
+      setError('O conteúdo da seção deve ter no máximo 8000 caracteres');
       return;
     }
 
@@ -145,7 +145,7 @@ export function TestPlanCreator({ onCreated }: Props) {
       setSections([]);
       setProjectId('');
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Unable to create test plan');
+      setError(err instanceof Error ? err.message : 'Não foi possível criar o plano de teste');
     } finally {
       setIsLoading(false);
     }
@@ -154,14 +154,14 @@ export function TestPlanCreator({ onCreated }: Props) {
   return (
     <div className="space-y-3">
       {error ? <div className="text-sm text-red-600">{error}</div> : null}
-      <label className="block text-sm font-medium text-slate-700">Project</label>
+      <label className="block text-sm font-medium text-slate-700">Projeto</label>
       <select
         className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50"
         disabled={isLoading}
         value={projectId}
         onChange={(e) => setProjectId(e.target.value)}
       >
-        <option value="">Select project...</option>
+        <option value="">Selecione um projeto...</option>
         {projects.map((p) => (
           <option key={p.id} value={p.id}>
             {p.name}
@@ -169,7 +169,7 @@ export function TestPlanCreator({ onCreated }: Props) {
         ))}
       </select>
 
-      <label className="block text-sm font-medium text-slate-700">Name</label>
+      <label className="block text-sm font-medium text-slate-700">Nome</label>
       <input
         className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50"
         disabled={isLoading}
@@ -177,7 +177,7 @@ export function TestPlanCreator({ onCreated }: Props) {
         onChange={(e) => setName(e.target.value)}
       />
 
-      <label className="block text-sm font-medium text-slate-700">Version</label>
+      <label className="block text-sm font-medium text-slate-700">Versão</label>
       <input
         className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50"
         disabled={isLoading}
@@ -187,7 +187,7 @@ export function TestPlanCreator({ onCreated }: Props) {
 
       <section className="pt-2">
         <div className="flex items-center justify-between gap-3">
-          <h3 className="text-sm font-semibold text-slate-950">Sections</h3>
+          <h3 className="text-sm font-semibold text-slate-950">Seções</h3>
           <button
             className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-600 bg-slate-600 px-3 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
             disabled={isLoading}
@@ -195,14 +195,14 @@ export function TestPlanCreator({ onCreated }: Props) {
             type="button"
           >
             <Plus className="h-4 w-4" aria-hidden="true" />
-            Add section
+            Adicionar seção
           </button>
         </div>
 
         <div className="mt-3 space-y-3">
           {sections.length === 0 ? (
             <p className="rounded-lg border border-dashed border-slate-300 px-3 py-4 text-sm text-slate-500">
-              No sections defined.
+              Nenhuma seção definida.
             </p>
           ) : null}
 
@@ -220,14 +220,14 @@ export function TestPlanCreator({ onCreated }: Props) {
                   className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50"
                   disabled={isLoading}
                   onChange={(event) => updateSection(index, 'title', event.target.value)}
-                  placeholder="Section title"
+                  placeholder="Título da seção"
                   value={section.title}
                 />
                 <textarea
                   className="min-h-24 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50"
                   disabled={isLoading}
                   onChange={(event) => updateSection(index, 'content', event.target.value)}
-                  placeholder="Section description"
+                  placeholder="Descrição da seção"
                   value={section.content}
                 />
               </div>
@@ -237,7 +237,7 @@ export function TestPlanCreator({ onCreated }: Props) {
                   className="rounded-lg p-2 text-slate-400 hover:bg-white hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
                   disabled={isLoading || index === 0}
                   onClick={() => moveSection(index, -1)}
-                  title="Move up"
+                  title="Mover para cima"
                   type="button"
                 >
                   <ArrowUp className="h-4 w-4" aria-hidden="true" />
@@ -246,7 +246,7 @@ export function TestPlanCreator({ onCreated }: Props) {
                   className="rounded-lg p-2 text-slate-400 hover:bg-white hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
                   disabled={isLoading || index === sections.length - 1}
                   onClick={() => moveSection(index, 1)}
-                  title="Move down"
+                  title="Mover para baixo"
                   type="button"
                 >
                   <ArrowDown className="h-4 w-4" aria-hidden="true" />
@@ -255,7 +255,7 @@ export function TestPlanCreator({ onCreated }: Props) {
                   className="rounded-lg p-2 text-slate-400 hover:bg-red-100 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-30"
                   disabled={isLoading}
                   onClick={() => removeSection(index)}
-                  title="Remove section"
+                  title="Remover seção"
                   type="button"
                 >
                   <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -273,7 +273,7 @@ export function TestPlanCreator({ onCreated }: Props) {
           type="button"
           disabled={isLoading}
         >
-          {isLoading ? 'Creating...' : 'Create test plan'}
+          {isLoading ? 'Criando...' : 'Criar plano de teste'}
         </button>
       </div>
     </div>

@@ -1,8 +1,17 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const backendEnvPath = path.join(__dirname, 'backend', '.env');
-const fallbackDatabaseUrl = 'postgresql://qa_user:qa_pass@localhost:5432/qa_platform';
+const nodeEnv = process.env.NODE_ENV;
+const envFileCandidates = [
+  nodeEnv ? path.join(__dirname, 'backend', `.env.${nodeEnv}.local`) : undefined,
+  nodeEnv ? path.join(__dirname, 'backend', `.env.${nodeEnv}`) : undefined,
+  path.join(__dirname, 'backend', '.env.local'),
+  path.join(__dirname, 'backend', '.env'),
+  nodeEnv ? path.join(__dirname, `.env.${nodeEnv}.local`) : undefined,
+  nodeEnv ? path.join(__dirname, `.env.${nodeEnv}`) : undefined,
+  path.join(__dirname, '.env.local'),
+  path.join(__dirname, '.env'),
+].filter(Boolean);
 
 function unquoteEnvValue(value) {
   const trimmed = value.trim();
@@ -15,18 +24,32 @@ function unquoteEnvValue(value) {
   return trimmed;
 }
 
-function readDatabaseUrlFromBackendEnv() {
-  if (!fs.existsSync(backendEnvPath)) {
+function readEnvValueFromFile(filePath, key) {
+  if (!fs.existsSync(filePath)) {
     return undefined;
   }
 
-  const envFile = fs.readFileSync(backendEnvPath, 'utf8');
-  const databaseUrlLine = envFile
+  const envFile = fs.readFileSync(filePath, 'utf8');
+  const envLine = envFile
     .split(/\r?\n/)
-    .map((line) => line.match(/^\s*DATABASE_URL\s*=\s*(.+?)\s*$/))
+    .map((line) => line.match(new RegExp(`^\\s*${key}\\s*=\\s*(.+?)\\s*$`)))
     .find(Boolean);
 
-  return databaseUrlLine ? unquoteEnvValue(databaseUrlLine[1]) : undefined;
+  return envLine ? unquoteEnvValue(envLine[1]) : undefined;
+}
+
+function getDatabaseUrl() {
+  const databaseUrl =
+    process.env.DATABASE_URL ??
+    envFileCandidates
+      .map((envFile) => readEnvValueFromFile(envFile, 'DATABASE_URL'))
+      .find(Boolean);
+
+  if (!databaseUrl) {
+    throw new Error('DATABASE_URL is required for Prisma');
+  }
+
+  return databaseUrl;
 }
 
 module.exports = {
@@ -35,6 +58,6 @@ module.exports = {
     path: 'backend/prisma/migrations',
   },
   datasource: {
-    url: process.env.DATABASE_URL ?? readDatabaseUrlFromBackendEnv() ?? fallbackDatabaseUrl,
+    url: getDatabaseUrl(),
   },
 };

@@ -31,12 +31,12 @@ export class EmailService {
   }
 
   private async sendWithSmtp(message: EmailMessage, smtpHost: string) {
-    const smtpPort = this.getNumber('SMTP_PORT', 587);
-    const smtpSecure = this.getBoolean('SMTP_SECURE', smtpPort === 465);
-    const smtpRequireTls = this.getBoolean('SMTP_REQUIRE_TLS', !smtpSecure);
+    const smtpPort = this.getNumber('SMTP_PORT');
+    const smtpSecure = this.getBoolean('SMTP_SECURE');
+    const smtpRequireTls = this.getBoolean('SMTP_REQUIRE_TLS');
     const smtpUser = this.configService.get<string>('SMTP_USER');
     const smtpPassword = this.configService.get<string>('SMTP_PASSWORD');
-    const from = this.configService.get<string>('MAIL_FROM', 'no-reply@qa-platform.local');
+    const from = this.configService.getOrThrow<string>('MAIL_FROM');
 
     let socket = await this.connect(smtpHost, smtpPort, smtpSecure);
 
@@ -75,7 +75,7 @@ export class EmailService {
       const socket = secure ? tls.connect({ host, port, servername: host }) : net.connect({ host, port });
 
       socket.setEncoding('utf8');
-      socket.setTimeout(this.getNumber('SMTP_TIMEOUT_MS', 10000));
+      socket.setTimeout(this.getNumber('SMTP_TIMEOUT_MS'));
       socket.once(secure ? 'secureConnect' : 'connect', () => resolve(socket));
       socket.once('error', reject);
       socket.once('timeout', () => {
@@ -90,7 +90,7 @@ export class EmailService {
       const secureSocket = tls.connect({ socket, servername: host });
 
       secureSocket.setEncoding('utf8');
-      secureSocket.setTimeout(this.getNumber('SMTP_TIMEOUT_MS', 10000));
+      secureSocket.setTimeout(this.getNumber('SMTP_TIMEOUT_MS'));
       secureSocket.once('secureConnect', () => resolve(secureSocket));
       secureSocket.once('error', reject);
       secureSocket.once('timeout', () => {
@@ -189,10 +189,10 @@ export class EmailService {
   }
 
   private getHostname() {
-    return this.configService.get<string>('SMTP_HELO_NAME', 'qa-platform.local');
+    return this.configService.getOrThrow<string>('SMTP_HELO_NAME');
   }
 
-  private getBoolean(key: string, fallback: boolean) {
+  private getBoolean(key: string) {
     const value = this.configService.get<string | boolean>(key);
 
     if (typeof value === 'boolean') {
@@ -203,11 +203,16 @@ export class EmailService {
       return ['1', 'true', 'yes'].includes(value.toLowerCase());
     }
 
-    return fallback;
+    throw new Error(`${key} is required`);
   }
 
-  private getNumber(key: string, fallback: number) {
-    const value = Number(this.configService.get<string | number>(key) ?? fallback);
-    return Number.isFinite(value) ? value : fallback;
+  private getNumber(key: string) {
+    const value = Number(this.configService.get<string | number>(key));
+
+    if (!Number.isFinite(value)) {
+      throw new Error(`${key} must be a number`);
+    }
+
+    return value;
   }
 }

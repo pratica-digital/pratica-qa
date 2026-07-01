@@ -7,6 +7,7 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
 import { validateEnv } from './config/env.validation';
 import { HealthModule } from './health/health.module';
+import { AiTestGeneratorModule } from './modules/ai-test-generator/ai-test-generator.module';
 import { ProjectsModule } from './modules/projects/projects.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { TestCasesModule } from './modules/test-cases/test-cases.module';
@@ -17,9 +18,22 @@ import { TestSuitesModule } from './modules/test-suites/test-suites.module';
 import { UsersModule } from './modules/users/users.module';
 import { PrismaModule } from './prisma/prisma.module';
 
+const nodeEnv = process.env.NODE_ENV;
+const envFilePath = [
+  nodeEnv ? `backend/.env.${nodeEnv}.local` : undefined,
+  nodeEnv ? `backend/.env.${nodeEnv}` : undefined,
+  'backend/.env.local',
+  'backend/.env',
+  nodeEnv ? `.env.${nodeEnv}.local` : undefined,
+  nodeEnv ? `.env.${nodeEnv}` : undefined,
+  '.env.local',
+  '.env',
+].filter((path): path is string => Boolean(path));
+
 @Module({
   imports: [
     ConfigModule.forRoot({
+      envFilePath,
       isGlobal: true,
       validate: validateEnv,
     }),
@@ -27,6 +41,7 @@ import { PrismaModule } from './prisma/prisma.module';
     AuthModule,
     UsersModule,
     HealthModule,
+    AiTestGeneratorModule,
     ProjectsModule,
     ReportsModule,
     TestSuitesModule,

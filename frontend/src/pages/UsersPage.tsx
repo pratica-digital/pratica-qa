@@ -13,6 +13,7 @@ import { useAuth } from '../auth/useAuth';
 import { usersApi } from '../lib/api';
 import type { AuthUser, CreateUserPayload, UpdateUserPayload, UserRole, UserStatus } from '../types/testRun';
 import { UserRoleBadge, UserStatusBadge } from '../components/badges';
+import { userRoleLabel, userStatusLabel } from '../lib/labels';
 
 const roleOptions: UserRole[] = ['ADMIN', 'QA', 'VIEWER'];
 const statusOptions: UserStatus[] = ['ACTIVE', 'INACTIVE'];
@@ -31,7 +32,7 @@ function formatDate(value?: string | null) {
     return '-';
   }
 
-  return new Intl.DateTimeFormat('en', {
+  return new Intl.DateTimeFormat('pt-BR', {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
@@ -64,7 +65,7 @@ export function UsersPage() {
     try {
       setUsers(await usersApi.list(token));
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Unable to load users');
+      setError(loadError instanceof Error ? loadError.message : 'Não foi possível carregar os usuários');
     } finally {
       setIsLoading(false);
     }
@@ -143,7 +144,7 @@ export function UsersPage() {
         status: 'ACTIVE',
       });
     } catch (createError) {
-      setError(createError instanceof Error ? createError.message : 'Unable to create user');
+      setError(createError instanceof Error ? createError.message : 'Não foi possível criar o usuário');
     } finally {
       setIsSaving(false);
     }
@@ -166,7 +167,7 @@ export function UsersPage() {
         return next;
       });
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Unable to update user');
+      setError(saveError instanceof Error ? saveError.message : 'Não foi possível atualizar o usuário');
     } finally {
       setIsSaving(false);
     }
@@ -185,7 +186,7 @@ export function UsersPage() {
         action === 'activate' ? await usersApi.activate(token, item.id) : await usersApi.deactivate(token, item.id);
       updateUserInState(updatedUser);
     } catch (statusError) {
-      setError(statusError instanceof Error ? statusError.message : 'Unable to update user status');
+      setError(statusError instanceof Error ? statusError.message : 'Não foi possível atualizar o status do usuário');
     } finally {
       setIsSaving(false);
     }
@@ -212,7 +213,7 @@ export function UsersPage() {
         emailError: response.emailError,
       });
     } catch (resetError) {
-      setError(resetError instanceof Error ? resetError.message : 'Unable to reset password');
+      setError(resetError instanceof Error ? resetError.message : 'Não foi possível redefinir a senha');
     } finally {
       setIsSaving(false);
     }
@@ -221,7 +222,7 @@ export function UsersPage() {
   if (currentUser?.role !== 'ADMIN') {
     return (
       <section className="rounded-lg border border-slate-200 bg-white p-6">
-        <h1 className="text-lg font-semibold text-slate-950">Restricted area</h1>
+        <h1 className="text-lg font-semibold text-slate-950">Área restrita</h1>
       </section>
     );
   }
@@ -230,15 +231,15 @@ export function UsersPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm font-medium uppercase text-blue-800">Access control</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-normal text-slate-950">Users</h1>
+          <p className="text-sm font-medium uppercase text-blue-800">Controle de acesso</p>
+          <h1 className="mt-1 text-2xl font-semibold tracking-normal text-slate-950">Usuários</h1>
         </div>
         <label className="flex h-10 w-full items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-500 sm:max-w-xs">
           <Search className="h-4 w-4" aria-hidden="true" />
           <input
             className="w-full border-0 bg-transparent p-0 text-sm text-slate-900 outline-none placeholder:text-slate-400"
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search users"
+            placeholder="Buscar usuários"
             type="search"
             value={search}
           />
@@ -250,7 +251,7 @@ export function UsersPage() {
         onSubmit={handleCreate}
       >
         <label className="block text-sm font-medium text-slate-700">
-          Name
+          Nome
           <input
             className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
             onChange={(event) => setCreateForm((current) => ({ ...current, name: event.target.value }))}
@@ -259,7 +260,7 @@ export function UsersPage() {
           />
         </label>
         <label className="block text-sm font-medium text-slate-700">
-          Email
+          E-mail
           <input
             className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
             onChange={(event) => setCreateForm((current) => ({ ...current, email: event.target.value }))}
@@ -269,7 +270,7 @@ export function UsersPage() {
           />
         </label>
         <label className="block text-sm font-medium text-slate-700">
-          Role
+          Perfil
           <select
             className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
             onChange={(event) => setCreateForm((current) => ({ ...current, role: event.target.value as UserRole }))}
@@ -277,7 +278,7 @@ export function UsersPage() {
           >
             {roleOptions.map((role) => (
               <option key={role} value={role}>
-                {role}
+                {userRoleLabel(role)}
               </option>
             ))}
           </select>
@@ -293,7 +294,7 @@ export function UsersPage() {
           >
             {statusOptions.map((status) => (
               <option key={status} value={status}>
-                {status}
+                {userStatusLabel(status)}
               </option>
             ))}
           </select>
@@ -304,7 +305,7 @@ export function UsersPage() {
           type="submit"
         >
           <UserPlus className="h-4 w-4" aria-hidden="true" />
-          Create
+          Criar
         </button>
       </form>
 
@@ -314,7 +315,7 @@ export function UsersPage() {
           <p className="mt-1">{emailNotice.message}</p>
           {!emailNotice.emailSent && emailNotice.emailError ? (
             <p className="mt-2 rounded-md border border-amber-200 bg-amber-100 px-3 py-2 text-amber-800">
-              Email not sent: {emailNotice.emailError}
+              E-mail não enviado: {emailNotice.emailError}
             </p>
           ) : null}
           <div className="mt-3 space-y-2">
@@ -327,7 +328,7 @@ export function UsersPage() {
               />
             </label>
             <label className="block text-xs font-semibold uppercase tracking-wide text-emerald-800">
-              Access link
+              Link de acesso
               <input
                 className="mt-1 h-10 w-full rounded-lg border border-emerald-200 bg-white px-3 text-sm text-emerald-950 outline-none"
                 readOnly
@@ -349,18 +350,18 @@ export function UsersPage() {
           <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
             <thead className="bg-slate-100 text-xs uppercase text-slate-700">
               <tr>
-                <th className="px-4 py-3 font-medium">User</th>
-                <th className="px-4 py-3 font-medium">Access</th>
+                <th className="px-4 py-3 font-medium">Usuário</th>
+                <th className="px-4 py-3 font-medium">Acesso</th>
                 <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Password</th>
-                <th className="px-4 py-3 font-medium">Actions</th>
+                <th className="px-4 py-3 font-medium">Senha</th>
+                <th className="px-4 py-3 font-medium">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
               {isLoading ? (
                 <tr>
                   <td className="px-4 py-6 text-sm text-slate-500" colSpan={5}>
-                    Loading users
+                    Carregando usuários
                   </td>
                 </tr>
               ) : null}
@@ -368,7 +369,7 @@ export function UsersPage() {
               {!isLoading && filteredUsers.length === 0 ? (
                 <tr>
                   <td className="px-4 py-6 text-sm text-slate-500" colSpan={5}>
-                    No users found
+                    Nenhum usuário encontrado
                   </td>
                 </tr>
               ) : null}
@@ -403,7 +404,7 @@ export function UsersPage() {
                         >
                           {roleOptions.map((role) => (
                             <option key={role} value={role}>
-                              {role}
+                              {userRoleLabel(role)}
                             </option>
                           ))}
                         </select>
@@ -419,7 +420,7 @@ export function UsersPage() {
                         >
                           {statusOptions.map((status) => (
                             <option key={status} value={status}>
-                              {status}
+                              {userStatusLabel(status)}
                             </option>
                           ))}
                         </select>
@@ -428,7 +429,9 @@ export function UsersPage() {
                     </td>
                     <td className="min-w-48 px-4 py-4 text-sm text-slate-600">
                       <div className="flex flex-col gap-2">
-                        <span>{item.firstAccess ? 'First access' : `Changed ${formatDate(item.passwordChangedAt)}`}</span>
+                        <span>
+                          {item.firstAccess ? 'Primeiro acesso' : `Alterada em ${formatDate(item.passwordChangedAt)}`}
+                        </span>
                         <button
                           className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-slate-600 bg-slate-600 px-3 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
                           disabled={isSaving}
@@ -436,7 +439,7 @@ export function UsersPage() {
                           type="button"
                         >
                           <KeyRound className="h-4 w-4" aria-hidden="true" />
-                          Reset
+                          Redefinir
                         </button>
                       </div>
                     </td>
@@ -449,7 +452,7 @@ export function UsersPage() {
                           type="button"
                         >
                           <Save className="h-4 w-4" aria-hidden="true" />
-                          Save
+                          Salvar
                         </button>
                         {item.status === 'INACTIVE' ? (
                           <button
@@ -459,7 +462,7 @@ export function UsersPage() {
                             type="button"
                           >
                             <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
-                            Activate
+                            Ativar
                           </button>
                         ) : (
                           <button
@@ -469,7 +472,7 @@ export function UsersPage() {
                             type="button"
                           >
                             <UserX className="h-4 w-4" aria-hidden="true" />
-                            Deactivate
+                            Desativar
                           </button>
                         )}
                         <span className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 px-3 text-xs font-medium text-slate-500">
@@ -478,7 +481,7 @@ export function UsersPage() {
                           ) : (
                             <ShieldCheck className="h-4 w-4" aria-hidden="true" />
                           )}
-                          {item.firstAccess ? 'Pending' : 'Ready'}
+                          {item.firstAccess ? 'Pendente' : 'Pronta'}
                         </span>
                       </div>
                     </td>

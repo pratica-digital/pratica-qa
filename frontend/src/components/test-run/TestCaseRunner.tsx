@@ -14,7 +14,8 @@ import {
 } from 'lucide-react';
 import { TestResultStatusBadge } from '../badges';
 import { resolveApiAssetUrl } from '../../lib/api';
-import type { ExecuteTestResultPayload, TestResult, TestResultAttachment } from '../../types/testRun';
+import { testResultStatusLabel } from '../../lib/labels';
+import type { ExecuteTestResultPayload, TestResult, TestResultAttachment, TestResultStatus } from '../../types/testRun';
 import { TestResultForm } from './TestResultForm';
 
 type TestCaseRunnerProps = {
@@ -31,10 +32,10 @@ type TestCaseRunnerProps = {
 
 function formatDate(value?: string | null) {
   if (!value) {
-    return 'Not executed';
+    return 'Não executado';
   }
 
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat('pt-BR', {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
@@ -48,7 +49,7 @@ function getAttachmentName(attachment: TestResultAttachment) {
   return (
     attachment.originalName ||
     attachment.fileName ||
-    decodeURIComponent(getAttachmentUrl(attachment).split('/').pop() ?? 'Evidence')
+    decodeURIComponent(getAttachmentUrl(attachment).split('/').pop() ?? 'Evidência')
   );
 }
 
@@ -68,17 +69,17 @@ function isVideoAttachment(attachment: TestResultAttachment) {
 
 function formatUploadDate(value?: string | null) {
   if (!value) {
-    return 'Pending date';
+    return 'Data pendente';
   }
 
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat('pt-BR', {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
 }
 
-function getStatusLabel(status?: string | null) {
-  return status === 'PENDING' ? 'Not Run' : status ?? 'Not Run';
+function getStatusLabel(status?: TestResultStatus | null) {
+  return testResultStatusLabel(status);
 }
 
 export function TestCaseRunner({
@@ -101,8 +102,8 @@ export function TestCaseRunner({
     testCase.suite?.project?.name ??
     result.testRun?.project?.name ??
     result.testRun?.projectId ??
-    'Project';
-  const suiteName = testCase.suite?.name ?? 'Unassigned suite';
+    'Projeto';
+  const suiteName = testCase.suite?.name ?? 'Suíte não atribuída';
   const isCriticalFailure =
     result.status === 'FAILED' && (testCase.severity === 'CRITICAL' || testCase.severity === 'HIGH');
 
@@ -129,7 +130,7 @@ export function TestCaseRunner({
               {isCriticalFailure ? (
                 <span className="inline-flex items-center gap-1 rounded-md border border-red-300 bg-red-100 px-2 py-1 text-xs font-medium text-red-800">
                   <ShieldAlert className="h-3 w-3" aria-hidden="true" />
-                  Critical failure
+                  Falha crítica
                 </span>
               ) : null}
             </div>
@@ -137,14 +138,14 @@ export function TestCaseRunner({
               {testCase.title}
             </h2>
             <p className="mt-2 text-sm text-slate-600">
-              {testCase.description || 'No description captured for this case.'}
+              {testCase.description || 'Nenhuma descrição registrada para este caso.'}
             </p>
           </div>
 
           <div className="grid gap-2 text-sm text-slate-600 sm:grid-cols-2 lg:min-w-72 lg:grid-cols-1">
             <div className="flex items-center gap-2">
               <UserCheck className="h-4 w-4 text-slate-400" aria-hidden="true" />
-              <span>{result.executedBy?.name ?? 'No executor yet'}</span>
+              <span>{result.executedBy?.name ?? 'Sem executor ainda'}</span>
             </div>
             <div className="flex items-center gap-2">
               <Clock3 className="h-4 w-4 text-slate-400" aria-hidden="true" />
@@ -154,8 +155,8 @@ export function TestCaseRunner({
               <History className="h-4 w-4 text-slate-400" aria-hidden="true" />
               <span>
                 {result.lastModifiedBy?.name
-                  ? `Edited by ${result.lastModifiedBy.name}`
-                  : `Updated ${formatDate(result.updatedAt)}`}
+                  ? `Editado por ${result.lastModifiedBy.name}`
+                  : `Atualizado em ${formatDate(result.updatedAt)}`}
               </span>
             </div>
           </div>
@@ -165,7 +166,7 @@ export function TestCaseRunner({
       <div className="grid gap-4 p-4 xl:grid-cols-[1fr_22rem]">
         <div className="space-y-4">
           <section>
-            <h3 className="text-xs font-medium uppercase text-slate-500">Steps</h3>
+            <h3 className="text-xs font-medium uppercase text-slate-500">Passos</h3>
             {steps.length > 0 ? (
               <ol className="mt-3 space-y-3">
                 {steps.map((step) => (
@@ -177,7 +178,7 @@ export function TestCaseRunner({
                       <p className="text-sm text-slate-800">{step.description}</p>
                       {step.expectedResult ? (
                         <p className="mt-1 text-xs text-slate-500">
-                          Expected: {step.expectedResult}
+                          Esperado: {step.expectedResult}
                         </p>
                       ) : null}
                     </div>
@@ -186,17 +187,17 @@ export function TestCaseRunner({
               </ol>
             ) : (
               <p className="mt-2 text-sm text-slate-500">
-                No step detail is available for this case.
+                Nenhum detalhe de passo disponível para este caso.
               </p>
             )}
           </section>
 
           <section>
             <h3 className="text-xs font-medium uppercase text-slate-500">
-              Expected result
+              Resultado esperado
             </h3>
             <p className="mt-2 text-sm text-slate-700">
-              {testCase.expectedResult || 'Use the step-level expected results for verification.'}
+              {testCase.expectedResult || 'Use os resultados esperados dos passos para verificação.'}
             </p>
           </section>
 
@@ -204,7 +205,7 @@ export function TestCaseRunner({
             <section className="rounded-lg border border-slate-200 bg-slate-50 p-3">
               <h3 className="flex items-center gap-2 text-xs font-medium uppercase text-slate-500">
                 <FileText className="h-3.5 w-3.5" aria-hidden="true" />
-                Last comment
+                Último comentário
               </h3>
               <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">
                 {result.comment}
@@ -215,7 +216,7 @@ export function TestCaseRunner({
           {attachments.length > 0 ? (
             <section>
               <h3 className="text-xs font-medium uppercase text-slate-500">
-                Evidence
+                Evidências
               </h3>
               <div className="mt-2 grid gap-2 sm:grid-cols-2">
                 {attachments.map((attachment) => (
@@ -266,7 +267,7 @@ export function TestCaseRunner({
                         </span>
                         <span className="block truncate text-[11px] text-slate-400">
                           {formatUploadDate(attachment.createdAt)}
-                          {attachment.uploadedBy?.name ? ` by ${attachment.uploadedBy.name}` : ''}
+                          {attachment.uploadedBy?.name ? ` por ${attachment.uploadedBy.name}` : ''}
                         </span>
                       </span>
                       <span className="flex shrink-0 items-center gap-1">
@@ -279,7 +280,7 @@ export function TestCaseRunner({
                           onClick={(event) => event.stopPropagation()}
                           rel="noreferrer"
                           target="_blank"
-                          title="Open evidence"
+                          title="Abrir evidência"
                         >
                           <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
                         </a>
@@ -288,7 +289,7 @@ export function TestCaseRunner({
                           download={getAttachmentName(attachment)}
                           href={resolveApiAssetUrl(getAttachmentUrl(attachment))}
                           onClick={(event) => event.stopPropagation()}
-                          title="Download evidence"
+                          title="Baixar evidência"
                         >
                           <Download className="h-3.5 w-3.5" aria-hidden="true" />
                         </a>
@@ -303,7 +304,7 @@ export function TestCaseRunner({
           {history.length > 0 ? (
             <section>
               <h3 className="text-xs font-medium uppercase text-slate-500">
-                Change history
+                Histórico de alterações
               </h3>
               <div className="mt-2 space-y-2">
                 {history.slice(0, 5).map((entry) => (
@@ -315,12 +316,12 @@ export function TestCaseRunner({
                       <span className="text-xs text-slate-500">{formatDate(entry.createdAt)}</span>
                     </div>
                     <p className="mt-1 text-xs text-slate-500">
-                      {entry.actor?.name ?? 'System'}
+                      {entry.actor?.name ?? 'Sistema'}
                       {entry.addedAttachments?.length
-                        ? ` added ${entry.addedAttachments.length} evidence file(s)`
+                        ? ` adicionou ${entry.addedAttachments.length} arquivo(s) de evidência`
                         : ''}
                       {entry.removedAttachments?.length
-                        ? ` removed ${entry.removedAttachments.length} evidence file(s)`
+                        ? ` removeu ${entry.removedAttachments.length} arquivo(s) de evidência`
                         : ''}
                     </p>
                     {entry.newComment && entry.newComment !== entry.previousComment ? (
@@ -371,7 +372,7 @@ export function TestCaseRunner({
               <button
                 className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
                 onClick={() => setPreviewAttachment(null)}
-                title="Close preview"
+                title="Fechar pré-visualização"
                 type="button"
               >
                 <X className="h-4 w-4" aria-hidden="true" />

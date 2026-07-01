@@ -30,6 +30,7 @@ import {
   testSuitesApi,
   usersApi,
 } from '../lib/api';
+import { pageLabels, testRunStatusLabel, userRoleLabel } from '../lib/labels';
 import type {
   AuthUser,
   ManagedTestCase,
@@ -40,16 +41,20 @@ import type {
   TestRun,
 } from '../types/testRun';
 import { PROJECT_CATEGORY_MAP, PROJECT_CATEGORY_ORDER } from '../types/testRun';
+import { useSidebar } from './useSidebar';
 
 const pageTitles: Record<PageId, string> = {
-  dashboard: 'Dashboard',
-  projects: 'Projects',
-  'test-plans': 'Test Plans',
-  'test-suites': 'Test Suites',
-  'test-cases': 'Test Cases',
-  'test-runs': 'Test Runs',
-  users: 'Users',
-  profile: 'Profile',
+  dashboard: pageLabels.dashboard,
+  projects: pageLabels.projects,
+  'test-plans': pageLabels['test-plans'],
+  'test-suites': pageLabels['test-suites'],
+  'test-cases': pageLabels['test-cases'],
+  'test-runs': pageLabels['test-runs'],
+  'ai-test-generator': 'AI Test Generator',
+  'ai-history': 'AI Test Generator',
+  'ai-settings': 'AI Test Generator',
+  users: pageLabels.users,
+  profile: pageLabels.profile,
 };
 
 type TopNavProps = {
@@ -59,7 +64,6 @@ type TopNavProps = {
   onCreateAction?: () => void;
   onNavigate: (page: PageId) => void;
   onOpenRun: (testRun: TestRun) => void;
-  onOpenSidebar: () => void;
 };
 
 type GlobalSearchGroup =
@@ -106,15 +110,15 @@ type ReadNotificationState = {
 };
 
 const searchGroups: Record<GlobalSearchGroup, { icon: LucideIcon; label: string }> = {
-  projects: { icon: FolderOpen, label: 'Projects' },
-  plans: { icon: ClipboardList, label: 'Test Plans' },
-  suites: { icon: Layers3, label: 'Test Suites' },
-  cases: { icon: ListChecks, label: 'Test Cases' },
-  runs: { icon: PlaySquare, label: 'Test Runs' },
-  reports: { icon: FileText, label: 'Reports' },
-  users: { icon: UsersRound, label: 'Users' },
+  projects: { icon: FolderOpen, label: 'Projetos' },
+  plans: { icon: ClipboardList, label: 'Planos de Teste' },
+  suites: { icon: Layers3, label: 'Suítes de Teste' },
+  cases: { icon: ListChecks, label: 'Casos de Teste' },
+  runs: { icon: PlaySquare, label: 'Execuções' },
+  reports: { icon: FileText, label: 'Relatórios' },
+  users: { icon: UsersRound, label: 'Usuários' },
   tags: { icon: Tag, label: 'Tags' },
-  categories: { icon: FolderOpen, label: 'Categories' },
+  categories: { icon: FolderOpen, label: 'Categorias' },
 };
 
 const notificationIcons: Record<NotificationType, { icon: LucideIcon; tone: string }> = {
@@ -156,7 +160,7 @@ function formatRelativeDate(value?: string | null) {
     return '';
   }
 
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat('pt-BR', {
     dateStyle: 'short',
     timeStyle: 'short',
   }).format(date);
@@ -177,29 +181,29 @@ function includesQuery(values: Array<string | undefined | null>, query: string) 
 }
 
 function getProjectSubtitle(project: ProjectSummary) {
-  const category = project.category ? PROJECT_CATEGORY_MAP[project.category] : 'No category';
+  const category = project.category ? PROJECT_CATEGORY_MAP[project.category] : 'Sem categoria';
   const key = project.key ? `${project.key} - ` : '';
   return `${key}${category}`;
 }
 
 function getPlanSubtitle(plan: TestPlan) {
   const project = plan.project?.name ? `${plan.project.name} - ` : '';
-  return `${project}Version ${plan.version}`;
+  return `${project}Versão ${plan.version}`;
 }
 
 function getSuiteSubtitle(suite: ManagedTestSuite) {
-  return suite.project?.name ?? 'Test suite';
+  return suite.project?.name ?? 'Suíte de teste';
 }
 
 function getCaseSubtitle(testCase: ManagedTestCase) {
-  const suite = testCase.suite?.name ?? 'Unassigned suite';
+  const suite = testCase.suite?.name ?? 'Suíte não atribuída';
   const tags = testCase.tags.length > 0 ? ` - ${testCase.tags.join(', ')}` : '';
   return `${suite}${tags}`;
 }
 
 function getRunSubtitle(testRun: TestRun) {
   const project = testRun.project?.name ? `${testRun.project.name} - ` : '';
-  return `${project}${testRun.status.replaceAll('_', ' ')}`;
+  return `${project}${testRunStatusLabel(testRun.status)}`;
 }
 
 function uniqueById<T extends { id: string }>(items: T[]) {
@@ -228,7 +232,7 @@ function buildTagResults(testCases: ManagedTestCase[], query: string): GlobalSea
   return [...tags.entries()].slice(0, 5).map(([tag, count]) => ({
     id: `tag:${tag}`,
     title: tag,
-    subtitle: `${count} matching test case${count === 1 ? '' : 's'}`,
+    subtitle: `${count} caso${count === 1 ? '' : 's'} de teste encontrado${count === 1 ? '' : 's'}`,
     group: 'tags',
     page: 'test-cases',
   }));
@@ -243,7 +247,7 @@ function buildCategoryResults(projects: ProjectSummary[], query: string): Global
     return {
       id: `category:${category}`,
       title: PROJECT_CATEGORY_MAP[category],
-      subtitle: `${count} project${count === 1 ? '' : 's'} in this category`,
+      subtitle: `${count} projeto${count === 1 ? '' : 's'} nesta categoria`,
       group: 'categories',
       page: 'projects',
     };
@@ -256,7 +260,7 @@ function createNotifications(testRuns: TestRun[], user?: AuthUser | null): TopNa
     .slice(0, 5)
     .map((run) => ({
       id: `assigned-run:${run.id}`,
-      title: 'Test Run assigned to you',
+      title: 'Execução atribuída a você',
       description: run.name,
       type: 'assigned-run' as const,
       createdAt: run.updatedAt ?? run.createdAt,
@@ -268,7 +272,7 @@ function createNotifications(testRuns: TestRun[], user?: AuthUser | null): TopNa
     .slice(0, 4)
     .map((run) => ({
       id: `completed-run:${run.id}`,
-      title: 'Execution completed',
+      title: 'Execução concluída',
       description: run.name,
       type: 'completed-run' as const,
       createdAt: run.completedAt ?? run.updatedAt ?? run.createdAt,
@@ -284,7 +288,7 @@ function createNotifications(testRuns: TestRun[], user?: AuthUser | null): TopNa
     .slice(0, 4)
     .map(({ failures, run }) => ({
       id: `critical-failure:${run.id}`,
-      title: failures === 1 ? 'Failure registered' : `${failures} failures registered`,
+      title: failures === 1 ? 'Falha registrada' : `${failures} falhas registradas`,
       description: run.name,
       type: 'critical-failure' as const,
       createdAt: run.updatedAt ?? run.completedAt ?? run.createdAt,
@@ -371,7 +375,7 @@ function NotificationRow({
             onClick={() => onMarkRead(notification.id)}
             type="button"
           >
-            Read
+            Lida
           </button>
         ) : null}
       </div>
@@ -386,9 +390,9 @@ export function TopNav({
   onCreateAction,
   onNavigate,
   onOpenRun,
-  onOpenSidebar,
 }: TopNavProps) {
   const { logout, token, user } = useAuth();
+  const { openMobileSidebar } = useSidebar();
   const isReadOnly = user?.role === 'VIEWER';
   const canCreateTestItems = canManageTests(user);
   const adminCreatePages: PageId[] = ['projects', 'test-plans', 'test-suites', 'test-runs'];
@@ -541,7 +545,7 @@ export function TopNav({
           .map((testRun) => ({
             id: `report:${testRun.id}`,
             title: testRun.name,
-            subtitle: `Final report - ${getRunSubtitle(testRun)}`,
+            subtitle: `Relatório final - ${getRunSubtitle(testRun)}`,
             group: 'reports',
             testRun,
           }));
@@ -551,7 +555,7 @@ export function TopNav({
           .map((item) => ({
             id: `user:${item.id}`,
             title: item.name,
-            subtitle: `${item.email} - ${item.role}`,
+            subtitle: `${item.email} - ${userRoleLabel(item.role)}`,
             group: 'users',
             page: 'users',
           }));
@@ -575,7 +579,7 @@ export function TopNav({
       } catch (error) {
         if (isActive) {
           setSearchState({
-            error: error instanceof Error ? error.message : 'Unable to search',
+            error: error instanceof Error ? error.message : 'Não foi possível buscar.',
             isLoading: false,
             query,
             results: [],
@@ -694,9 +698,10 @@ export function TopNav({
     <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur">
       <div className="flex h-16 items-center gap-3 px-4 sm:px-6 lg:px-8">
         <button
+          aria-label="Abrir menu"
           className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-950 lg:hidden"
-          onClick={onOpenSidebar}
-          title="Open sidebar"
+          onClick={openMobileSidebar}
+          title="Abrir menu"
           type="button"
         >
           <Menu className="h-4 w-4" aria-hidden="true" />
@@ -720,7 +725,7 @@ export function TopNav({
                 setIsSearchOpen(true);
               }}
               onFocus={() => setIsSearchOpen(true)}
-              placeholder="Search projects, runs, users..."
+              placeholder="Buscar projetos, execuções, usuários..."
               ref={searchInputRef}
               type="search"
               value={searchValue}
@@ -731,18 +736,18 @@ export function TopNav({
             <div className="absolute right-0 top-11 z-40 w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg ring-1 ring-slate-900/5">
               {normalizedSearchValue.length < 2 ? (
                 <div className="px-4 py-6 text-center text-sm text-slate-500">
-                  Type at least 2 characters to search across the platform.
+                  Digite pelo menos 2 caracteres para buscar na plataforma.
                 </div>
               ) : isCurrentSearchLoading ? (
                 <div className="flex items-center justify-center gap-2 px-4 py-6 text-sm text-slate-500">
                   <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                  Searching
+                  Buscando
                 </div>
               ) : currentSearchError ? (
                 <div className="px-4 py-6 text-center text-sm text-red-600">{currentSearchError}</div>
               ) : currentSearchResults.length === 0 ? (
                 <div className="px-4 py-6 text-center text-sm text-slate-500">
-                  No results found for "{normalizedSearchValue}".
+                  Nenhum resultado encontrado para "{normalizedSearchValue}".
                 </div>
               ) : (
                 <div className="max-h-[28rem] overflow-y-auto p-2">
@@ -783,10 +788,10 @@ export function TopNav({
             onClick={onCreateAction}
             title={
               requiresAdminCreate && !canCreateTestItems
-                ? 'Requires test management permission'
+                ? 'Requer permissão de gestão de testes'
                 : isReadOnly
-                  ? 'Viewer mode is read-only'
-                  : `New ${createActionLabel.toLowerCase()}`
+                  ? 'Modo visualizador é somente leitura'
+                  : `Novo item: ${createActionLabel.toLowerCase()}`
             }
             type="button"
           >
@@ -797,10 +802,10 @@ export function TopNav({
 
         <div className="relative" ref={notificationRef}>
           <button
-            aria-label={`${unreadNotifications.length} unread notifications`}
+            aria-label={`${unreadNotifications.length} notificações não lidas`}
             className="relative flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-950"
             onClick={() => setIsNotificationOpen((current) => !current)}
-            title="Notifications"
+            title="Notificações"
             type="button"
           >
             <Bell className="h-4 w-4" aria-hidden="true" />
@@ -815,9 +820,9 @@ export function TopNav({
             <div className="absolute right-0 top-11 z-40 w-96 max-w-[calc(100vw-2rem)] rounded-lg border border-slate-200 bg-white shadow-lg ring-1 ring-slate-900/5">
               <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
                 <div>
-                  <p className="text-sm font-semibold text-slate-950">Notifications</p>
+                  <p className="text-sm font-semibold text-slate-950">Notificações</p>
                   <p className="text-xs text-slate-500">
-                    {unreadNotifications.length} unread
+                    {unreadNotifications.length} não lida{unreadNotifications.length === 1 ? '' : 's'}
                   </p>
                 </div>
                 <div className="flex items-center gap-1">
@@ -826,7 +831,7 @@ export function TopNav({
                     onClick={() => void fetchNotifications()}
                     type="button"
                   >
-                    Refresh
+                    Atualizar
                   </button>
                   {notifications.length > 0 ? (
                     <button
@@ -834,7 +839,7 @@ export function TopNav({
                       onClick={markAllNotificationsRead}
                       type="button"
                     >
-                      Mark all read
+                      Marcar todas como lidas
                     </button>
                   ) : null}
                 </div>
@@ -844,14 +849,14 @@ export function TopNav({
                 {isLoadingNotifications ? (
                   <div className="flex items-center justify-center gap-2 px-4 py-8 text-sm text-slate-500">
                     <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                    Loading notifications
+                    Carregando notificações
                   </div>
                 ) : notifications.length === 0 ? (
                   <div className="px-4 py-8 text-center">
                     <Bell className="mx-auto h-8 w-8 text-slate-300" aria-hidden="true" />
-                    <p className="mt-3 text-sm font-medium text-slate-700">No notifications</p>
+                    <p className="mt-3 text-sm font-medium text-slate-700">Nenhuma notificação</p>
                     <p className="mt-1 text-xs text-slate-500">
-                      Assignments, completed runs and failures will appear here.
+                      Atribuições, execuções concluídas e falhas aparecerão aqui.
                     </p>
                   </div>
                 ) : (
@@ -875,7 +880,7 @@ export function TopNav({
         <button
           className="hidden min-w-0 items-center gap-2 border-l border-slate-200 pl-3 md:flex"
           onClick={() => onNavigate('profile')}
-          title="Open profile"
+          title="Abrir perfil"
           type="button"
         >
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
@@ -885,14 +890,14 @@ export function TopNav({
             <span className="block max-w-36 truncate text-sm font-medium text-slate-950">
               {user?.name}
             </span>
-            <span className="block truncate text-xs text-slate-500">{user?.role}</span>
+            <span className="block truncate text-xs text-slate-500">{userRoleLabel(user?.role)}</span>
           </span>
         </button>
 
         <button
           className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-950"
           onClick={logout}
-          title="Log out"
+          title="Sair"
           type="button"
         >
           <LogOut className="h-4 w-4" aria-hidden="true" />

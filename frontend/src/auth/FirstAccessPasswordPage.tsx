@@ -24,7 +24,7 @@ export function FirstAccessPasswordPage() {
     }
 
     if (newPassword !== confirmPassword) {
-      setError('Passwords do not match.');
+      setError('As senhas não coincidem.');
       return;
     }
 
@@ -33,7 +33,7 @@ export function FirstAccessPasswordPage() {
     try {
       await changePassword(currentPassword, newPassword);
     } catch (changeError) {
-      setError(changeError instanceof Error ? changeError.message : 'Unable to change password');
+      setError(changeError instanceof Error ? changeError.message : 'Não foi possível alterar a senha.');
     } finally {
       setIsSubmitting(false);
     }
@@ -52,13 +52,13 @@ export function FirstAccessPasswordPage() {
         <div className="mt-8">
           <p className="text-sm font-medium text-slate-500">{user?.email}</p>
           <h1 className="mt-2 text-2xl font-semibold tracking-normal text-slate-950">
-            Change temporary password
+            Alterar senha temporária
           </h1>
         </div>
 
         <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
           <label className="block text-sm font-medium text-slate-700">
-            Temporary password
+            Senha temporária
             <input
               autoComplete="current-password"
               autoFocus
@@ -71,7 +71,7 @@ export function FirstAccessPasswordPage() {
           </label>
 
           <label className="block text-sm font-medium text-slate-700">
-            New password
+            Nova senha
             <input
               autoComplete="new-password"
               className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
@@ -84,7 +84,7 @@ export function FirstAccessPasswordPage() {
           </label>
 
           <label className="block text-sm font-medium text-slate-700">
-            Confirm password
+            Confirmar senha
             <input
               autoComplete="new-password"
               className="mt-1 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
@@ -108,7 +108,7 @@ export function FirstAccessPasswordPage() {
             type="submit"
           >
             <KeyRound className="h-4 w-4" aria-hidden="true" />
-            {isSubmitting ? 'Saving' : 'Save password'}
+            {isSubmitting ? 'Salvando' : 'Salvar senha'}
           </button>
         </form>
 
@@ -118,7 +118,7 @@ export function FirstAccessPasswordPage() {
           type="button"
         >
           <LogOut className="h-4 w-4" aria-hidden="true" />
-          Log out
+          Sair
         </button>
       </section>
     </main>

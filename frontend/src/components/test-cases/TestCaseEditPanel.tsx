@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowDown, ArrowUp, ListChecks, Plus, Save, Trash2, X } from 'lucide-react';
 import { ActionMenu } from '../ActionMenu';
+import { testCaseStatusLabels } from '../../lib/labels';
 import type {
   ManagedTestCase,
   ManagedTestSuite,
@@ -75,13 +76,13 @@ export function TestCaseEditPanel({
   }, []);
 
   const suite = suites.find((item) => item.id === testCase.suiteId);
-  const suiteName = suite?.name ?? testCase.suite?.name ?? 'Suite';
+  const suiteName = suite?.name ?? testCase.suite?.name ?? 'Suíte';
   const projectName =
     suite?.project?.name ??
     testCase.suite?.project?.name ??
     suite?.projectId ??
     testCase.suite?.projectId ??
-    'Project';
+    'Projeto';
 
   function updateStep(index: number, field: 'description' | 'expectedResult', value: string) {
     setSteps((current) =>
@@ -120,12 +121,12 @@ export function TestCaseEditPanel({
       .filter((step) => step.description.length > 0);
 
     if (!title.trim()) {
-      setError('Title is required.');
+      setError('Título obrigatório.');
       return;
     }
 
     if (normalizedSteps.length !== steps.length) {
-      setError('Empty steps must be removed or filled before saving.');
+      setError('Passos vazios devem ser removidos ou preenchidos antes de salvar.');
       return;
     }
 
@@ -145,7 +146,7 @@ export function TestCaseEditPanel({
       );
       onClose();
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : 'Unable to save test case.');
+      setError(saveError instanceof Error ? saveError.message : 'Não foi possível salvar o caso de teste.');
     } finally {
       setSaving(false);
     }
@@ -161,19 +162,19 @@ export function TestCaseEditPanel({
           </span>
           <div className="min-w-0 flex-1">
             <h2 className="truncate text-sm font-semibold text-slate-950">
-              Edit test case
+              Editar caso de teste
             </h2>
             <p className="truncate text-xs text-slate-500">{projectName} / {suiteName}</p>
           </div>
           {onDelete ? (
             <ActionMenu
-              ariaLabel="Test case actions"
+              ariaLabel="Ações do caso de teste"
               disabled={readOnly || saving}
               items={[
                 {
-                  label: 'Delete',
+                  label: 'Excluir',
                   onSelect: () => onDelete(testCase),
-                  title: 'Delete test case',
+                  title: 'Excluir caso de teste',
                   tone: 'danger',
                 },
               ]}
@@ -182,7 +183,7 @@ export function TestCaseEditPanel({
           <button
             className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
             onClick={onClose}
-            title="Close"
+            title="Fechar"
             type="button"
           >
             <X className="h-4 w-4" aria-hidden="true" />
@@ -192,7 +193,7 @@ export function TestCaseEditPanel({
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
           <div className="grid gap-4 lg:grid-cols-[1fr_14rem]">
             <label className="block text-sm font-medium text-slate-700">
-              Title
+              Título
               <input
                 className="mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50"
                 disabled={readOnly || saving}
@@ -212,7 +213,7 @@ export function TestCaseEditPanel({
                 >
                   {statuses.map((item) => (
                     <option key={item} value={item}>
-                      {item}
+                      {testCaseStatusLabels[item]}
                     </option>
                   ))}
                 </select>
@@ -221,14 +222,14 @@ export function TestCaseEditPanel({
           </div>
 
           <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-            Project: <span className="font-medium text-slate-900">{projectName}</span>
+            Projeto: <span className="font-medium text-slate-900">{projectName}</span>
             <span className="mx-2 text-slate-300">/</span>
-            Suite: <span className="font-medium text-slate-900">{suiteName}</span>
+            Suíte: <span className="font-medium text-slate-900">{suiteName}</span>
           </div>
 
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
             <label className="block text-sm font-medium text-slate-700">
-              Description
+              Descrição
               <textarea
                 className="mt-1.5 min-h-28 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50"
                 disabled={readOnly || saving}
@@ -238,7 +239,7 @@ export function TestCaseEditPanel({
             </label>
 
             <label className="block text-sm font-medium text-slate-700">
-              Expected result
+              Resultado esperado
               <textarea
                 className="mt-1.5 min-h-28 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50"
                 disabled={readOnly || saving}
@@ -250,7 +251,7 @@ export function TestCaseEditPanel({
 
           <section className="mt-5">
             <div className="flex items-center justify-between gap-3">
-              <h3 className="text-sm font-semibold text-slate-950">Steps</h3>
+              <h3 className="text-sm font-semibold text-slate-950">Passos</h3>
               <button
                 className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-600 bg-slate-600 px-3 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={readOnly || saving}
@@ -258,14 +259,14 @@ export function TestCaseEditPanel({
                 type="button"
               >
                 <Plus className="h-4 w-4" aria-hidden="true" />
-                Step
+                Passo
               </button>
             </div>
 
             <div className="mt-3 space-y-3">
               {steps.length === 0 ? (
                 <p className="rounded-lg border border-dashed border-slate-300 px-3 py-4 text-sm text-slate-500">
-                  No steps defined.
+                  Nenhum passo definido.
                 </p>
               ) : null}
 
@@ -281,14 +282,14 @@ export function TestCaseEditPanel({
                     className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50"
                     disabled={readOnly || saving}
                     onChange={(event) => updateStep(index, 'description', event.target.value)}
-                    placeholder="Step description"
+                    placeholder="Descrição do passo"
                     value={step.description}
                   />
                   <input
                     className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50"
                     disabled={readOnly || saving}
                     onChange={(event) => updateStep(index, 'expectedResult', event.target.value)}
-                    placeholder="Step expected result"
+                    placeholder="Resultado esperado do passo"
                     value={step.expectedResult}
                   />
                   <div className="flex h-10 items-center justify-end gap-1">
@@ -296,7 +297,7 @@ export function TestCaseEditPanel({
                       className="rounded-lg p-2 text-slate-400 hover:bg-white hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
                       disabled={readOnly || saving || index === 0}
                       onClick={() => moveStep(index, -1)}
-                      title="Move up"
+                      title="Mover para cima"
                       type="button"
                     >
                       <ArrowUp className="h-4 w-4" aria-hidden="true" />
@@ -305,7 +306,7 @@ export function TestCaseEditPanel({
                       className="rounded-lg p-2 text-slate-400 hover:bg-white hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"
                       disabled={readOnly || saving || index === steps.length - 1}
                       onClick={() => moveStep(index, 1)}
-                      title="Move down"
+                      title="Mover para baixo"
                       type="button"
                     >
                       <ArrowDown className="h-4 w-4" aria-hidden="true" />
@@ -314,7 +315,7 @@ export function TestCaseEditPanel({
                       className="rounded-lg p-2 text-slate-400 hover:bg-red-100 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-30"
                       disabled={readOnly || saving}
                       onClick={() => removeStep(index)}
-                      title="Remove step"
+                      title="Remover passo"
                       type="button"
                     >
                       <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -335,7 +336,7 @@ export function TestCaseEditPanel({
               onClick={onClose}
               type="button"
             >
-              Cancel
+              Cancelar
             </button>
             <button
               className="inline-flex h-9 items-center gap-2 rounded-lg bg-blue-700 px-4 text-sm font-medium text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
@@ -344,7 +345,7 @@ export function TestCaseEditPanel({
               type="button"
             >
               <Save className="h-4 w-4" aria-hidden="true" />
-              {saving ? 'Saving' : 'Save'}
+              {saving ? 'Salvando' : 'Salvar'}
             </button>
           </div>
         </div>
