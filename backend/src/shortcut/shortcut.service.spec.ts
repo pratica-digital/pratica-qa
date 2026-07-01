@@ -2,9 +2,13 @@ import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ShortcutService } from './shortcut.service';
 
+const SHORTCUT_API_URL = 'https://shortcut.example.test/api/v3';
+
 function createConfig(values: Record<string, string>) {
+  const config: Record<string, string> = { SHORTCUT_API_URL, ...values };
+
   return {
-    get: jest.fn((key: string, fallback?: string) => values[key] ?? fallback),
+    get: jest.fn((key: string, fallback?: string) => config[key] ?? fallback),
   } as unknown as ConfigService;
 }
 
@@ -50,7 +54,7 @@ describe('ShortcutService', () => {
 
     expect(global.fetch).toHaveBeenCalledTimes(1);
     expect(global.fetch).toHaveBeenCalledWith(
-      'https://api.app.shortcut.com/api/v3/stories',
+      `${SHORTCUT_API_URL}/stories`,
       expect.objectContaining({
         method: 'POST',
         headers: {
@@ -93,7 +97,7 @@ describe('ShortcutService', () => {
     await service.createStory({ name: 'Story', description: 'Description' });
 
     expect(global.fetch).toHaveBeenCalledWith(
-      'https://api.app.shortcut.com/api/v3/stories',
+      `${SHORTCUT_API_URL}/stories`,
       expect.objectContaining({
         body: JSON.stringify({
           description: 'Description',

@@ -258,6 +258,18 @@ export type TestRun = {
   results?: TestResult[];
 };
 
+export type CreateTestRunPayload = {
+  projectId: string;
+  testPlanId: string;
+  assignedToId: string;
+  name: string;
+  description?: string;
+  testTypes: Array<{
+    type: TestRunTestType;
+    suites: string[];
+  }>;
+};
+
 export type TestPlanSection = {
   type?: string;
   title: string;

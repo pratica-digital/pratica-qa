@@ -120,16 +120,13 @@ export class AiSettingsService {
   private getEnvSettings(): AiConfigurationRecord {
     return {
       id: 'default',
-      provider: toProvider(this.configService.get<string>('LLM_PROVIDER', OPENROUTER_PROVIDER)),
-      model: this.configService.get<string>('OPENROUTER_MODEL', 'openrouter/free'),
-      endpoint: this.configService.get<string>(
-        'OPENROUTER_ENDPOINT',
-        'https://openrouter.ai/api/v1/chat/completions',
-      ),
-      temperature: this.configService.get<number>('TEMPERATURE', 0.2),
-      maxTokens: this.configService.get<number>('MAX_TOKENS', 4096),
-      timeoutSeconds: this.configService.get<number>('TIMEOUT', 120),
-      retries: this.configService.get<number>('LLM_RETRIES', 3),
+      provider: toProvider(this.configService.getOrThrow<string>('LLM_PROVIDER')),
+      model: this.configService.getOrThrow<string>('OPENROUTER_MODEL'),
+      endpoint: this.configService.getOrThrow<string>('OPENROUTER_ENDPOINT'),
+      temperature: this.configService.getOrThrow<number>('TEMPERATURE'),
+      maxTokens: this.configService.getOrThrow<number>('MAX_TOKENS'),
+      timeoutSeconds: this.configService.getOrThrow<number>('TIMEOUT'),
+      retries: this.configService.getOrThrow<number>('LLM_RETRIES'),
       streaming: false,
       promptBase: DEFAULT_BASE_PROMPT,
       promptUser: DEFAULT_USER_PROMPT,
@@ -159,7 +156,7 @@ export class AiSettingsService {
   }
 
   private getOpenRouterApiKey() {
-    const apiKey = this.configService.get<string>('OPENROUTER_KEY', '').trim();
+    const apiKey = this.configService.getOrThrow<string>('OPENROUTER_API_KEY').trim();
 
     if (!apiKey) {
       throw new BadRequestException('OpenRouter API Key not configured.');
@@ -169,10 +166,10 @@ export class AiSettingsService {
   }
 
   private getOpenRouterHttpReferer() {
-    return this.configService.get<string>('OPENROUTER_HTTP_REFERER', 'http://localhost:5173').trim();
+    return this.configService.getOrThrow<string>('OPENROUTER_HTTP_REFERER').trim();
   }
 
   private getOpenRouterTitle() {
-    return this.configService.get<string>('OPENROUTER_TITLE', 'QA Platform').trim();
+    return this.configService.getOrThrow<string>('OPENROUTER_TITLE').trim();
   }
 }

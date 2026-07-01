@@ -11,7 +11,7 @@ const config: LLMRuntimeConfig = {
   model: 'openrouter/free',
   endpoint: 'https://openrouter.ai/api/v1/chat/completions',
   apiKey: 'test-key',
-  httpReferer: 'http://localhost:5173',
+  httpReferer: 'https://app.example.test',
   appTitle: 'QA Platform',
   temperature: 0.2,
   maxTokens: 4096,
@@ -68,7 +68,7 @@ describe('OpenRouterClientService', () => {
         headers: {
           Authorization: 'Bearer test-key',
           'Content-Type': 'application/json',
-          'HTTP-Referer': 'http://localhost:5173',
+          'HTTP-Referer': 'https://app.example.test',
           'X-Title': 'QA Platform',
         },
         body: JSON.stringify({
@@ -119,7 +119,7 @@ describe('OpenRouterClientService', () => {
   });
 
   it.each([
-    [401, 'OpenRouter authentication failed. Verify OPENROUTER_KEY.'],
+    [401, 'OpenRouter authentication failed. Verify OPENROUTER_API_KEY.'],
     [403, 'Access denied by OpenRouter.'],
     [404, 'Configured model does not exist or is unavailable.'],
     [429, 'Rate limit exceeded.'],

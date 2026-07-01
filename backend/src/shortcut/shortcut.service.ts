@@ -31,6 +31,7 @@ type ShortcutGroup = {
 };
 
 type ShortcutConfig = {
+  endpoint?: string;
   groupId?: string;
   projectId?: number;
   spaceId?: number;
@@ -61,7 +62,6 @@ function asOptionalString(value: string | undefined) {
 @Injectable()
 export class ShortcutService {
   private readonly logger = new Logger(ShortcutService.name);
-  private readonly endpoint = 'https://api.app.shortcut.com/api/v3';
   private discoveryPromise?: Promise<ShortcutDestination | null>;
 
   constructor(private readonly configService: ConfigService) {}
@@ -78,6 +78,11 @@ export class ShortcutService {
       return null;
     }
 
+    if (!config.endpoint) {
+      this.logger.warn('Shortcut integration skipped: SHORTCUT_API_URL is not configured.');
+      return null;
+    }
+
     const destination = await this.resolveDestination(config);
 
     if (!destination?.workflowStateId && !destination?.projectId) {
@@ -88,7 +93,7 @@ export class ShortcutService {
     }
 
     const body = this.buildCreateStoryBody(story, destination);
-    const response = await fetch(`${this.endpoint}/stories`, {
+    const response = await fetch(`${config.endpoint}/stories`, {
       method: 'POST',
       headers: this.buildHeaders(config.token),
       body: JSON.stringify(body),
@@ -270,7 +275,11 @@ export class ShortcutService {
   }
 
   private async fetchShortcut<T>(config: ShortcutConfig, path: string) {
-    const response = await fetch(`${this.endpoint}${path}`, {
+    if (!config.endpoint) {
+      throw new Error('SHORTCUT_API_URL is required');
+    }
+
+    const response = await fetch(`${config.endpoint}${path}`, {
       method: 'GET',
       headers: this.buildHeaders(config.token),
     });
@@ -292,6 +301,7 @@ export class ShortcutService {
 
   private getConfig(): ShortcutConfig {
     return {
+      endpoint: asOptionalString(this.configService.get<string>('SHORTCUT_API_URL')),
       groupId: asOptionalString(this.configService.get<string>('SHORTCUT_TEAM_ID')),
       projectId: asOptionalNumber(this.configService.get<string>('SHORTCUT_PROJECT_ID')),
       spaceId: asOptionalNumber(this.configService.get<string>('SHORTCUT_SPACE_ID')),

@@ -41,6 +41,7 @@ import type {
   TestRun,
 } from '../types/testRun';
 import { PROJECT_CATEGORY_MAP, PROJECT_CATEGORY_ORDER } from '../types/testRun';
+import { useSidebar } from './useSidebar';
 
 const pageTitles: Record<PageId, string> = {
   dashboard: pageLabels.dashboard,
@@ -63,7 +64,6 @@ type TopNavProps = {
   onCreateAction?: () => void;
   onNavigate: (page: PageId) => void;
   onOpenRun: (testRun: TestRun) => void;
-  onOpenSidebar: () => void;
 };
 
 type GlobalSearchGroup =
@@ -390,9 +390,9 @@ export function TopNav({
   onCreateAction,
   onNavigate,
   onOpenRun,
-  onOpenSidebar,
 }: TopNavProps) {
   const { logout, token, user } = useAuth();
+  const { openMobileSidebar } = useSidebar();
   const isReadOnly = user?.role === 'VIEWER';
   const canCreateTestItems = canManageTests(user);
   const adminCreatePages: PageId[] = ['projects', 'test-plans', 'test-suites', 'test-runs'];
@@ -698,8 +698,9 @@ export function TopNav({
     <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur">
       <div className="flex h-16 items-center gap-3 px-4 sm:px-6 lg:px-8">
         <button
+          aria-label="Abrir menu"
           className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-950 lg:hidden"
-          onClick={onOpenSidebar}
+          onClick={openMobileSidebar}
           title="Abrir menu"
           type="button"
         >

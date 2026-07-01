@@ -57,7 +57,7 @@ export class OpenRouterErrorService {
   fromStatus(status: number) {
     if (status === 401) {
       return new OpenRouterException(
-        'OpenRouter authentication failed. Verify OPENROUTER_KEY.',
+        'OpenRouter authentication failed. Verify OPENROUTER_API_KEY.',
         HttpStatus.UNAUTHORIZED,
         {
           providerStatus: status,

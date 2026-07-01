@@ -194,11 +194,19 @@ function DashboardMetricCard({
       : (delta.direction === 'up' && !inverseDelta) || (delta.direction === 'down' && inverseDelta)
         ? 'text-emerald-600'
         : 'text-red-600';
-  const deltaSign = delta && delta.value > 0 ? '+' : '';
+  const deltaSign =
+    !delta || delta.direction === 'flat'
+      ? ''
+      : delta.direction === 'up'
+        ? '+'
+        : '-';
+  const deltaPercent = delta
+    ? new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 }).format(Math.abs(delta.percent))
+    : '';
 
   return (
     <button
-      className={`group rounded-lg border bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50 ${
+      className={`group rounded-lg border bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50 ${
         active
           ? 'border-slate-950 ring-2 ring-slate-200'
           : 'border-slate-200'
@@ -206,25 +214,35 @@ function DashboardMetricCard({
       onClick={onClick}
       type="button"
     >
-      <div className="flex items-start justify-between gap-3">
-        <span className={`flex h-9 w-9 items-center justify-center rounded-lg border ${metricToneClasses[tone]}`}>
-          <Icon className="h-4 w-4" aria-hidden="true" />
-        </span>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className={`flex h-8 w-9 items-center justify-center rounded-lg border ${metricToneClasses[tone]}`}>
+            <Icon className="h-4 w-4" aria-hidden="true" />
+          </span>
+
+          <p className="text-sm text-slate-500">{label}</p>
+        </div>
+
         <ArrowUpRight className="h-4 w-4 text-slate-400 transition group-hover:text-slate-700" />
       </div>
-      <p className="mt-4 text-sm text-slate-500">{label}</p>
-      <p className="mt-1 text-2xl font-semibold tracking-normal text-slate-950">
+
+      <p className="mt-1 text-center text-2xl font-semibold tracking-normal text-slate-950">
         {value}
       </p>
-      {delta ? (
-        <p className={`mt-2 text-xs font-medium ${deltaTone}`}>
-          {deltaSign}
-          {delta.value} in {periodLabel ?? 'selected period'}
-        </p>
+
+      {description ? <p className="mt-2 text-xs text-slate-500">{description}</p> : null}
+
+      {delta || periodLabel ? (
+        <div className="mt-4 flex items-center justify-between gap-3 text-xs">
+          <span className="truncate text-slate-400">{periodLabel}</span>
+          {delta ? (
+            <span className={`shrink-0 font-medium ${deltaTone}`}>
+              {deltaSign}
+              {deltaPercent}%
+            </span>
+          ) : null}
+        </div>
       ) : null}
-      <p className="mt-2 line-clamp-2 min-h-10 text-xs text-slate-500">
-        {description}
-      </p>
     </button>
   );
 }

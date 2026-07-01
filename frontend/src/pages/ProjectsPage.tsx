@@ -32,6 +32,9 @@ type ProjectsPageProps = {
   createActionEventId?: number;
 };
 
+type ProjectStatusFilter = 'ALL' | ProjectStatus;
+type ProjectCategoryFilter = 'ALL' | ProjectCategory;
+
 type ProjectForm = {
   name: string;
   description: string;
@@ -507,6 +510,9 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
   const canManageTestAssets = canManageTests(user);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [search, setSearch] = useState('');
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<ProjectCategoryFilter>('ALL');
+  const [statusFilter, setStatusFilter] = useState<ProjectStatusFilter>('ALL');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<ProjectSummary | null>(null);
   const [selectedProject, setSelectedProject] = useState<ProjectSummary | null>(null);
@@ -559,19 +565,40 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
   const visibleProjects = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
 
-    if (!normalizedSearch) {
-      return projects;
-    }
-
     return projects.filter((project) => {
-      const searchable = [project.name, project.description, project.status]
+      const category = project.category ?? 'BAKERY_OVENS';
+      const status = project.status ?? 'ACTIVE';
+
+      if (categoryFilter !== 'ALL' && category !== categoryFilter) {
+        return false;
+      }
+
+      if (statusFilter !== 'ALL' && status !== statusFilter) {
+        return false;
+      }
+
+      if (!normalizedSearch) {
+        return true;
+      }
+
+      const searchable = [
+        project.name,
+        project.description,
+        status,
+        PROJECT_CATEGORY_MAP[category],
+      ]
         .filter(Boolean)
         .join(' ')
         .toLowerCase();
 
       return searchable.includes(normalizedSearch);
     });
-  }, [projects, search]);
+  }, [categoryFilter, projects, search, statusFilter]);
+
+  const activeFilterCount = useMemo(
+    () => Number(categoryFilter !== 'ALL') + Number(statusFilter !== 'ALL'),
+    [categoryFilter, statusFilter],
+  );
 
   const projectsByCategory = useMemo(() => {
     const grouped: Record<ProjectCategory, ProjectSummary[]> = {
@@ -692,15 +719,12 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
           <input
             className="w-full border-0 bg-transparent p-0 text-sm text-slate-900 outline-none placeholder:text-slate-400"
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Buscar projetos"
+            placeholder="Buscar"
             type="search"
             value={search}
           />
         </label>
-        <span className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-600">
-          <Filter className="h-4 w-4" aria-hidden="true" />
-          {visibleProjects.length} exibido{visibleProjects.length === 1 ? '' : 's'}
-        </span>
+        
       </div>
 
       {error ? (

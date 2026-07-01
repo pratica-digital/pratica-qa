@@ -7,6 +7,7 @@ import type {
   CreateTestCasePayload,
   CreateTestPlanPayload,
   CreateTestResultPayload,
+  CreateTestRunPayload,
   CreateTestSuitePayload,
   ExecuteTestResultPayload,
   ManagedTestCase,
@@ -31,7 +32,15 @@ import type {
   UpdateUserPayload,
 } from '../types/testRun';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, '');
+
+function getApiBaseUrl() {
+  if (!API_BASE_URL) {
+    throw new Error('VITE_API_URL is required');
+  }
+
+  return API_BASE_URL;
+}
 
 type RequestOptions = {
   method?: string;
@@ -65,7 +74,7 @@ function buildUrl(path: string) {
     return path;
   }
 
-  return `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
+  return `${getApiBaseUrl()}${path.startsWith('/') ? path : `/${path}`}`;
 }
 
 function buildQuery(params: Record<string, string | number | undefined>) {
@@ -150,7 +159,7 @@ export function resolveApiAssetUrl(value?: string | null) {
     return value;
   }
 
-  const apiOrigin = new URL(API_BASE_URL, window.location.origin).origin;
+  const apiOrigin = new URL(getApiBaseUrl(), window.location.origin).origin;
   return `${apiOrigin}${value.startsWith('/') ? value : `/${value}`}`;
 }
 
@@ -491,6 +500,12 @@ export const testCasesApi = {
 };
 
 export const testRunsApi = {
+  create: (token: string, payload: CreateTestRunPayload) =>
+    apiRequest<TestRun>('/test-runs', {
+      method: 'POST',
+      token,
+      body: payload,
+    }),
   assignableUsers: (token: string) => apiRequest<AuthUser[]>('/test-runs/assignable-users', { token }),
   listPage: async (
     token: string,

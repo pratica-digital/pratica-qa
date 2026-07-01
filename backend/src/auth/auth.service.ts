@@ -214,12 +214,12 @@ export class AuthService {
   }
 
   private getPasswordResetExpirationDate() {
-    const minutes = this.configService.get<number>('PASSWORD_RESET_TOKEN_EXPIRES_IN_MINUTES', 30);
+    const minutes = this.configService.getOrThrow<number>('PASSWORD_RESET_TOKEN_EXPIRES_IN_MINUTES');
     return new Date(Date.now() + minutes * 60 * 1000);
   }
 
   private buildPasswordResetLink(email: string, token: string) {
-    const url = new URL(this.configService.get<string>('APP_FRONTEND_URL', 'http://localhost:5173'));
+    const url = new URL(this.configService.getOrThrow<string>('FRONTEND_URL'));
     url.searchParams.set('mode', 'reset');
     url.searchParams.set('email', email);
     url.searchParams.set('token', token);

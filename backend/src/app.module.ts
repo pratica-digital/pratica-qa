@@ -18,10 +18,22 @@ import { TestSuitesModule } from './modules/test-suites/test-suites.module';
 import { UsersModule } from './modules/users/users.module';
 import { PrismaModule } from './prisma/prisma.module';
 
+const nodeEnv = process.env.NODE_ENV;
+const envFilePath = [
+  nodeEnv ? `backend/.env.${nodeEnv}.local` : undefined,
+  nodeEnv ? `backend/.env.${nodeEnv}` : undefined,
+  'backend/.env.local',
+  'backend/.env',
+  nodeEnv ? `.env.${nodeEnv}.local` : undefined,
+  nodeEnv ? `.env.${nodeEnv}` : undefined,
+  '.env.local',
+  '.env',
+].filter((path): path is string => Boolean(path));
+
 @Module({
   imports: [
     ConfigModule.forRoot({
-      envFilePath: ['.env', 'backend/.env'],
+      envFilePath,
       isGlobal: true,
       validate: validateEnv,
     }),

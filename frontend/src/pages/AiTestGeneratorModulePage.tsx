@@ -1,6 +1,6 @@
 import { History, ListChecks, Settings } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { AiHistoryPage } from './AiHistoryPage';
 import { AiSettingsPage } from './AiSettingsPage';
 import { AiTestGeneratorPage } from './AiTestGeneratorPage';
@@ -25,10 +25,6 @@ export function AiTestGeneratorModulePage({
   initialTab = 'generate',
 }: AiTestGeneratorModulePageProps) {
   const [activeTab, setActiveTab] = useState<AiTestGeneratorTab>(initialTab);
-
-  useEffect(() => {
-    setActiveTab(initialTab);
-  }, [initialTab]);
 
   return (
     <div className="space-y-6">

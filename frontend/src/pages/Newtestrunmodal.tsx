@@ -18,12 +18,12 @@ import {
 import type {
   AuthUser,
   ManagedTestSuite,
-  PaginatedResponse,
   TestPlan,
   TestRun,
   TestRunTestType,
 } from '../types/testRun';
 import { useAuth } from '../auth/useAuth';
+import { testPlansApi, testRunsApi, testSuitesApi } from '../lib/api';
 
 type SuiteOption = ManagedTestSuite;
 type TabId = 'info' | 'suites';
@@ -139,32 +139,15 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
       setLoadError('');
 
       try {
-        const [plansResponse, suitesResponse] = await Promise.all([
-          fetch(`http://localhost:3000/api/test-plans?limit=100`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          fetch(`http://localhost:3000/api/test-suites?limit=100${projectId ? `&projectId=${projectId}` : ''}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
+        const [plansList, suitesList] = await Promise.all([
+          testPlansApi.list(token, { limit: 100 }),
+          testSuitesApi.list(token, { limit: 100, projectId }),
         ]);
-
-        if (!plansResponse.ok || !suitesResponse.ok) {
-          setLoadError('Falha ao carregar os dados');
-          return;
-        }
-
-        const plansData = (await plansResponse.json()) as TestPlan[] | PaginatedResponse<TestPlan>;
-        const suitesData = (await suitesResponse.json()) as
-          | ManagedTestSuite[]
-          | PaginatedResponse<ManagedTestSuite>;
-
-        const plansList = Array.isArray(plansData) ? plansData : plansData.data || [];
-        const suitesList = Array.isArray(suitesData) ? suitesData : suitesData.data || [];
 
         setTestPlans(plansList);
         setSuites(suitesList);
-      } catch {
-        setLoadError('Não foi possível carregar os dados');
+      } catch (loadError) {
+        setLoadError(loadError instanceof Error ? loadError.message : 'Não foi possível carregar os dados');
       } finally {
         setIsLoadingData(false);
       }
@@ -294,6 +277,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
     try {
       const selectedSuiteOptions = suites.filter((suite) => suiteAssignments[suite.id]);
       const selectedPlan = testPlans.find((plan) => plan.id === form.planId);
+      const resolvedProjectId = projectId || selectedPlan?.projectId || selectedSuiteOptions[0]?.projectId;
       const testTypes = selectedTestTypes.map((type) => ({
         type,
         suites: Object.entries(suiteAssignments)
@@ -301,33 +285,20 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
           .map(([suiteId]) => suiteId),
       }));
 
-      const response = await fetch('http://localhost:3000/api/test-runs', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          projectId: projectId || selectedPlan?.projectId || selectedSuiteOptions[0]?.projectId,
-          testPlanId: form.planId,
-          assignedToId: form.assignedToId,
-          name: form.name.trim(),
-          description: form.description.trim(),
-          testTypes,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = (await response.json()) as { message?: string | string[] };
-        const message = Array.isArray(errorData.message)
-          ? errorData.message.join(', ')
-          : errorData.message;
-        setLoadError(message || 'Falha ao criar a execução');
+      if (!resolvedProjectId) {
+        setLoadError('Selecione ao menos uma suíte vinculada a um projeto.');
         setSubmitting(false);
         return;
       }
 
-      const createdRun = (await response.json()) as TestRun;
+      const createdRun = await testRunsApi.create(token, {
+        projectId: resolvedProjectId,
+        testPlanId: form.planId,
+        assignedToId: form.assignedToId,
+        name: form.name.trim(),
+        description: form.description.trim(),
+        testTypes,
+      });
       onCreate?.(createdRun);
 
       onClose();
