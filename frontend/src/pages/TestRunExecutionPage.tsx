@@ -12,10 +12,12 @@ import {
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { canManageTests } from '../auth/permissions';
 import { useAuth } from '../auth/useAuth';
+import { DeleteConfirmationModal } from '../components/DeleteConfirmationModal';
 import { TestCaseRunner } from '../components/test-run/TestCaseRunner';
 import { TestRunStatusBadge, UserRoleBadge } from '../components/badges';
 import { ApiError, testResultsApi, testRunsApi } from '../lib/api';
 import { testResultStatusLabel } from '../lib/labels';
+import { getResultTestCase } from '../lib/testResultOverrides';
 import type {
   ExecuteTestResultPayload,
   TestResult,
@@ -36,6 +38,16 @@ function countResults(results: TestResult[] | undefined, status: TestResult['sta
 
 type StatusFilter = 'ALL' | TestResultStatus;
 type SortMode = 'suite' | 'status' | 'date' | 'executor';
+type RunCaseEditDraft = {
+  title: string;
+  description: string;
+  expectedResult: string;
+  steps: Array<{
+    id?: string;
+    description: string;
+    expectedResult: string;
+  }>;
+};
 
 const statusFilters: Array<{ label: string; value: StatusFilter }> = [
   { label: 'Todos', value: 'ALL' },
@@ -69,6 +81,21 @@ function getStatusLabel(status: TestResultStatus) {
   return testResultStatusLabel(status);
 }
 
+function createRunCaseEditDraft(result: TestResult): RunCaseEditDraft {
+  const testCase = getResultTestCase(result);
+
+  return {
+    title: testCase.title,
+    description: testCase.description ?? '',
+    expectedResult: testCase.expectedResult ?? '',
+    steps: (testCase.steps ?? []).map((step) => ({
+      id: step.id,
+      description: step.description,
+      expectedResult: step.expectedResult ?? '',
+    })),
+  };
+}
+
 function mergeUpdatedResult(current: TestRun, updatedResult: TestResult) {
   const results = current.results?.map((result) => {
     if (result.id !== updatedResult.id) {
@@ -81,9 +108,6 @@ function mergeUpdatedResult(current: TestRun, updatedResult: TestResult) {
       testCase: {
         ...result.testCase,
         ...updatedResult.testCase,
-        steps: result.testCase.steps,
-        description: result.testCase.description,
-        expectedResult: result.testCase.expectedResult,
       },
     };
   });
@@ -148,6 +172,12 @@ export function TestRunExecutionPage({
   const [rerunning, setRerunning] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [editingResult, setEditingResult] = useState<TestResult | null>(null);
+  const [editDraft, setEditDraft] = useState<RunCaseEditDraft | null>(null);
+  const [editError, setEditError] = useState('');
+  const [savingRunCaseEdit, setSavingRunCaseEdit] = useState(false);
+  const [removeTarget, setRemoveTarget] = useState<TestResult | null>(null);
+  const [removingResult, setRemovingResult] = useState(false);
 
   const results = useMemo(() => run.results ?? [], [run.results]);
   const failedCount = countResults(results, 'FAILED');
@@ -157,13 +187,15 @@ export function TestRunExecutionPage({
     return results
       .filter((result) => statusFilter === 'ALL' || result.status === statusFilter)
       .filter((result) => {
+        const testCase = getResultTestCase(result);
+
         if (!normalizedSearch) {
           return true;
         }
 
         return [
-          result.testCase.title,
-          result.testCase.description,
+          testCase.title,
+          testCase.description,
           result.comment,
           getResultProjectName(result),
           getResultSuiteName(result),
@@ -192,7 +224,7 @@ export function TestRunExecutionPage({
         }
 
         return getResultSuiteName(left).localeCompare(getResultSuiteName(right)) ||
-          left.testCase.title.localeCompare(right.testCase.title);
+          getResultTestCase(left).title.localeCompare(getResultTestCase(right).title);
       });
   }, [results, search, sortMode, statusFilter]);
   const effectiveActiveResultId = useMemo(() => {
@@ -304,7 +336,7 @@ export function TestRunExecutionPage({
         comment: payload.comment,
       });
       applyUpdatedResult(updatedResult);
-      setSuccess(`${result.testCase.title} marcado como ${getStatusLabel(payload.status)}.`);
+      setSuccess(`${getResultTestCase(result).title} marcado como ${getStatusLabel(payload.status)}.`);
     } catch (submitError) {
       if (submitError instanceof ApiError && submitError.status === 403) {
         setError('Você não tem permissão para atualizar este resultado.');
@@ -330,7 +362,7 @@ export function TestRunExecutionPage({
 
       applyUpdatedResult(updatedResult);
       setSuccess(
-        `${files.length} arquivo${files.length > 1 ? 's' : ''} de evidência enviado${files.length > 1 ? 's' : ''} para ${result.testCase.title}.`,
+        `${files.length} arquivo${files.length > 1 ? 's' : ''} de evidência enviado${files.length > 1 ? 's' : ''} para ${getResultTestCase(result).title}.`,
       );
     } catch (uploadError) {
       if (uploadError instanceof ApiError && uploadError.status === 403) {
@@ -368,6 +400,108 @@ export function TestRunExecutionPage({
       }
     } finally {
       setSubmittingResultId(null);
+    }
+  };
+
+  function openRunCaseEdit(result: TestResult) {
+    setError('');
+    setSuccess('');
+    setEditError('');
+    setEditingResult(result);
+    setEditDraft(createRunCaseEditDraft(result));
+  }
+
+  function closeRunCaseEdit() {
+    if (savingRunCaseEdit) {
+      return;
+    }
+
+    setEditingResult(null);
+    setEditDraft(null);
+    setEditError('');
+  }
+
+  const handleSaveRunCaseEdit = async () => {
+    if (!token || !editingResult || !editDraft) {
+      return;
+    }
+
+    const title = editDraft.title.trim();
+    const steps = editDraft.steps.map((step, index) => ({
+      id: step.id,
+      order: index + 1,
+      description: step.description.trim(),
+      expectedResult: step.expectedResult.trim(),
+    }));
+
+    if (!title) {
+      setEditError('Informe um título para o caso.');
+      return;
+    }
+
+    if (steps.some((step) => !step.description)) {
+      setEditError('Todos os passos precisam de descrição.');
+      return;
+    }
+
+    setEditError('');
+    setError('');
+    setSuccess('');
+    setSavingRunCaseEdit(true);
+
+    try {
+      const updatedResult = await testResultsApi.update(token, editingResult.id, {
+        title,
+        description: editDraft.description.trim(),
+        expectedResult: editDraft.expectedResult.trim(),
+        steps,
+      });
+
+      applyUpdatedResult(updatedResult);
+      setSuccess(`${title} atualizado somente nesta execução.`);
+      setEditingResult(null);
+      setEditDraft(null);
+    } catch (saveError) {
+      if (saveError instanceof ApiError && saveError.status === 403) {
+        setEditError('Você não tem permissão para editar este caso nesta execução.');
+      } else {
+        setEditError(saveError instanceof Error ? saveError.message : 'Não foi possível salvar a edição.');
+      }
+    } finally {
+      setSavingRunCaseEdit(false);
+    }
+  };
+
+  const handleConfirmRemoveRunCase = async () => {
+    if (!token || !removeTarget) {
+      return;
+    }
+
+    const removedTitle = getResultTestCase(removeTarget).title;
+
+    setError('');
+    setSuccess('');
+    setRemovingResult(true);
+
+    try {
+      await testResultsApi.remove(token, removeTarget.id);
+      const freshRun = await testRunsApi.get(token, run.id);
+
+      setRun(freshRun);
+      onRunUpdated(freshRun);
+      setActiveResultId((current) =>
+        current === removeTarget.id ? freshRun.results?.[0]?.id ?? null : current,
+      );
+      setRemoveTarget(null);
+      setSuccess(`${removedTitle} removido somente desta execução.`);
+    } catch (removeError) {
+      if (removeError instanceof ApiError && removeError.status === 403) {
+        setError('Você não tem permissão para remover este caso da execução.');
+      } else {
+        setError(removeError instanceof Error ? removeError.message : 'Não foi possível remover o caso da execução.');
+      }
+    } finally {
+      setRemovingResult(false);
     }
   };
 
@@ -484,26 +618,34 @@ export function TestRunExecutionPage({
       <div className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-1 flex-col gap-3">
           <div className="flex flex-wrap items-center gap-2">
-            {statusFilters.map((filter) => (
-              <button
-                className={`inline-flex h-9 items-center gap-2 rounded-lg border px-3 text-sm font-medium ${
-                  statusFilter === filter.value
-                    ? 'border-slate-950 bg-slate-950 text-white'
-                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                }`}
-                key={filter.value}
-                onClick={() => setStatusFilter(filter.value)}
-                type="button"
-              >
-                <Filter className="h-4 w-4" aria-hidden="true" />
-                {filter.label}
-                {filter.value !== 'ALL' ? (
-                  <span className="rounded bg-white/20 px-1.5 text-xs">
-                    {countResults(results, filter.value)}
-                  </span>
-                ) : null}
-              </button>
-            ))}
+            {statusFilters.map((filter) => {
+              const isActive = statusFilter === filter.value;
+
+              return (
+                <button
+                  className={`inline-flex h-9 items-center gap-2 rounded-lg border px-3 text-sm font-medium transition ${
+                    isActive
+                      ? 'border-blue-700 bg-blue-700 text-white shadow-sm'
+                      : 'border-slate-200 bg-white text-slate-700 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700'
+                  }`}
+                  key={filter.value}
+                  onClick={() => setStatusFilter(filter.value)}
+                  type="button"
+                >
+                  <Filter className="h-4 w-4" aria-hidden="true" />
+                  {filter.label}
+                  {filter.value !== 'ALL' ? (
+                    <span
+                      className={`rounded px-1.5 text-xs font-semibold ${
+                        isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+                      }`}
+                    >
+                      {countResults(results, filter.value)}
+                    </span>
+                  ) : null}
+                </button>
+              );
+            })}
           </div>
           <div className="grid gap-2 md:grid-cols-[1fr_14rem]">
             <label className="flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-500">
@@ -604,7 +746,9 @@ export function TestRunExecutionPage({
                     isSubmitting={submittingResultId === result.id}
                     key={result.id}
                     onActivate={() => setActiveResultId(result.id)}
+                    onEditRunCase={openRunCaseEdit}
                     onRemoveAttachment={handleRemoveAttachment}
+                    onRemoveRunCase={setRemoveTarget}
                     onSubmit={handleSubmit}
                     onUploadAttachments={handleUploadAttachments}
                     result={result}
@@ -635,6 +779,200 @@ export function TestRunExecutionPage({
           </button>
         </div>
       )}
+
+      {editingResult && editDraft ? (
+        <div
+          className="fixed inset-0 z-[10000] flex items-end justify-center bg-slate-600/40 px-4 py-6 backdrop-blur-sm sm:items-center"
+          onClick={(event) => event.target === event.currentTarget && closeRunCaseEdit()}
+          role="presentation"
+        >
+          <form
+            aria-modal="true"
+            className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+            onSubmit={(event) => {
+              event.preventDefault();
+              void handleSaveRunCaseEdit();
+            }}
+            role="dialog"
+          >
+            <div className="border-b border-slate-200 px-5 py-4">
+              <h2 className="text-base font-semibold text-slate-950">
+                Editar caso neste run
+              </h2>
+            </div>
+
+            <div className="space-y-4 px-5 py-4">
+              {editError ? (
+                <p className="rounded-lg border border-red-200 bg-red-100 px-3 py-2 text-sm text-red-800">
+                  {editError}
+                </p>
+              ) : null}
+
+              <label className="block text-xs font-medium uppercase text-slate-500">
+                Título
+                <input
+                  className="mt-2 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm normal-case text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                  onChange={(event) =>
+                    setEditDraft((current) =>
+                      current ? { ...current, title: event.target.value } : current,
+                    )
+                  }
+                  value={editDraft.title}
+                />
+              </label>
+
+              <label className="block text-xs font-medium uppercase text-slate-500">
+                Descrição
+                <textarea
+                  className="mt-2 min-h-24 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm normal-case text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                  onChange={(event) =>
+                    setEditDraft((current) =>
+                      current ? { ...current, description: event.target.value } : current,
+                    )
+                  }
+                  value={editDraft.description}
+                />
+              </label>
+
+              <label className="block text-xs font-medium uppercase text-slate-500">
+                Resultado esperado
+                <textarea
+                  className="mt-2 min-h-20 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm normal-case text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                  onChange={(event) =>
+                    setEditDraft((current) =>
+                      current ? { ...current, expectedResult: event.target.value } : current,
+                    )
+                  }
+                  value={editDraft.expectedResult}
+                />
+              </label>
+
+              <section className="space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-xs font-medium uppercase text-slate-500">Passos</h3>
+                  <button
+                    className="inline-flex h-8 items-center justify-center rounded-lg border border-blue-700 bg-blue-700 px-3 text-xs font-medium text-white transition hover:bg-blue-800"
+                    onClick={() =>
+                      setEditDraft((current) =>
+                        current
+                          ? {
+                              ...current,
+                              steps: [
+                                ...current.steps,
+                                { description: '', expectedResult: '' },
+                              ],
+                            }
+                          : current,
+                      )
+                    }
+                    type="button"
+                  >
+                    Adicionar passo
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {editDraft.steps.map((step, index) => (
+                    <div
+                      className="rounded-lg border border-slate-200 bg-slate-50 p-3"
+                      key={`${step.id ?? 'new'}-${index}`}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-xs font-semibold uppercase text-slate-500">
+                          Passo {index + 1}
+                        </span>
+                        <button
+                          className="text-xs font-medium text-red-600 hover:text-red-700"
+                          onClick={() =>
+                            setEditDraft((current) =>
+                              current
+                                ? {
+                                    ...current,
+                                    steps: current.steps.filter((_, stepIndex) => stepIndex !== index),
+                                  }
+                                : current,
+                            )
+                          }
+                          type="button"
+                        >
+                          Remover
+                        </button>
+                      </div>
+                      <textarea
+                        className="mt-2 min-h-16 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                        onChange={(event) =>
+                          setEditDraft((current) =>
+                            current
+                              ? {
+                                  ...current,
+                                  steps: current.steps.map((item, stepIndex) =>
+                                    stepIndex === index
+                                      ? { ...item, description: event.target.value }
+                                      : item,
+                                  ),
+                                }
+                              : current,
+                          )
+                        }
+                        placeholder="Descrição do passo"
+                        value={step.description}
+                      />
+                      <textarea
+                        className="mt-2 min-h-14 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                        onChange={(event) =>
+                          setEditDraft((current) =>
+                            current
+                              ? {
+                                  ...current,
+                                  steps: current.steps.map((item, stepIndex) =>
+                                    stepIndex === index
+                                      ? { ...item, expectedResult: event.target.value }
+                                      : item,
+                                  ),
+                                }
+                              : current,
+                          )
+                        }
+                        placeholder="Resultado esperado do passo"
+                        value={step.expectedResult}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </div>
+
+            <div className="flex flex-col-reverse gap-2 border-t border-slate-200 px-5 py-4 sm:flex-row sm:justify-end">
+              <button
+                className="inline-flex h-9 items-center justify-center rounded-lg bg-slate-600 px-4 text-sm font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={savingRunCaseEdit}
+                onClick={closeRunCaseEdit}
+                type="button"
+              >
+                Cancelar
+              </button>
+              <button
+                className="inline-flex h-9 items-center justify-center rounded-lg bg-blue-700 px-4 text-sm font-medium text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={savingRunCaseEdit}
+                type="submit"
+              >
+                {savingRunCaseEdit ? 'Salvando' : 'Salvar nesta execução'}
+              </button>
+            </div>
+          </form>
+        </div>
+      ) : null}
+
+      {removeTarget ? (
+        <DeleteConfirmationModal
+          description={`Isso remove "${getResultTestCase(removeTarget).title}" somente desta execução. O caso de teste original continua existindo.`}
+          loading={removingResult}
+          onCancel={() => !removingResult && setRemoveTarget(null)}
+          onConfirm={() => void handleConfirmRemoveRunCase()}
+          title="Remover caso deste run"
+        />
+      ) : null}
     </div>
   );
 }

@@ -8,13 +8,17 @@ import {
   History,
   Image,
   ListChecks,
+  Pencil,
   ShieldAlert,
+  Trash2,
   UserCheck,
   X,
 } from 'lucide-react';
+import { ActionMenu } from '../ActionMenu';
 import { TestResultStatusBadge } from '../badges';
 import { resolveApiAssetUrl } from '../../lib/api';
 import { testResultStatusLabel } from '../../lib/labels';
+import { getResultTestCase } from '../../lib/testResultOverrides';
 import type { ExecuteTestResultPayload, TestResult, TestResultAttachment, TestResultStatus } from '../../types/testRun';
 import { TestResultForm } from './TestResultForm';
 
@@ -25,6 +29,8 @@ type TestCaseRunnerProps = {
   isActive: boolean;
   isSubmitting: boolean;
   onActivate: () => void;
+  onEditRunCase: (result: TestResult) => void;
+  onRemoveRunCase: (result: TestResult) => void;
   onRemoveAttachment: (result: TestResult, attachment: TestResultAttachment) => Promise<void>;
   onSubmit: (result: TestResult, payload: ExecuteTestResultPayload) => Promise<void>;
   onUploadAttachments: (result: TestResult, files: File[]) => Promise<void>;
@@ -89,12 +95,14 @@ export function TestCaseRunner({
   isActive,
   isSubmitting,
   onActivate,
+  onEditRunCase,
+  onRemoveRunCase,
   onRemoveAttachment,
   onSubmit,
   onUploadAttachments,
 }: TestCaseRunnerProps) {
   const [previewAttachment, setPreviewAttachment] = useState<TestResultAttachment | null>(null);
-  const { testCase } = result;
+  const testCase = getResultTestCase(result);
   const steps = testCase.steps ?? [];
   const attachments = result.attachments ?? [];
   const history = result.history ?? [];
@@ -133,6 +141,23 @@ export function TestCaseRunner({
                   Falha crítica
                 </span>
               ) : null}
+              <ActionMenu
+                ariaLabel="Ações do caso nesta execução"
+                disabled={disabled}
+                items={[
+                  {
+                    icon: <Pencil className="h-4 w-4" aria-hidden="true" />,
+                    label: 'Editar neste run',
+                    onSelect: () => onEditRunCase(result),
+                  },
+                  {
+                    icon: <Trash2 className="h-4 w-4" aria-hidden="true" />,
+                    label: 'Remover deste run',
+                    onSelect: () => onRemoveRunCase(result),
+                    tone: 'danger',
+                  },
+                ]}
+              />
             </div>
             <h2 className="mt-3 text-base font-semibold tracking-normal text-slate-950">
               {testCase.title}
@@ -163,7 +188,7 @@ export function TestCaseRunner({
         </div>
       </div>
 
-      <div className="grid gap-4 p-4 xl:grid-cols-[1fr_22rem]">
+      <div className="p-4">
         <div className="space-y-4">
           <section>
             <h3 className="text-xs font-medium uppercase text-slate-500">Passos</h3>
@@ -199,6 +224,26 @@ export function TestCaseRunner({
             <p className="mt-2 text-sm text-slate-700">
               {testCase.expectedResult || 'Use os resultados esperados dos passos para verificação.'}
             </p>
+          </section>
+
+          <section className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+            {disabled && disabledReason ? (
+              <p className="mb-3 rounded-md border border-amber-200 bg-amber-100 px-3 py-2 text-sm text-amber-800">
+                {disabledReason}
+              </p>
+            ) : null}
+            <TestResultForm
+              attachments={result.attachments}
+              comment={result.comment}
+              currentStatus={result.status}
+              disabled={disabled}
+              isActive={isActive}
+              isSubmitting={isSubmitting}
+              key={`${result.id}-${result.comment ?? ''}`}
+              onRemoveAttachment={(attachment) => onRemoveAttachment(result, attachment)}
+              onSubmit={(payload) => onSubmit(result, payload)}
+              onUploadAttachments={(files) => onUploadAttachments(result, files)}
+            />
           </section>
 
           {result.comment ? (
@@ -333,26 +378,6 @@ export function TestCaseRunner({
             </section>
           ) : null}
         </div>
-
-        <aside className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
-          {disabled && disabledReason ? (
-            <p className="rounded-md border border-amber-200 bg-amber-100 px-3 py-2 text-sm text-amber-800">
-              {disabledReason}
-            </p>
-          ) : null}
-          <TestResultForm
-            attachments={result.attachments}
-            comment={result.comment}
-            currentStatus={result.status}
-            disabled={disabled}
-            isActive={isActive}
-            isSubmitting={isSubmitting}
-            key={`${result.id}-${result.comment ?? ''}`}
-            onRemoveAttachment={(attachment) => onRemoveAttachment(result, attachment)}
-            onSubmit={(payload) => onSubmit(result, payload)}
-            onUploadAttachments={(files) => onUploadAttachments(result, files)}
-          />
-        </aside>
       </div>
 
       {previewAttachment ? (

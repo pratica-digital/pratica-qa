@@ -72,7 +72,7 @@ export class TestResultsService {
   async findOne(id: string) {
     const testResult = await this.testResultsRepository.findById(id);
 
-    if (!testResult) {
+    if (!testResult || testResult.removedAt) {
       throw new NotFoundException('Test result not found');
     }
 
@@ -151,9 +151,11 @@ export class TestResultsService {
     return updatedResult;
   }
 
-  async remove(id: string) {
+  async remove(id: string, user: AuthenticatedUser) {
     const testResult = await this.findOne(id);
-    const deletedResult = await this.testResultsRepository.delete(id);
+    this.ensureCanExecuteResult(testResult.testRun.assignedToId, user);
+
+    const deletedResult = await this.testResultsRepository.delete(id, user.id);
     await this.testRunsRepository.refreshExecutionStatus(testResult.testRunId);
 
     return deletedResult;

@@ -22,6 +22,7 @@ import type { TestResult, TestResultAttachment, TestResultStatus, TestRun } from
 import { useTestRunReport } from "../hooks/useTestRunReport";
 import { resolveApiAssetUrl } from '../lib/api';
 import { testResultStatusLabel, testRunStatusLabel } from '../lib/labels';
+import { getResultTestCase } from '../lib/testResultOverrides';
 import praticaLogoUrl from '../assets/pratica-logo.png';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -104,7 +105,7 @@ function isExternalHttpUrl(value?: string | null) {
 }
 
 function getShortcutStoryLabel(result: TestResult) {
-  return result.shortcutStoryName?.trim() || `[FAIL] ${result.testCase.title}`;
+  return result.shortcutStoryName?.trim() || `[FAIL] ${getResultTestCase(result).title}`;
 }
 
 function ShortcutStorySection({ result }: { result: TestResult }) {
@@ -364,7 +365,7 @@ function TestCaseAccordion({ result }: { result: TestResult }) {
   const status = result.status as StatusGroup;
   const cfg = STATUS_CONFIG[status];
   const Icon = cfg.icon;
-  const tc = result.testCase;
+  const tc = getResultTestCase(result);
 
   return (
     <div
@@ -376,7 +377,6 @@ function TestCaseAccordion({ result }: { result: TestResult }) {
         type="button"
         aria-expanded={open}
       >
-        <Icon className={`h-4 w-4 shrink-0 ${cfg.cardText}`} aria-hidden="true" />
         <div className="flex-1 min-w-0">
           <span className="text-sm font-semibold text-slate-950 truncate block">
             {tc.title}
@@ -389,9 +389,11 @@ function TestCaseAccordion({ result }: { result: TestResult }) {
           )}
         </div>
         <span
-          className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${cfg.badgeBg} ${cfg.badgeText}`}
+          className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${cfg.badgeBg} ${cfg.badgeText}`}
+          title={cfg.label}
         >
-          {cfg.label}
+          <Icon className="h-4 w-4" aria-hidden="true" />
+          <span className="sr-only">{cfg.label}</span>
         </span>
         {open ? (
           <ChevronUp className="h-4 w-4 shrink-0 text-slate-400" />
@@ -523,13 +525,19 @@ function StatusSection({
     <section className="space-y-3">
       <button
         className="flex w-full items-center gap-2 text-left"
+        aria-expanded={!collapsed}
         onClick={() => setCollapsed((v) => !v)}
+        title={`${cfg.label} (${results.length})`}
         type="button"
       >
-        <Icon className={`h-4 w-4 ${cfg.sectionTitle}`} aria-hidden="true" />
-        <h2 className={`text-sm font-semibold ${cfg.sectionTitle}`}>
-          {cfg.label}
-          <span className="ml-2 text-slate-400 font-normal">({results.length})</span>
+        <h2 className={`flex items-center gap-2 text-sm font-semibold ${cfg.sectionTitle}`}>
+          <span
+            className={`inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${cfg.badgeBg} ${cfg.badgeText}`}
+          >
+            <Icon className="h-4 w-4" aria-hidden="true" />
+          </span>
+          <span className="sr-only">{cfg.label}</span>
+          <span className="text-slate-400 font-normal">({results.length})</span>
         </h2>
         <div className={`flex-1 h-px ${cfg.sectionBorder} border-t`} />
         {collapsed ? (
@@ -883,7 +891,7 @@ async function generatePDF(testRun: TestRun, results: TestResult[]) {
       y += 16;
 
       for (const result of group) {
-        const tc = result.testCase;
+        const tc = getResultTestCase(result);
         const hasDesc     = Boolean(tc.description);
         const hasExpected = Boolean(tc.expectedResult);
         const hasComment  = Boolean(result.comment);

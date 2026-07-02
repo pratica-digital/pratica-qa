@@ -42,13 +42,13 @@ export function Sidebar({ activePage, onNavigate }: SidebarProps) {
         }`}>
           <button
             aria-label="Ir para dashboard"
-            className={`flex min-w-0 items-center gap-3 text-left transition ${
+            className={`flex min-w-0 items-center gap-1 text-left transition ${
               isCollapsed ? 'lg:justify-center' : ''
             }`}
             onClick={() => onNavigate('dashboard')}
             type="button"
           >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-blue-900/60">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg ">
               <img
                 src={simquality2}
                 alt=""
@@ -149,7 +149,9 @@ export function Sidebar({ activePage, onNavigate }: SidebarProps) {
                   {user?.name}
                 </p>
                 <p className="mt-0.5 text-xs text-blue-200">
-                  {activeAssignedRuns.length} atribuição{activeAssignedRuns.length === 1 ? '' : 'ões'} ativa{activeAssignedRuns.length === 1 ? '' : 's'}
+                  {activeAssignedRuns.length}{' '}
+                  {activeAssignedRuns.length === 1 ? 'atribuição' : 'atribuições'}{' '}
+                  {activeAssignedRuns.length === 1 ? 'ativa' : 'ativas'}
                 </p>
               </div>
               <span className={`h-2.5 w-2.5 rounded-full bg-emerald-500 ${

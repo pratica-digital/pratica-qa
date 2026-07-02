@@ -177,6 +177,10 @@ export type TestResult = {
   testCaseId: string;
   status: TestResultStatus;
   comment?: string;
+  titleOverride?: string | null;
+  descriptionOverride?: string | null;
+  expectedResultOverride?: string | null;
+  stepsOverride?: TestStep[] | null;
   attachments?: TestResultAttachment[];
   legacyAttachments?: string[];
   shortcutCreatedAt?: string | null;
@@ -184,6 +188,7 @@ export type TestResult = {
   shortcutStoryName?: string | null;
   shortcutStoryUrl?: string | null;
   executedAt?: string | null;
+  removedAt?: string | null;
   executedBy?: AuthUser | null;
   lastModifiedBy?: AuthUser | null;
   updatedAt?: string;
@@ -372,14 +377,20 @@ export type ExecuteTestResultPayload = {
   comment?: string;
 };
 
-export type UpdateTestResultPayload = {
+export type UpdateTestResultPayload = Partial<{
   status: TestResultStatus;
-  comment?: string;
-};
+  comment: string;
+  title: string;
+  description: string;
+  expectedResult: string;
+  steps: ReplaceTestStepsPayload['steps'];
+}>;
 
-export type CreateTestResultPayload = UpdateTestResultPayload & {
+export type CreateTestResultPayload = {
   testRunId: string;
   testCaseId: string;
+  status: TestResultStatus;
+  comment?: string;
   executedById?: string;
 };
 

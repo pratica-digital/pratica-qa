@@ -1,5 +1,5 @@
 import { ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, Clock3, Paperclip, SkipForward, X, XCircle, type LucideIcon } from 'lucide-react';
+import { CheckCircle2, Paperclip, SkipForward, X, XCircle, type LucideIcon } from 'lucide-react';
 import type {
   ExecuteTestResultPayload,
   TestResultAttachment,
@@ -28,39 +28,30 @@ const actionConfig: Array<{
 }> = [
   {
     status: 'PASSED',
-    label: 'Aprovado',
+    label: 'Aprovar',
     title: 'Marcar como aprovado',
     className:
-      'border-emerald-200 text-emerald-800 hover:bg-emerald-100',
-    activeClassName: 'border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700',
+      'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100',
+    activeClassName: 'border-emerald-600 bg-emerald-100 text-emerald-900 ring-1 ring-emerald-500',
     icon: CheckCircle2,
   },
   {
     status: 'FAILED',
-    label: 'Falhou',
+    label: 'Falhar',
     title: 'Marcar como falhou',
     className:
-      'border-red-200 text-red-800 hover:bg-red-100',
-    activeClassName: 'border-red-600 bg-red-600 text-white hover:bg-red-700',
+      'border-red-200 bg-red-50 text-red-700 hover:bg-red-100',
+    activeClassName: 'border-red-600 bg-red-100 text-red-900 ring-1 ring-red-500',
     icon: XCircle,
   },
   {
     status: 'SKIPPED',
-    label: 'Ignorado',
+    label: 'Pular',
     title: 'Marcar como ignorado',
     className:
-      'border-amber-200 text-amber-800 hover:bg-amber-100',
-    activeClassName: 'border-amber-200 bg-amber-100 text-amber-800 hover:bg-amber-100',
+      'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100',
+    activeClassName: 'border-amber-500 bg-amber-100 text-amber-900 ring-1 ring-amber-500',
     icon: SkipForward,
-  },
-  {
-    status: 'PENDING',
-    label: 'Não executado',
-    title: 'Marcar como não executado',
-    className:
-      'border-slate-200 text-slate-700 hover:bg-slate-100',
-    activeClassName: 'border-slate-600 bg-slate-600 text-white hover:bg-slate-700',
-    icon: Clock3,
   },
 ];
 
@@ -163,9 +154,7 @@ export function TestResultForm({
             ? 'FAILED'
             : key === 's'
               ? 'SKIPPED'
-              : key === 'n'
-                ? 'PENDING'
-                : undefined;
+              : undefined;
 
       if (!status) {
         return;
@@ -255,16 +244,17 @@ export function TestResultForm({
         </div>
       ) : null}
 
-      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="flex flex-wrap gap-2">
         {actionConfig.map((action) => {
           const Icon = action.icon;
 
           return (
             <button
-              className={`inline-flex h-9 items-center justify-center gap-2 rounded-lg border px-3 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50 ${
+              aria-label={action.title}
+              className={`inline-flex h-10 items-center justify-center gap-2 rounded-lg border px-3 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${
                 currentStatus === action.status
                   ? action.activeClassName
-                  : `bg-white ${action.className}`
+                  : action.className
               }`}
               disabled={disabled || isBusy}
               key={action.status}
@@ -272,7 +262,7 @@ export function TestResultForm({
               title={action.title}
               type="button"
             >
-              <Icon className="h-4 w-4" aria-hidden="true" />
+              <Icon className="h-5 w-5" aria-hidden="true" />
               {action.label}
             </button>
           );

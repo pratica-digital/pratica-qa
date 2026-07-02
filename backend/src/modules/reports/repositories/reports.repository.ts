@@ -51,13 +51,13 @@ export class ReportsRepository {
       this.prisma.testPlan.count({ where: { deletedAt: null } }),
       this.prisma.testRun.count({ where: { deletedAt: null } }),
       this.prisma.testResult.count({
-        where: { status: TestResultStatus.PASSED, testRun: { deletedAt: null } },
+        where: { status: TestResultStatus.PASSED, removedAt: null, testRun: { deletedAt: null } },
       }),
       this.prisma.testResult.count({
-        where: { status: TestResultStatus.FAILED, testRun: { deletedAt: null } },
+        where: { status: TestResultStatus.FAILED, removedAt: null, testRun: { deletedAt: null } },
       }),
       this.prisma.testResult.count({
-        where: { status: TestResultStatus.PENDING, testRun: { deletedAt: null } },
+        where: { status: TestResultStatus.PENDING, removedAt: null, testRun: { deletedAt: null } },
       }),
     ]).then(([projects, suites, cases, plans, runs, passed, failed, pending]) => ({
       projects,
@@ -115,6 +115,7 @@ export class ReportsRepository {
       FROM test_results tr
       INNER JOIN test_runs r ON r.id = tr."testRunId"
       WHERE r."deletedAt" IS NULL
+        AND tr."removedAt" IS NULL
     `;
 
     return rows[0] ?? { executed: 0, passed: 0, failed: 0, skipped: 0, pending: 0 };
@@ -129,6 +130,7 @@ export class ReportsRepository {
       FROM test_results tr
       INNER JOIN test_runs r ON r.id = tr."testRunId"
       WHERE r."deletedAt" IS NULL
+        AND tr."removedAt" IS NULL
         AND tr.status IN ('PASSED', 'FAILED', 'SKIPPED')
         AND tr."executedAt" BETWEEN ${start} AND ${end}
       GROUP BY DATE_TRUNC('month', tr."executedAt")
@@ -155,6 +157,7 @@ export class ReportsRepository {
       FROM test_results tr
       INNER JOIN test_runs r ON r.id = tr."testRunId"
       WHERE r."deletedAt" IS NULL
+        AND tr."removedAt" IS NULL
         AND COALESCE(tr."executedAt", tr."createdAt") BETWEEN ${start} AND ${end}
       GROUP BY tr.status
     `;
@@ -213,6 +216,7 @@ export class ReportsRepository {
       FROM test_results tr
       INNER JOIN test_runs r ON r.id = tr."testRunId"
       WHERE r."deletedAt" IS NULL
+        AND tr."removedAt" IS NULL
     `;
 
     return rows[0] ?? { casesExecuted: 0, failures: 0, approvals: 0 };

@@ -8,7 +8,6 @@ type Environment = {
   LLM_PROVIDER: 'openrouter';
   LLM_RETRIES: number;
   LLM_STREAMING: boolean;
-  MAIL_FROM?: string;
   MAX_TOKENS: number;
   NODE_ENV?: string;
   OPENROUTER_API_KEY: string;
@@ -25,14 +24,6 @@ type Environment = {
   SHORTCUT_SPACE_ID?: string;
   SHORTCUT_TEAM_ID?: string;
   SHORTCUT_WORKFLOW_STATE_ID?: string;
-  SMTP_HELO_NAME?: string;
-  SMTP_HOST?: string;
-  SMTP_PASSWORD?: string;
-  SMTP_PORT?: number;
-  SMTP_REQUIRE_TLS?: string;
-  SMTP_SECURE?: string;
-  SMTP_TIMEOUT_MS?: number;
-  SMTP_USER?: string;
   TEMPERATURE: number;
   TIMEOUT: number;
 };
@@ -81,19 +72,11 @@ function getOptionalString(config: Record<string, unknown>, key: string) {
   return value || undefined;
 }
 
-function getOptionalNumber(config: Record<string, unknown>, key: string) {
-  if (config[key] === undefined || config[key] === null || config[key] === '') {
-    return undefined;
-  }
-
-  return Number(config[key]);
-}
-
 function getFrontendUrl(config: Record<string, unknown>) {
-  const value = getString(config, 'FRONTEND_URL') ?? getString(config, 'APP_FRONTEND_URL');
+  const value = getString(config, 'APP_FRONTEND_URL') ?? getString(config, 'FRONTEND_URL');
 
   if (!value) {
-    throw new Error('FRONTEND_URL is required');
+    throw new Error('APP_FRONTEND_URL is required');
   }
 
   return value;
@@ -107,15 +90,6 @@ export function validateEnv(config: Record<string, unknown>): Environment {
   const frontendUrl = getFrontendUrl(config);
   const firstAccessTokenMinutes = getNumber(config, 'FIRST_ACCESS_TOKEN_EXPIRES_IN_MINUTES', 1440);
   const passwordResetTokenMinutes = getNumber(config, 'PASSWORD_RESET_TOKEN_EXPIRES_IN_MINUTES', 30);
-  const mailFrom = getOptionalString(config, 'MAIL_FROM');
-  const smtpHost = getOptionalString(config, 'SMTP_HOST');
-  const smtpHeloName = getOptionalString(config, 'SMTP_HELO_NAME') ?? 'qa-platform.local';
-  const smtpPort = getOptionalNumber(config, 'SMTP_PORT');
-  const smtpPassword = getOptionalString(config, 'SMTP_PASSWORD');
-  const smtpRequireTls = getOptionalString(config, 'SMTP_REQUIRE_TLS');
-  const smtpSecure = getOptionalString(config, 'SMTP_SECURE');
-  const smtpTimeoutMs = getOptionalNumber(config, 'SMTP_TIMEOUT_MS') ?? 10000;
-  const smtpUser = getOptionalString(config, 'SMTP_USER');
   const temperature = getNumber(config, 'TEMPERATURE', 0.2);
   const maxTokens = getNumber(config, 'MAX_TOKENS', 4096);
   const timeout = getNumber(config, 'TIMEOUT', 120);
@@ -144,37 +118,6 @@ export function validateEnv(config: Record<string, unknown>): Environment {
 
   if (!Number.isInteger(passwordResetTokenMinutes) || passwordResetTokenMinutes < 1) {
     throw new Error('PASSWORD_RESET_TOKEN_EXPIRES_IN_MINUTES must be a positive integer');
-  }
-
-  if (smtpPort !== undefined && (!Number.isInteger(smtpPort) || smtpPort < 1 || smtpPort > 65535)) {
-    throw new Error('SMTP_PORT must be a valid TCP port');
-  }
-
-  if (smtpTimeoutMs !== undefined && (!Number.isInteger(smtpTimeoutMs) || smtpTimeoutMs < 1000)) {
-    throw new Error('SMTP_TIMEOUT_MS must be at least 1000');
-  }
-
-  if (smtpHost) {
-    if (!mailFrom) {
-      throw new Error('MAIL_FROM is required when SMTP_HOST is configured');
-    }
-
-    if (smtpPort === undefined) {
-      throw new Error('SMTP_PORT is required when SMTP_HOST is configured');
-    }
-
-    if (!smtpSecure) {
-      throw new Error('SMTP_SECURE is required when SMTP_HOST is configured');
-    }
-
-    if (!smtpRequireTls) {
-      throw new Error('SMTP_REQUIRE_TLS is required when SMTP_HOST is configured');
-    }
-
-  }
-
-  if ((smtpUser && !smtpPassword) || (!smtpUser && smtpPassword)) {
-    throw new Error('SMTP_USER and SMTP_PASSWORD must be configured together');
   }
 
   if (llmProvider !== 'openrouter') {
@@ -207,7 +150,6 @@ export function validateEnv(config: Record<string, unknown>): Environment {
     LLM_PROVIDER: 'openrouter',
     LLM_RETRIES: llmRetries,
     LLM_STREAMING: false,
-    MAIL_FROM: mailFrom,
     MAX_TOKENS: maxTokens,
     NODE_ENV: getOptionalString(config, 'NODE_ENV'),
     OPENROUTER_API_KEY: openRouterApiKey,
@@ -224,14 +166,6 @@ export function validateEnv(config: Record<string, unknown>): Environment {
     SHORTCUT_SPACE_ID: getOptionalString(config, 'SHORTCUT_SPACE_ID'),
     SHORTCUT_TEAM_ID: getOptionalString(config, 'SHORTCUT_TEAM_ID'),
     SHORTCUT_WORKFLOW_STATE_ID: getOptionalString(config, 'SHORTCUT_WORKFLOW_STATE_ID'),
-    SMTP_HELO_NAME: smtpHeloName,
-    SMTP_HOST: smtpHost,
-    SMTP_PASSWORD: smtpPassword,
-    SMTP_PORT: smtpPort,
-    SMTP_REQUIRE_TLS: smtpRequireTls,
-    SMTP_SECURE: smtpSecure,
-    SMTP_TIMEOUT_MS: smtpTimeoutMs,
-    SMTP_USER: smtpUser,
     TEMPERATURE: temperature,
     TIMEOUT: timeout,
   };
