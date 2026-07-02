@@ -32,7 +32,6 @@ type TestRunForm = {
   name: string;
   planId: string;
   assignedToId: string;
-  description: string;
   scheduledAt: string;
 };
 
@@ -57,7 +56,6 @@ const initialForm: TestRunForm = {
   name: '',
   planId: '',
   assignedToId: '',
-  description: '',
   scheduledAt: '',
 };
 
@@ -296,7 +294,6 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
         testPlanId: form.planId,
         assignedToId: form.assignedToId,
         name: form.name.trim(),
-        description: form.description.trim(),
         testTypes,
       });
       onCreate?.(createdRun);
@@ -464,15 +461,6 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
                 </div>
               </Field>
 
-              <Field label="Descrição" hint="Objetivo ou escopo desta execução">
-                <textarea
-                  className="w-full resize-none rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
-                  onChange={(event) => setField('description', event.target.value)}
-                  placeholder="Cobertura smoke da release"
-                  rows={3}
-                  value={form.description}
-                />
-              </Field>
             </div>
           ) : null}
 

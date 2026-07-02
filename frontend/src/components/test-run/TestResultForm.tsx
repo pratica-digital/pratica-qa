@@ -1,5 +1,14 @@
 import { ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, Paperclip, SkipForward, X, XCircle, type LucideIcon } from 'lucide-react';
+import {
+  CheckCircle2,
+  ChevronRight,
+  ListChecks,
+  Paperclip,
+  SkipForward,
+  X,
+  XCircle,
+  type LucideIcon,
+} from 'lucide-react';
 import type {
   ExecuteTestResultPayload,
   TestResultAttachment,
@@ -10,9 +19,16 @@ type TestResultFormProps = {
   comment?: string;
   attachments?: TestResultAttachment[];
   currentStatus: TestResultStatus;
+  draftComment?: string;
   disabled: boolean;
   isActive: boolean;
   isSubmitting: boolean;
+  isLastResult?: boolean;
+  navigationPosition?: number;
+  navigationTotal?: number;
+  onNext?: (payload: ExecuteTestResultPayload, hasDraftChanges: boolean) => Promise<void>;
+  onDraftCommentChange?: (value: string) => void;
+  onOpenList?: () => void;
   onRemoveAttachment: (attachment: TestResultAttachment) => Promise<void>;
   onSubmit: (payload: ExecuteTestResultPayload) => Promise<void>;
   onUploadAttachments: (files: File[]) => Promise<void>;
@@ -86,9 +102,16 @@ export function TestResultForm({
   comment = '',
   attachments = [],
   currentStatus,
+  draftComment: controlledDraftComment,
   disabled,
   isActive,
   isSubmitting,
+  isLastResult = false,
+  navigationPosition,
+  navigationTotal,
+  onNext,
+  onDraftCommentChange,
+  onOpenList,
   onRemoveAttachment,
   onSubmit,
   onUploadAttachments,
@@ -97,6 +120,19 @@ export function TestResultForm({
   const [uploadingFiles, setUploadingFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const isBusy = isSubmitting || isUploading;
+  const displayedDraftComment = controlledDraftComment ?? draftComment;
+  const updateDraftComment = useCallback((value: string) => {
+    if (onDraftCommentChange) {
+      onDraftCommentChange(value);
+      return;
+    }
+
+    setDraftComment(value);
+  }, [onDraftCommentChange]);
+  const normalizedDraftComment = displayedDraftComment.trim();
+  const normalizedSavedComment = comment.trim();
+  const hasDraftChanges = normalizedDraftComment !== normalizedSavedComment;
+  const hasNavigation = Boolean(isActive && onNext && onOpenList && navigationPosition && navigationTotal);
 
   const uploadingAttachmentLabels = useMemo(
     () => uploadingFiles.map((file) => `${file.name} (${formatFileSize(file.size)})`),
@@ -125,9 +161,23 @@ export function TestResultForm({
   const submitStatus = useCallback(async (status: TestResultStatus) => {
     await onSubmit({
       status,
-      comment: draftComment.trim(),
+      comment: normalizedDraftComment,
     });
-  }, [draftComment, onSubmit]);
+  }, [normalizedDraftComment, onSubmit]);
+
+  const goToNext = useCallback(async () => {
+    if (!onNext || isLastResult) {
+      return;
+    }
+
+    await onNext(
+      {
+        status: currentStatus,
+        comment: normalizedDraftComment,
+      },
+      hasDraftChanges,
+    );
+  }, [currentStatus, hasDraftChanges, isLastResult, normalizedDraftComment, onNext]);
 
   useEffect(() => {
     if (!isActive || disabled || isBusy) {
@@ -176,9 +226,9 @@ export function TestResultForm({
         <textarea
           className="mt-2 min-h-20 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm normal-case text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500"
           disabled={disabled || isBusy}
-          onChange={(event) => setDraftComment(event.target.value)}
+          onChange={(event) => updateDraftComment(event.target.value)}
           placeholder="Notas, comportamento observado ou detalhe da falha"
-          value={draftComment}
+          value={displayedDraftComment}
         />
       </label>
 
@@ -268,6 +318,35 @@ export function TestResultForm({
           );
         })}
       </div>
+
+      {hasNavigation ? (
+        <div className="flex flex-col gap-2 border-t border-slate-200 pt-3 sm:flex-row sm:items-center sm:justify-between">
+          <span className="text-xs font-medium text-slate-500">
+            Caso {navigationPosition}/{navigationTotal}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-600 bg-slate-600 px-3 text-sm font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={isBusy || isLastResult}
+              onClick={() => void goToNext()}
+              type="button"
+            >
+              {isLastResult ? 'Último caso' : 'Próximo'}
+              <ChevronRight className="h-4 w-4" aria-hidden="true" />
+            </button>
+            <button
+              aria-label="Abrir lista de casos de teste"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={isBusy}
+              onClick={() => onOpenList?.()}
+              title="Lista de casos"
+              type="button"
+            >
+              <ListChecks className="h-4 w-4" aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

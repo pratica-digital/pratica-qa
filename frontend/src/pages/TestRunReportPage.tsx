@@ -18,10 +18,10 @@ import {
   XCircle,
 } from 'lucide-react';
 import { useCallback, useState } from 'react';
-import type { TestResult, TestResultAttachment, TestResultStatus, TestRun } from '../types/testRun';
+import type { TestResult, TestResultAttachment, TestRun } from '../types/testRun';
 import { useTestRunReport } from "../hooks/useTestRunReport";
 import { resolveApiAssetUrl } from '../lib/api';
-import { testResultStatusLabel, testRunStatusLabel } from '../lib/labels';
+import { testRunStatusLabel } from '../lib/labels';
 import { getResultTestCase } from '../lib/testResultOverrides';
 import praticaLogoUrl from '../assets/pratica-logo.png';
 
@@ -94,10 +94,6 @@ function attachmentMeta(attachment: TestResultAttachment) {
   }
 
   return parts.join(' - ');
-}
-
-function statusLabel(status?: TestResultStatus | null) {
-  return testResultStatusLabel(status);
 }
 
 function isExternalHttpUrl(value?: string | null) {
@@ -471,37 +467,6 @@ function TestCaseAccordion({ result }: { result: TestResult }) {
             </div>
           )}
 
-          {result.history && result.history.length > 0 && (
-            <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                Histórico de alterações
-              </p>
-              <div className="space-y-2">
-                {result.history.map((entry) => (
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2" key={entry.id}>
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="text-xs font-medium text-slate-700">
-                        {statusLabel(entry.previousStatus)} {'->'} {statusLabel(entry.newStatus)}
-                      </span>
-                      <span className="text-xs text-slate-500">{fmt(entry.createdAt)}</span>
-                    </div>
-                    <p className="mt-1 text-xs text-slate-500">
-                      {entry.actor?.name ?? 'Sistema'}
-                      {entry.addedAttachments?.length
-                        ? ` adicionou ${entry.addedAttachments.length} evidência(s)`
-                        : ''}
-                      {entry.removedAttachments?.length
-                        ? ` removeu ${entry.removedAttachments.length} evidência(s)`
-                        : ''}
-                    </p>
-                    {entry.newComment && entry.newComment !== entry.previousComment ? (
-                      <p className="mt-1 text-xs text-slate-600">{entry.newComment}</p>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       )}
     </div>
@@ -591,7 +556,7 @@ async function generatePDF(testRun: TestRun, results: TestResult[]) {
     failed:     [220, 38,  38]  as [number, number, number],  // red-600
     failedBg:   [254, 226, 226] as [number, number, number],
     skipped:    [241,185, 56]   as [number, number, number],  // amber-700
-    skippedBg:  [255,252, 33] as [number, number, number],
+    skippedBg:  [255,238,140] as [number, number, number],
     pending:    [100, 116, 139] as [number, number, number],  // slate-500
     pendingBg:  [241, 245, 249] as [number, number, number],
 
@@ -896,7 +861,6 @@ async function generatePDF(testRun: TestRun, results: TestResult[]) {
         const hasExpected = Boolean(tc.expectedResult);
         const hasComment  = Boolean(result.comment);
         const attachments = result.attachments ?? [];
-        const historyCount = result.history?.length ?? 0;
 
         const titleLines = doc.splitTextToSize(tc.title || 'Sem título', contentW - 52);
         const titleLineCount = Math.min(titleLines.length, 2);
@@ -910,7 +874,6 @@ async function generatePDF(testRun: TestRun, results: TestResult[]) {
         const attachH = attachments.length > 0
           ? 4 + attachments.reduce((h, a) => h + (isImageAttachment(a) ? 30 : 0) + 5, 0)
           : 0;
-        const histH = historyCount > 0 ? 4 + Math.min(historyCount, 3) * 4.5 : 0;
 
         const estimatedH =
           8 +
@@ -921,7 +884,7 @@ async function generatePDF(testRun: TestRun, results: TestResult[]) {
           (hasExpected ? measureField(tc.expectedResult ?? '') : 0) +
           (hasComment  ? measureField(result.comment    ?? '') : 0) +
           (stepsH > 0  ? 4 + stepsH + 2                      : 0) +
-          attachH + histH + 6;
+          attachH + 6;
 
         checkPage(estimatedH + 4);
 
@@ -1028,19 +991,6 @@ async function generatePDF(testRun: TestRun, results: TestResult[]) {
             doc.text(aLines.slice(0, 1), cx + 2, cy);
             cy += 5;
           }
-        }
-
-        if (historyCount > 0) {
-          sf('bold', 6.5, C.navy);
-          doc.text('HISTÓRICO', cx, cy);
-          cy += 4;
-          result.history?.slice(0, 3).forEach((entry) => {
-            const line = `${fmt(entry.createdAt)}  ·  ${entry.actor?.name ?? 'Sistema'}  ›  ${statusLabel(entry.previousStatus)} → ${statusLabel(entry.newStatus)}`;
-            sf('normal', 7.5, C.textSub);
-            const hLines = doc.splitTextToSize(line, contentW - 18);
-            doc.text(hLines.slice(0, 1), cx + 2, cy);
-            cy += 4.5;
-          });
         }
 
         y += Math.max(estimatedH, cy - cardY + 6) + 4;
