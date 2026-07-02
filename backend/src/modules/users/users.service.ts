@@ -1,12 +1,14 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { User, UserRole, UserStatus } from '@prisma/client';
+import { UserRole, UserStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
 import { AuditService, RequestMetadata } from '../../audit/audit.service';
 import { AuthenticatedUser } from '../../auth/types/authenticated-user';
 import { getPagination } from '../../common/dto/pagination-query.dto';
-import { EmailService } from '../../email/email.service';
+import { MAIL_SENDER_ADDRESS, MailService } from '../../mail/mail.service';
+import { renderFirstAccessTemplate } from '../../mail/templates/first-access';
+import { renderPasswordResetTemplate } from '../../mail/templates/password-reset';
 import { CreateUserDto } from './dto/create-user.dto';
 import { QueryUsersDto } from './dto/query-users.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
@@ -29,7 +31,7 @@ export class UsersService {
   constructor(
     private readonly usersRepository: UsersRepository,
     private readonly auditService: AuditService,
-    private readonly emailService: EmailService,
+    private readonly mailService: MailService,
     private readonly configService: ConfigService,
   ) {}
 
@@ -77,12 +79,25 @@ export class UsersService {
       metadata,
     });
 
-    const firstAccessLink = this.buildPasswordSetupLink(user.email, firstAccessToken);
+    const firstAccessLink = this.buildFirstAccessLink(firstAccessToken);
+    const firstAccessTemplate = renderFirstAccessTemplate({
+      actionUrl: firstAccessLink,
+      expiresAt: tokenExpiresAt,
+      token: firstAccessToken,
+      userName: user.name,
+    });
     let emailSent = false;
     let emailErrorMessage: string | undefined;
 
     try {
-      await this.sendFirstAccessEmail(user, firstAccessToken, tokenExpiresAt);
+      await this.mailService.sendMail({
+        from: MAIL_SENDER_ADDRESS,
+        html: firstAccessTemplate.html,
+        subject: firstAccessTemplate.subject,
+        text: firstAccessTemplate.text,
+        to: user.email,
+      });
+
       emailSent = true;
 
       await this.auditService.logAdminAction({
@@ -92,6 +107,7 @@ export class UsersService {
         details: {
           email: user.email,
           expiresAt: tokenExpiresAt.toISOString(),
+          provider: 'nodemailer',
         },
         metadata,
       });
@@ -114,7 +130,7 @@ export class UsersService {
       user: this.usersRepository.toPublicUser(user),
       message: emailSent
         ? `First access email sent to ${user.email}.`
-        : `First access token generated for ${user.email}. Email was not sent.`,
+        : `First access token generated for ${user.email}. Email was not sent: ${emailErrorMessage ?? 'email delivery disabled'}.`,
       token: firstAccessToken,
       link: firstAccessLink,
       emailSent,
@@ -281,12 +297,25 @@ export class UsersService {
       metadata,
     });
 
-    const resetLink = this.buildPasswordSetupLink(user.email, resetToken);
+    const resetLink = this.buildPasswordResetLink(resetToken);
+    const resetTemplate = renderPasswordResetTemplate({
+      actionUrl: resetLink,
+      expiresAt: tokenExpiresAt,
+      token: resetToken,
+      userName: user.name,
+    });
     let emailSent = false;
     let emailErrorMessage: string | undefined;
 
     try {
-      await this.sendPasswordResetEmail(user, resetToken, tokenExpiresAt);
+      await this.mailService.sendMail({
+        from: MAIL_SENDER_ADDRESS,
+        html: resetTemplate.html,
+        subject: resetTemplate.subject,
+        text: resetTemplate.text,
+        to: user.email,
+      });
+
       emailSent = true;
 
       await this.auditService.logAdminAction({
@@ -296,6 +325,7 @@ export class UsersService {
         details: {
           email: user.email,
           expiresAt: tokenExpiresAt.toISOString(),
+          provider: 'nodemailer',
         },
         metadata,
       });
@@ -318,7 +348,7 @@ export class UsersService {
       user: this.usersRepository.toPublicUser(user),
       message: emailSent
         ? `Password reset email sent to ${user.email}.`
-        : `Password reset token generated for ${user.email}. Email was not sent.`,
+        : `Password reset token generated for ${user.email}. Email was not sent: ${emailErrorMessage ?? 'email delivery disabled'}.`,
       token: resetToken,
       link: resetLink,
       emailSent,
@@ -366,56 +396,19 @@ export class UsersService {
     return new Date(Date.now() + minutes * 60 * 1000);
   }
 
-  private buildPasswordSetupLink(email: string, token: string) {
-    const url = new URL(this.configService.getOrThrow<string>('FRONTEND_URL'));
-    url.searchParams.set('mode', 'reset');
-    url.searchParams.set('email', email);
+  private buildFirstAccessLink(token: string) {
+    return this.buildFrontendTokenLink('/first-access', token);
+  }
+
+  private buildPasswordResetLink(token: string) {
+    return this.buildFrontendTokenLink('/reset-password', token);
+  }
+
+  private buildFrontendTokenLink(path: string, token: string) {
+    const frontendUrl = this.configService.getOrThrow<string>('APP_FRONTEND_URL');
+    const url = new URL(path, frontendUrl.endsWith('/') ? frontendUrl : `${frontendUrl}/`);
     url.searchParams.set('token', token);
     return url.toString();
-  }
-
-  private async sendFirstAccessEmail(user: User, token: string, expiresAt: Date) {
-    const link = this.buildPasswordSetupLink(user.email, token);
-
-    await this.emailService.send({
-      to: user.email,
-      subject: 'Sua conta na QA Platform foi criada',
-      text: [
-        `Olá, ${user.name}.`,
-        '',
-        'Uma conta foi criada para você na QA Platform.',
-        '',
-        'Use o link abaixo para concluir o primeiro acesso e definir sua senha inicial:',
-        link,
-        '',
-        `Token de primeiro acesso: ${token}`,
-        `Validade: ${expiresAt.toLocaleString('pt-BR')}`,
-        '',
-        'Se você não esperava esse convite, ignore este e-mail e avise o administrador.',
-      ].join('\n'),
-    });
-  }
-
-  private async sendPasswordResetEmail(user: User, token: string, expiresAt: Date) {
-    const link = this.buildPasswordSetupLink(user.email, token);
-
-    await this.emailService.send({
-      to: user.email,
-      subject: 'Redefinição de senha da QA Platform',
-      text: [
-        `Olá, ${user.name}.`,
-        '',
-        'Um administrador solicitou a redefinição da sua senha na QA Platform.',
-        '',
-        'Use o link abaixo para criar uma nova senha:',
-        link,
-        '',
-        `Token de redefinição: ${token}`,
-        `Validade: ${expiresAt.toLocaleString('pt-BR')}`,
-        '',
-        'Após a criação da nova senha, este token será invalidado automaticamente.',
-      ].join('\n'),
-    });
   }
 
   private ensureEmail(email: string | null | undefined) {
@@ -425,6 +418,7 @@ export class UsersService {
   }
 
   private getErrorMessage(error: unknown) {
-    return error instanceof Error ? error.message : 'Unknown email delivery error';
+    const message = error instanceof Error ? error.message : 'Unknown email delivery error';
+    return message.replace(/token=[^\s"'&]+/gi, 'token=[redacted]');
   }
 }

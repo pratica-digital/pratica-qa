@@ -216,6 +216,18 @@ export class TestResultsRepository {
           lastModifiedById: dto.lastModifiedById,
           status: dto.status,
           comment: dto.comment,
+          titleOverride: dto.title,
+          descriptionOverride: dto.description,
+          expectedResultOverride: dto.expectedResult,
+          stepsOverride:
+            dto.steps === undefined
+              ? undefined
+              : dto.steps.map((step, index) => ({
+                  id: step.id ?? `run-step-${index + 1}`,
+                  order: step.order,
+                  description: step.description,
+                  expectedResult: step.expectedResult ?? '',
+                })),
           executedAt,
         },
       });
@@ -360,7 +372,7 @@ export class TestResultsRepository {
     });
   }
 
-  delete(id: string) {
+  delete(id: string, actorUserId?: string) {
     return this.prisma.$transaction(async (tx) => {
       await tx.testResultAttachment.deleteMany({
         where: { testResultId: id },
@@ -370,10 +382,10 @@ export class TestResultsRepository {
         where: { id },
         data: {
           executedById: null,
-          status: TestResultStatus.PENDING,
-          comment: '',
+          lastModifiedById: actorUserId,
           legacyAttachments: [],
           executedAt: null,
+          removedAt: new Date(),
         },
         include: TEST_RESULT_INCLUDE,
       });
@@ -387,6 +399,7 @@ export class TestResultsRepository {
       testRunId: params.testRunId,
       testCaseId: params.testCaseId,
       status: params.status,
+      removedAt: null,
     };
   }
 }

@@ -8,6 +8,12 @@ import fundologin from '../assets/fundo-login.png';
 
 type AuthMode = 'login' | 'recover' | 'reset';
 
+type ResetLinkParams = {
+  email: string;
+  token: string;
+  type: 'first-access' | 'password-reset';
+};
+
 type PasswordVisibilityButtonProps = {
   label: string;
   onToggle: () => void;
@@ -31,16 +37,35 @@ function PasswordVisibilityButton({ label, onToggle, visible }: PasswordVisibili
   );
 }
 
-function readResetLinkParams() {
+function readResetLinkParams(): ResetLinkParams | null {
   const params = new URLSearchParams(window.location.search);
   const token = params.get('token');
   const email = params.get('email');
+  const path = window.location.pathname.replace(/\/+$/, '');
+
+  if (token && path.endsWith('/first-access')) {
+    return { email: email ?? '', token, type: 'first-access' };
+  }
+
+  if (token && path.endsWith('/reset-password')) {
+    return { email: email ?? '', token, type: 'password-reset' };
+  }
 
   if (params.get('mode') !== 'reset' || !token || !email) {
     return null;
   }
 
-  return { email, token };
+  return { email, token, type: 'password-reset' };
+}
+
+function getResetNotice(params: ResetLinkParams | null) {
+  if (!params) {
+    return '';
+  }
+
+  return params.type === 'first-access'
+    ? 'Crie sua senha para concluir o primeiro acesso.'
+    : 'Crie uma nova senha para concluir a recuperação.';
 }
 
 export function LoginPage() {
@@ -57,12 +82,12 @@ export function LoginPage() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
-  const [notice, setNotice] = useState(resetLinkParams ? 'Crie uma nova senha para concluir a configuração de acesso.' : '');
+  const [notice, setNotice] = useState(() => getResetNotice(resetLinkParams));
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (resetLinkParams) {
-      window.history.replaceState(null, '', window.location.pathname);
+      window.history.replaceState(null, '', '/');
     }
   }, [resetLinkParams]);
 

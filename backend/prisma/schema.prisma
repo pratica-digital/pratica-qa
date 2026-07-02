@@ -160,33 +160,39 @@ model TestRunSuite {
 }
 
 model TestResult {
-  id                String                 @id @default(uuid()) @db.Uuid
-  testRunId         String                 @db.Uuid
-  testCaseId        String                 @db.Uuid
-  executedById      String?                @db.Uuid
-  lastModifiedById  String?                @db.Uuid
-  status            TestResultStatus       @default(PENDING)
-  comment           String                 @default("")
-  legacyAttachments String[]               @default([]) @map("attachments")
-  shortcutStoryId    String?
-  shortcutStoryUrl   String?
-  shortcutStoryName   String?
-  shortcutCreatedAt   DateTime?
-  executedAt        DateTime?
-  createdAt         DateTime               @default(now())
-  updatedAt         DateTime               @updatedAt
-  attachments       TestResultAttachment[]
-  executedBy        User?                  @relation("ExecutedResults", fields: [executedById], references: [id])
-  lastModifiedBy    User?                  @relation("ModifiedResults", fields: [lastModifiedById], references: [id])
-  history           TestResultHistory[]
-  testCase          TestCase               @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
-  testRun           TestRun                @relation(fields: [testRunId], references: [id], onDelete: Cascade)
+  id                     String                 @id @default(uuid()) @db.Uuid
+  testRunId              String                 @db.Uuid
+  testCaseId             String                 @db.Uuid
+  executedById           String?                @db.Uuid
+  lastModifiedById       String?                @db.Uuid
+  status                 TestResultStatus       @default(PENDING)
+  comment                String                 @default("")
+  titleOverride          String?
+  descriptionOverride    String?
+  expectedResultOverride String?
+  stepsOverride          Json?
+  legacyAttachments      String[]               @default([]) @map("attachments")
+  shortcutStoryId        String?
+  shortcutStoryUrl       String?
+  shortcutStoryName      String?
+  shortcutCreatedAt      DateTime?
+  executedAt             DateTime?
+  removedAt              DateTime?
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+  attachments            TestResultAttachment[]
+  executedBy             User?                  @relation("ExecutedResults", fields: [executedById], references: [id])
+  lastModifiedBy         User?                  @relation("ModifiedResults", fields: [lastModifiedById], references: [id])
+  history                TestResultHistory[]
+  testCase               TestCase               @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+  testRun                TestRun                @relation(fields: [testRunId], references: [id], onDelete: Cascade)
 
   @@unique([testRunId, testCaseId])
   @@index([testCaseId])
   @@index([status])
   @@index([lastModifiedById])
   @@index([shortcutStoryId])
+  @@index([removedAt])
   @@map("test_results")
 }
 

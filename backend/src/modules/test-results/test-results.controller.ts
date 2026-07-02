@@ -94,7 +94,10 @@ export class TestResultsController {
 
   @Roles(UserRole.ADMIN, UserRole.QA)
   @Delete(':id')
-  remove(@Param('id', ParseUUIDPipe) id: string) {
-    return this.testResultsService.remove(id);
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.testResultsService.remove(id, user);
   }
 }

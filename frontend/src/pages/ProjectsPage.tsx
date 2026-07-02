@@ -724,7 +724,83 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
             value={search}
           />
         </label>
-        
+        <div className="relative flex items-center gap-2">
+          <span className="hidden text-sm font-medium text-slate-500 sm:inline">
+            {visibleProjects.length} exibido{visibleProjects.length === 1 ? '' : 's'}
+          </span>
+          <button
+            aria-expanded={filtersOpen}
+            aria-label="Filtrar projetos"
+            className={`inline-flex h-10 items-center gap-2 rounded-lg border px-3 text-sm font-medium transition ${
+              activeFilterCount > 0
+                ? 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100'
+                : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-950'
+            }`}
+            onClick={() => setFiltersOpen((current) => !current)}
+            title="Filtrar projetos"
+            type="button"
+          >
+            <Filter className="h-4 w-4" aria-hidden="true" />
+            Filtrar
+            {activeFilterCount > 0 ? (
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-700 px-1 text-xs font-semibold text-white">
+                {activeFilterCount}
+              </span>
+            ) : null}
+          </button>
+
+          {filtersOpen ? (
+            <div className="absolute right-0 top-12 z-20 w-72 max-w-[calc(100vw-2rem)] rounded-lg border border-slate-200 bg-white p-3 shadow-lg ring-1 ring-slate-900/5">
+              <div className="space-y-3">
+                <label className="block">
+                  <span className="text-xs font-medium uppercase text-slate-500">Categoria</span>
+                  <select
+                    className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                    onChange={(event) => setCategoryFilter(event.target.value as ProjectCategoryFilter)}
+                    value={categoryFilter}
+                  >
+                    <option value="ALL">Todas</option>
+                    {PROJECT_CATEGORY_ORDER.map((category) => (
+                      <option key={category} value={category}>
+                        {PROJECT_CATEGORY_MAP[category]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="block">
+                  <span className="text-xs font-medium uppercase text-slate-500">Status</span>
+                  <select
+                    className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                    onChange={(event) => setStatusFilter(event.target.value as ProjectStatusFilter)}
+                    value={statusFilter}
+                  >
+                    <option value="ALL">Todos</option>
+                    <option value="ACTIVE">Ativo</option>
+                    <option value="ARCHIVED">Arquivado</option>
+                  </select>
+                </label>
+
+                <div className="flex items-center justify-between gap-3 border-t border-slate-200 pt-3">
+                  <span className="text-xs text-slate-500">
+                    {visibleProjects.length} resultado{visibleProjects.length === 1 ? '' : 's'}
+                  </span>
+                  <button
+                    className="h-8 rounded-lg px-3 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={activeFilterCount === 0}
+                    onClick={() => {
+                      setCategoryFilter('ALL');
+                      setStatusFilter('ALL');
+                    }}
+                    type="button"
+                  >
+                    Limpar
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
       </div>
 
       {error ? (

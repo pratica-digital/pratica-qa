@@ -5,7 +5,8 @@ import { User, UserStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
 import { AuditService, RequestMetadata } from '../audit/audit.service';
-import { EmailService } from '../email/email.service';
+import { MAIL_SENDER_ADDRESS, MailService } from '../mail/mail.service';
+import { renderPasswordResetTemplate } from '../mail/templates/password-reset';
 import { UsersRepository } from '../modules/users/repositories/users.repository';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { LoginDto } from './dto/login.dto';
@@ -21,7 +22,7 @@ export class AuthService {
     private readonly usersRepository: UsersRepository,
     private readonly jwtService: JwtService,
     private readonly auditService: AuditService,
-    private readonly emailService: EmailService,
+    private readonly mailService: MailService,
     private readonly configService: ConfigService,
   ) {}
 
@@ -141,6 +142,7 @@ export class AuthService {
           details: {
             email: user.email,
             expiresAt: expiresAt.toISOString(),
+            provider: 'nodemailer',
           },
           metadata,
         });
@@ -218,38 +220,33 @@ export class AuthService {
     return new Date(Date.now() + minutes * 60 * 1000);
   }
 
-  private buildPasswordResetLink(email: string, token: string) {
-    const url = new URL(this.configService.getOrThrow<string>('FRONTEND_URL'));
-    url.searchParams.set('mode', 'reset');
-    url.searchParams.set('email', email);
+  private buildPasswordResetLink(token: string) {
+    const frontendUrl = this.configService.getOrThrow<string>('APP_FRONTEND_URL');
+    const url = new URL('/reset-password', frontendUrl.endsWith('/') ? frontendUrl : `${frontendUrl}/`);
     url.searchParams.set('token', token);
     return url.toString();
   }
 
   private async sendPasswordRecoveryEmail(user: User, token: string, expiresAt: Date) {
-    const link = this.buildPasswordResetLink(user.email, token);
+    const link = this.buildPasswordResetLink(token);
+    const template = renderPasswordResetTemplate({
+      actionUrl: link,
+      expiresAt,
+      token,
+      userName: user.name,
+    });
 
-    await this.emailService.send({
+    return this.mailService.sendMail({
+      from: MAIL_SENDER_ADDRESS,
+      html: template.html,
+      subject: template.subject,
+      text: template.text,
       to: user.email,
-      subject: 'Recuperação de senha da QA Platform',
-      text: [
-        `Olá, ${user.name}.`,
-        '',
-        'Recebemos uma solicitação de recuperação de senha para sua conta na QA Platform.',
-        '',
-        'Use o link abaixo para criar uma nova senha:',
-        link,
-        '',
-        `Token de redefinição: ${token}`,
-        `Validade: ${expiresAt.toLocaleString('pt-BR')}`,
-        '',
-        'Após a criação da nova senha, este token será invalidado automaticamente.',
-        'Se você não solicitou essa recuperação, ignore este e-mail.',
-      ].join('\n'),
     });
   }
 
   private getErrorMessage(error: unknown) {
-    return error instanceof Error ? error.message : 'Unknown email delivery error';
+    const message = error instanceof Error ? error.message : 'Unknown email delivery error';
+    return message.replace(/token=[^\s"'&]+/gi, 'token=[redacted]');
   }
 }

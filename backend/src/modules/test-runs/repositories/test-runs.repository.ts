@@ -64,6 +64,9 @@ const TEST_RUN_INCLUDE = {
     },
   },
   results: {
+    where: {
+      removedAt: null,
+    },
     include: {
       testCase: {
         select: {
@@ -268,6 +271,7 @@ export class TestRunsRepository {
       where: {
         testRunId: sourceRunId,
         status: TestResultStatus.FAILED,
+        removedAt: null,
       },
       select: { id: true },
     });
@@ -313,6 +317,7 @@ export class TestRunsRepository {
         id: dto.testResultId,
         testRunId,
         testCaseId: dto.testCaseId,
+        removedAt: null,
       },
     });
 
@@ -448,12 +453,13 @@ export class TestRunsRepository {
       }),
       this.prisma.testResult.groupBy({
         by: ['testCaseId'],
-        where: { testRunId },
+        where: { testRunId, removedAt: null },
       }),
       this.prisma.testResult.groupBy({
         by: ['testCaseId'],
         where: {
           testRunId,
+          removedAt: null,
           status: { not: TestResultStatus.PENDING },
         },
       }),

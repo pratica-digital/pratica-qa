@@ -28,6 +28,7 @@ import type {
   UpdateTestCasePayload,
   UpdateTestPlanPayload,
   UpdateProjectPayload,
+  UpdateTestResultPayload,
   UpdateTestSuitePayload,
   UpdateUserPayload,
 } from '../types/testRun';
@@ -593,12 +594,12 @@ export const testResultsApi = {
       token,
       body: payload,
     }),
-  update: (token: string, resultId: string, payload: Partial<ExecuteTestResultPayload>) =>
-  apiRequest<TestResult>(`/test-results/${resultId}`, {
-    method: 'PATCH',
-    token,
-    body: payload,
-  }),
+  update: (token: string, resultId: string, payload: UpdateTestResultPayload) =>
+    apiRequest<TestResult>(`/test-results/${resultId}`, {
+      method: 'PATCH',
+      token,
+      body: payload,
+    }),
   uploadAttachments: (token: string, resultId: string, files: File[], testStepId?: string) => {
     const formData = new FormData();
 
@@ -615,6 +616,11 @@ export const testResultsApi = {
   },
   removeAttachment: (token: string, resultId: string, attachmentId: string) =>
     apiRequest<TestResult>(`/test-results/${resultId}/attachments/${attachmentId}`, {
+      method: 'DELETE',
+      token,
+    }),
+  remove: (token: string, resultId: string) =>
+    apiRequest<TestResult>(`/test-results/${resultId}`, {
       method: 'DELETE',
       token,
     }),
