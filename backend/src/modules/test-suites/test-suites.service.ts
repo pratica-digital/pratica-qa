@@ -2,9 +2,11 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { getPagination } from '../../common/dto/pagination-query.dto';
 import { ProjectsRepository } from '../projects/repositories/projects.repository';
 import { CreateTestSuiteDto } from './dto/create-test-suite.dto';
+import { ImportTestCasesDto } from './dto/import-test-cases.dto';
 import { QueryTestSuitesDto } from './dto/query-test-suites.dto';
 import { UpdateTestSuiteDto } from './dto/update-test-suite.dto';
 import { TestSuitesRepository } from './repositories/test-suites.repository';
+import { validateTestCaseImport } from './test-case-import.validation';
 
 @Injectable()
 export class TestSuitesService {
@@ -58,6 +60,34 @@ export class TestSuitesService {
   async update(id: string, dto: UpdateTestSuiteDto) {
     await this.findOne(id);
     return this.testSuitesRepository.update(id, dto);
+  }
+
+  async importCases(id: string, dto: ImportTestCasesDto) {
+    await this.findOne(id);
+
+    const validation = validateTestCaseImport(dto.cases, {
+      requireExpectedResults: dto.requireExpectedResults,
+    });
+
+    if (validation.validRows.length === 0) {
+      return {
+        imported: 0,
+        skipped: validation.invalidRowCount,
+        ignoredEmptyRows: validation.ignoredEmptyRows,
+        errors: validation.errors,
+        createdSections: [],
+      };
+    }
+
+    const importResult = await this.testSuitesRepository.importTestCases(id, validation.validRows);
+
+    return {
+      imported: importResult.imported,
+      skipped: validation.invalidRowCount,
+      ignoredEmptyRows: validation.ignoredEmptyRows,
+      errors: validation.errors,
+      createdSections: importResult.createdSections,
+    };
   }
 
   async remove(id: string) {

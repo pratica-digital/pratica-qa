@@ -121,6 +121,7 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
         testCase.title,
         testCase.description,
         testCase.expectedResult,
+        testCase.section,
         getProjectName(testCase, suites),
         getSuiteName(testCase, suites),
         ...(testCase.tags ?? []),
@@ -310,6 +311,7 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
                         </p>
                         <p className="text-xs text-slate-500">
                           {getSuiteName(testCase, suites)}
+                          {testCase.section ? ` / ${testCase.section}` : ''}
                         </p>
                       </td>
                       <td className="px-4 py-3">

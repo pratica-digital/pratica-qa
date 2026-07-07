@@ -353,7 +353,6 @@ export function UsersPage() {
                 <th className="px-4 py-3 font-medium">Usuário</th>
                 <th className="px-4 py-3 font-medium">Acesso</th>
                 <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Senha</th>
                 <th className="px-4 py-3 font-medium">Ações</th>
               </tr>
             </thead>
@@ -408,7 +407,7 @@ export function UsersPage() {
                             </option>
                           ))}
                         </select>
-                        <UserRoleBadge role={item.role} />
+                        
                       </div>
                     </td>
                     <td className="px-4 py-4">
@@ -424,7 +423,7 @@ export function UsersPage() {
                             </option>
                           ))}
                         </select>
-                        <UserStatusBadge status={item.status} />
+                        
                       </div>
                     </td>
                     <td className="min-w-48 px-4 py-4 text-sm text-slate-600">
@@ -432,6 +431,9 @@ export function UsersPage() {
                         <span>
                           {item.firstAccess ? 'Primeiro acesso' : `Alterada em ${formatDate(item.passwordChangedAt)}`}
                         </span>
+                        
+                        
+                        <div className="flex min-w-44 flex-wrap gap-2">
                         <button
                           className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-slate-600 bg-slate-600 px-3 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
                           disabled={isSaving}
@@ -441,10 +443,6 @@ export function UsersPage() {
                           <KeyRound className="h-4 w-4" aria-hidden="true" />
                           Redefinir
                         </button>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4">
-                      <div className="flex min-w-44 flex-wrap gap-2">
                         <button
                           className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-blue-700 px-3 text-sm font-medium text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
                           disabled={isSaving}
@@ -461,7 +459,7 @@ export function UsersPage() {
                             onClick={() => handleStatusAction(item, 'activate')}
                             type="button"
                           >
-                            <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                            <CheckCircle2 className="h-4 w-6" aria-hidden="true" />
                             Ativar
                           </button>
                         ) : (
@@ -484,6 +482,10 @@ export function UsersPage() {
                           {item.firstAccess ? 'Pendente' : 'Pronta'}
                         </span>
                       </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      
                     </td>
                   </tr>
                 );

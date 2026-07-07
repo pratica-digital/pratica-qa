@@ -1,15 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Filter, Plus, RefreshCw, Search } from 'lucide-react';
+import { FileSpreadsheet, Filter, Plus, RefreshCw, Search } from 'lucide-react';
 import { canManageTests } from '../auth/permissions';
 import { useAuth } from '../auth/useAuth';
 import { ActionMenu } from '../components/ActionMenu';
 import { DeleteConfirmationModal } from '../components/DeleteConfirmationModal';
 import { TestCaseEditPanel } from '../components/test-cases/TestCaseEditPanel';
+import { TestCaseImportModal } from '../components/test-suites/TestCaseImportModal';
 import { TestSuiteDetailPanel } from '../components/test-suites/TestSuiteDetailPanel';
 import { TestSuiteEditPanel } from '../components/test-suites/TestSuiteEditPanel';
 import { ApiError, projectsApi, testCasesApi, testSuitesApi } from '../lib/api';
 import type {
   CreateTestSuitePayload,
+  ImportTestCasesPayload,
+  ImportTestCasesReport,
   ManagedTestCase,
   ManagedTestSuite,
   ProjectSummary,
@@ -64,6 +67,12 @@ function getSuiteCases(
       return leftIndex - rightIndex;
     }
 
+    const sectionCompare = (left.section ?? '').localeCompare(right.section ?? '');
+
+    if (sectionCompare !== 0) {
+      return sectionCompare;
+    }
+
     return left.title.localeCompare(right.title);
   });
 }
@@ -93,6 +102,7 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
   const [selectedSuite, setSelectedSuite] = useState<ManagedTestSuite | null>(null);
   const [selectedCase, setSelectedCase] = useState<ManagedTestCase | null>(null);
   const [editingSuite, setEditingSuite] = useState<ManagedTestSuite | null>(null);
+  const [importingSuite, setImportingSuite] = useState<ManagedTestSuite | null>(null);
   const [suitePendingDelete, setSuitePendingDelete] = useState<ManagedTestSuite | null>(null);
   const [casePendingDelete, setCasePendingDelete] = useState<ManagedTestCase | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -235,6 +245,33 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
     setSuccess('Test case updated.');
   }
 
+  async function handleImportCases(payload: ImportTestCasesPayload): Promise<ImportTestCasesReport> {
+    if (!token || !importingSuite) {
+      throw new Error('Autenticação obrigatória.');
+    }
+
+    const report = await testSuitesApi.importCases(token, importingSuite.id, payload);
+    const [nextSuites, nextCases] = await Promise.all([
+      testSuitesApi.list(token),
+      testCasesApi.list(token),
+    ]);
+    const refreshedSuite = nextSuites.find((suite) => suite.id === importingSuite.id);
+
+    setSuites(nextSuites);
+    setCases(nextCases);
+
+    if (refreshedSuite && selectedSuite?.id === refreshedSuite.id) {
+      setSelectedSuite(refreshedSuite);
+    }
+
+    if (refreshedSuite && editingSuite?.id === refreshedSuite.id) {
+      setEditingSuite(refreshedSuite);
+    }
+
+    setSuccess(`${report.imported} casos de teste importados.`);
+    return report;
+  }
+
   function requestSuiteDelete(suite: ManagedTestSuite) {
     setError('');
     setSuccess('');
@@ -246,6 +283,13 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
     setSuccess('');
     setCasePendingDelete(testCase);
   }
+
+  const editingSuiteCases = editingSuite
+    ? getSuiteCases(editingSuite, cases, caseOrder)
+    : [];
+  const selectedSuiteCases = selectedSuite
+    ? getSuiteCases(selectedSuite, cases, caseOrder)
+    : [];
 
   async function handleDeleteSuite() {
     if (!token || !suitePendingDelete) {
@@ -432,6 +476,12 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
                           disabled={!canManageTestAssets}
                           items={[
                             {
+                              icon: <FileSpreadsheet className="h-4 w-4" aria-hidden="true" />,
+                              label: 'Importar Casos de Teste',
+                              onSelect: () => setImportingSuite(suite),
+                              title: 'Importar Casos de Teste',
+                            },
+                            {
                               label: 'Editar',
                               onSelect: () => setEditingSuite(suite),
                               title: 'Editar suíte de teste',
@@ -470,9 +520,10 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
 
       {editingSuite ? (
         <TestSuiteEditPanel
-          key={editingSuite.id}
-          cases={getSuiteCases(editingSuite, cases, caseOrder)}
+          key={`${editingSuite.id}-${editingSuiteCases.length}`}
+          cases={editingSuiteCases}
           onClose={() => setEditingSuite(null)}
+          onImportCases={canManageTestAssets ? () => setImportingSuite(editingSuite) : undefined}
           onSave={handleSaveSuite}
           readOnly={!canManageTestAssets}
           suite={editingSuite}
@@ -481,17 +532,26 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
 
       {selectedSuite ? (
         <TestSuiteDetailPanel
-          cases={getSuiteCases(selectedSuite, cases, caseOrder)}
+          cases={selectedSuiteCases}
           onClose={() => setSelectedSuite(null)}
           onDelete={canManageTestAssets ? () => requestSuiteDelete(selectedSuite) : undefined}
           onEdit={() => {
             setEditingSuite(selectedSuite);
             setSelectedSuite(null);
           }}
+          onImportCases={canManageTestAssets ? () => setImportingSuite(selectedSuite) : undefined}
           onOpenCase={setSelectedCase}
           suite={selectedSuite}
         />
       ) : null}
+
+      <TestCaseImportModal
+        key={importingSuite?.id ?? 'closed-import-modal'}
+        onClose={() => setImportingSuite(null)}
+        onImport={handleImportCases}
+        open={Boolean(importingSuite)}
+        suite={importingSuite}
+      />
 
       {selectedCase ? (
         <TestCaseEditPanel

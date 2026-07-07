@@ -52,6 +52,7 @@ model TestCase {
   description    String                 @default("")
   preconditions  String                 @default("")
   expectedResult String                 @default("")
+  section        String                 @default("")
   status         TestCaseStatus         @default(ACTIVE)
   priority       TestPriority           @default(MEDIUM)
   severity       TestSeverity           @default(MEDIUM)
@@ -69,6 +70,7 @@ model TestCase {
   requirements   Requirement[]          @relation("RequirementToTestCase")
 
   @@index([suiteId])
+  @@index([suiteId, section])
   @@index([status])
   @@index([priority])
   @@index([deletedAt])

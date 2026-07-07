@@ -12,6 +12,7 @@ import {
 import { UserRole } from '@prisma/client';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { CreateTestSuiteDto } from './dto/create-test-suite.dto';
+import { ImportTestCasesDto } from './dto/import-test-cases.dto';
 import { QueryTestSuitesDto } from './dto/query-test-suites.dto';
 import { UpdateTestSuiteDto } from './dto/update-test-suite.dto';
 import { TestSuitesService } from './test-suites.service';
@@ -40,6 +41,12 @@ export class TestSuitesController {
   @Patch(':id')
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateTestSuiteDto) {
     return this.testSuitesService.update(id, dto);
+  }
+
+  @Roles(UserRole.ADMIN, UserRole.QA)
+  @Post(':id/import-cases')
+  importCases(@Param('id', ParseUUIDPipe) id: string, @Body() dto: ImportTestCasesDto) {
+    return this.testSuitesService.importCases(id, dto);
   }
 
   @Roles(UserRole.ADMIN, UserRole.QA)

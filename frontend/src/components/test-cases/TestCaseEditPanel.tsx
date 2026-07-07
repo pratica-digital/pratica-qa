@@ -61,6 +61,7 @@ export function TestCaseEditPanel({
   const [title, setTitle] = useState(testCase.title);
   const [description, setDescription] = useState(testCase.description ?? '');
   const [expectedResult, setExpectedResult] = useState(testCase.expectedResult ?? '');
+  const [section, setSection] = useState(testCase.section ?? '');
   const [status, setStatus] = useState<TestCaseStatus>(testCase.status ?? 'ACTIVE');
   const [steps, setSteps] = useState<StepDraft[]>(() => toStepDrafts(testCase));
   const [saving, setSaving] = useState(false);
@@ -140,6 +141,7 @@ export function TestCaseEditPanel({
           title: title.trim(),
           description: description.trim(),
           expectedResult: expectedResult.trim(),
+          section: section.trim(),
           status,
         },
         { steps: normalizedSteps },
@@ -191,7 +193,7 @@ export function TestCaseEditPanel({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
-          <div className="grid gap-4 lg:grid-cols-[1fr_14rem]">
+          <div className="grid gap-4 lg:grid-cols-[1fr_14rem_12rem]">
             <label className="block text-sm font-medium text-slate-700">
               Título
               <input
@@ -199,6 +201,17 @@ export function TestCaseEditPanel({
                 disabled={readOnly || saving}
                 onChange={(event) => setTitle(event.target.value)}
                 value={title}
+              />
+            </label>
+
+            <label className="block text-sm font-medium text-slate-700">
+              Seção
+              <input
+                className="mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50"
+                disabled={readOnly || saving}
+                onChange={(event) => setSection(event.target.value)}
+                placeholder="Raiz da suíte"
+                value={section}
               />
             </label>
 
@@ -225,6 +238,12 @@ export function TestCaseEditPanel({
             Projeto: <span className="font-medium text-slate-900">{projectName}</span>
             <span className="mx-2 text-slate-300">/</span>
             Suíte: <span className="font-medium text-slate-900">{suiteName}</span>
+            {section.trim() ? (
+              <>
+                <span className="mx-2 text-slate-300">/</span>
+                Seção: <span className="font-medium text-slate-900">{section.trim()}</span>
+              </>
+            ) : null}
           </div>
 
           <div className="mt-4 grid gap-4 lg:grid-cols-2">

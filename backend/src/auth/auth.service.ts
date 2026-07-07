@@ -5,7 +5,7 @@ import { User, UserStatus } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
 import { AuditService, RequestMetadata } from '../audit/audit.service';
-import { MAIL_SENDER_ADDRESS, MailService } from '../mail/mail.service';
+import { MailService } from '../mail/mail.service';
 import { renderPasswordResetTemplate } from '../mail/templates/password-reset';
 import { UsersRepository } from '../modules/users/repositories/users.repository';
 import { ChangePasswordDto } from './dto/change-password.dto';
@@ -142,7 +142,7 @@ export class AuthService {
           details: {
             email: user.email,
             expiresAt: expiresAt.toISOString(),
-            provider: 'nodemailer',
+            provider: 'microsoft-graph',
           },
           metadata,
         });
@@ -237,7 +237,7 @@ export class AuthService {
     });
 
     return this.mailService.sendMail({
-      from: MAIL_SENDER_ADDRESS,
+      from: this.mailService.senderAddress,
       html: template.html,
       subject: template.subject,
       text: template.text,

@@ -6,7 +6,7 @@ import { randomBytes } from 'crypto';
 import { AuditService, RequestMetadata } from '../../audit/audit.service';
 import { AuthenticatedUser } from '../../auth/types/authenticated-user';
 import { getPagination } from '../../common/dto/pagination-query.dto';
-import { MAIL_SENDER_ADDRESS, MailService } from '../../mail/mail.service';
+import { MailService } from '../../mail/mail.service';
 import { renderFirstAccessTemplate } from '../../mail/templates/first-access';
 import { renderPasswordResetTemplate } from '../../mail/templates/password-reset';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -91,7 +91,7 @@ export class UsersService {
 
     try {
       await this.mailService.sendMail({
-        from: MAIL_SENDER_ADDRESS,
+        from: this.mailService.senderAddress,
         html: firstAccessTemplate.html,
         subject: firstAccessTemplate.subject,
         text: firstAccessTemplate.text,
@@ -107,7 +107,7 @@ export class UsersService {
         details: {
           email: user.email,
           expiresAt: tokenExpiresAt.toISOString(),
-          provider: 'nodemailer',
+          provider: 'microsoft-graph',
         },
         metadata,
       });
@@ -309,7 +309,7 @@ export class UsersService {
 
     try {
       await this.mailService.sendMail({
-        from: MAIL_SENDER_ADDRESS,
+        from: this.mailService.senderAddress,
         html: resetTemplate.html,
         subject: resetTemplate.subject,
         text: resetTemplate.text,
@@ -325,7 +325,7 @@ export class UsersService {
         details: {
           email: user.email,
           expiresAt: tokenExpiresAt.toISOString(),
-          provider: 'nodemailer',
+          provider: 'microsoft-graph',
         },
         metadata,
       });

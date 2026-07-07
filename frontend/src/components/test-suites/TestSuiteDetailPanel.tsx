@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Layers3, ListChecks, X } from 'lucide-react';
+import { FileSpreadsheet, Layers3, ListChecks, X } from 'lucide-react';
 import { ActionMenu } from '../ActionMenu';
 import { CaseStatusBadge } from '../badges';
 import type { ManagedTestCase, ManagedTestSuite } from '../../types/testRun';
@@ -11,6 +11,7 @@ type TestSuiteDetailPanelProps = {
   onClose: () => void;
   onDelete?: () => void;
   onEdit: () => void;
+  onImportCases?: () => void;
   onOpenCase: (testCase: ManagedTestCase) => void;
 };
 
@@ -31,6 +32,7 @@ export function TestSuiteDetailPanel({
   onClose,
   onDelete,
   onEdit,
+  onImportCases,
   onOpenCase,
 }: TestSuiteDetailPanelProps) {
   useEffect(() => {
@@ -58,9 +60,29 @@ export function TestSuiteDetailPanel({
               {suite.project?.name ?? suite.projectId}
             </p>
           </div>
+          {onImportCases ? (
+            <button
+              className="hidden h-9 items-center gap-2 rounded-lg bg-blue-700 px-3 text-sm font-medium text-white transition hover:bg-blue-800 sm:inline-flex"
+              onClick={onImportCases}
+              type="button"
+            >
+              <FileSpreadsheet className="h-4 w-4" aria-hidden="true" />
+              Importar Casos de Teste
+            </button>
+          ) : null}
           <ActionMenu
             ariaLabel="Ações da suíte de teste"
             items={[
+              ...(onImportCases
+                ? [
+                    {
+                      icon: <FileSpreadsheet className="h-4 w-4" aria-hidden="true" />,
+                      label: 'Importar Casos de Teste',
+                      onSelect: onImportCases,
+                      title: 'Importar Casos de Teste',
+                    },
+                  ]
+                : []),
               {
                 label: 'Editar',
                 onSelect: onEdit,
@@ -138,6 +160,7 @@ export function TestSuiteDetailPanel({
                     </span>
                     <span className="mt-1 line-clamp-1 block text-xs text-slate-500">
                       {suite.project?.name ?? suite.projectId} / {suite.name}
+                      {testCase.section ? ` / ${testCase.section}` : ''}
                     </span>
                   </span>
                   <span className="flex flex-wrap items-center gap-2">

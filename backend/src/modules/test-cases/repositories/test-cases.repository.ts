@@ -52,6 +52,7 @@ export class TestCasesRepository {
         description: dto.description ?? '',
         preconditions: dto.preconditions ?? '',
         expectedResult: dto.expectedResult ?? '',
+        section: dto.section ?? '',
         status: dto.status,
         priority: dto.priority,
         severity: dto.severity,
@@ -95,6 +96,7 @@ export class TestCasesRepository {
         description: dto.description,
         preconditions: dto.preconditions,
         expectedResult: dto.expectedResult,
+        section: dto.section,
         status: dto.status,
         priority: dto.priority,
         severity: dto.severity,
@@ -144,6 +146,7 @@ export class TestCasesRepository {
         description: source.description,
         preconditions: source.preconditions,
         expectedResult: source.expectedResult,
+        section: source.section,
         status: source.status,
         priority: source.priority,
         severity: source.severity,
@@ -199,6 +202,7 @@ export class TestCasesRepository {
         ? [
             { title: { contains: params.search, mode: 'insensitive' } },
             { description: { contains: params.search, mode: 'insensitive' } },
+            { section: { contains: params.search, mode: 'insensitive' } },
           ]
         : undefined,
     };

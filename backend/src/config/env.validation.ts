@@ -8,6 +8,17 @@ type Environment = {
   LLM_PROVIDER: 'openrouter';
   LLM_RETRIES: number;
   LLM_STREAMING: boolean;
+  CLIENT_ID?: string;
+  CLIENT_SECRET?: string;
+  MAIL_GRAPH_CLIENT_ID?: string;
+  MAIL_GRAPH_CLIENT_SECRET?: string;
+  MAIL_GRAPH_ENDPOINT?: string;
+  MAIL_GRAPH_SAVE_TO_SENT_ITEMS?: string;
+  MAIL_GRAPH_SCOPE?: string;
+  MAIL_GRAPH_TENANT_ID?: string;
+  MAIL_GRAPH_TOKEN_ENDPOINT?: string;
+  MAIL_GRAPH_USER?: string;
+  MAIL_SENDER_ADDRESS?: string;
   MAX_TOKENS: number;
   NODE_ENV?: string;
   OPENROUTER_API_KEY: string;
@@ -24,6 +35,7 @@ type Environment = {
   SHORTCUT_SPACE_ID?: string;
   SHORTCUT_TEAM_ID?: string;
   SHORTCUT_WORKFLOW_STATE_ID?: string;
+  TENANT_ID?: string;
   TEMPERATURE: number;
   TIMEOUT: number;
 };
@@ -150,6 +162,17 @@ export function validateEnv(config: Record<string, unknown>): Environment {
     LLM_PROVIDER: 'openrouter',
     LLM_RETRIES: llmRetries,
     LLM_STREAMING: false,
+    CLIENT_ID: getOptionalString(config, 'CLIENT_ID'),
+    CLIENT_SECRET: getOptionalString(config, 'CLIENT_SECRET'),
+    MAIL_GRAPH_CLIENT_ID: getOptionalString(config, 'MAIL_GRAPH_CLIENT_ID'),
+    MAIL_GRAPH_CLIENT_SECRET: getOptionalString(config, 'MAIL_GRAPH_CLIENT_SECRET'),
+    MAIL_GRAPH_ENDPOINT: getOptionalString(config, 'MAIL_GRAPH_ENDPOINT'),
+    MAIL_GRAPH_SAVE_TO_SENT_ITEMS: getOptionalString(config, 'MAIL_GRAPH_SAVE_TO_SENT_ITEMS'),
+    MAIL_GRAPH_SCOPE: getOptionalString(config, 'MAIL_GRAPH_SCOPE'),
+    MAIL_GRAPH_TENANT_ID: getOptionalString(config, 'MAIL_GRAPH_TENANT_ID'),
+    MAIL_GRAPH_TOKEN_ENDPOINT: getOptionalString(config, 'MAIL_GRAPH_TOKEN_ENDPOINT'),
+    MAIL_GRAPH_USER: getOptionalString(config, 'MAIL_GRAPH_USER'),
+    MAIL_SENDER_ADDRESS: getOptionalString(config, 'MAIL_SENDER_ADDRESS'),
     MAX_TOKENS: maxTokens,
     NODE_ENV: getOptionalString(config, 'NODE_ENV'),
     OPENROUTER_API_KEY: openRouterApiKey,
@@ -166,6 +189,7 @@ export function validateEnv(config: Record<string, unknown>): Environment {
     SHORTCUT_SPACE_ID: getOptionalString(config, 'SHORTCUT_SPACE_ID'),
     SHORTCUT_TEAM_ID: getOptionalString(config, 'SHORTCUT_TEAM_ID'),
     SHORTCUT_WORKFLOW_STATE_ID: getOptionalString(config, 'SHORTCUT_WORKFLOW_STATE_ID'),
+    TENANT_ID: getOptionalString(config, 'TENANT_ID'),
     TEMPERATURE: temperature,
     TIMEOUT: timeout,
   };
