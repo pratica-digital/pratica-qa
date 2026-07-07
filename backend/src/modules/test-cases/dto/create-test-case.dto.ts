@@ -38,6 +38,11 @@ export class CreateTestCaseDto {
   expectedResult?: string;
 
   @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  section?: string;
+
+  @IsOptional()
   @IsEnum(TestCaseStatus)
   status?: TestCaseStatus;
 

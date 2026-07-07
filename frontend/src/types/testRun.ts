@@ -152,6 +152,7 @@ export type ManagedTestCase = {
   description: string;
   preconditions?: string;
   expectedResult: string;
+  section?: string;
   status: TestCaseStatus;
   priority?: TestPriority;
   severity?: TestSeverity;
@@ -398,6 +399,7 @@ export type UpdateTestCasePayload = Partial<{
   title: string;
   description: string;
   expectedResult: string;
+  section: string;
   status: TestCaseStatus;
   priority: TestPriority;
   severity: TestSeverity;
@@ -416,10 +418,40 @@ export type CreateTestCasePayload = {
   title: string;
   description?: string;
   expectedResult?: string;
+  section?: string;
   status?: TestCaseStatus;
   priority?: TestPriority;
   severity?: TestSeverity;
   steps?: ReplaceTestStepsPayload['steps'];
+};
+
+export type ImportTestCasePayload = {
+  rowNumber: number;
+  title: string;
+  description?: string;
+  expectedResults?: string;
+  section?: string;
+  testSteps?: Array<{
+    order: number;
+    description: string;
+    expectedResult?: string;
+  }>;
+};
+
+export type ImportTestCasesPayload = {
+  requireExpectedResults?: boolean;
+  cases: ImportTestCasePayload[];
+};
+
+export type ImportTestCasesReport = {
+  imported: number;
+  skipped: number;
+  ignoredEmptyRows?: number;
+  createdSections: string[];
+  errors: Array<{
+    rowNumber: number;
+    message: string;
+  }>;
 };
 
 export type AiProviderName = 'openrouter';

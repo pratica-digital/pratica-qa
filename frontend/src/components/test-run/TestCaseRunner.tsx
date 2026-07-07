@@ -17,19 +17,30 @@ import {
 import { ActionMenu } from '../ActionMenu';
 import { TestResultStatusBadge } from '../badges';
 import { resolveApiAssetUrl } from '../../lib/api';
-import { testResultStatusLabel } from '../../lib/labels';
 import { getResultTestCase } from '../../lib/testResultOverrides';
-import type { ExecuteTestResultPayload, TestResult, TestResultAttachment, TestResultStatus } from '../../types/testRun';
+import type { AuthUser, ExecuteTestResultPayload, TestResult, TestResultAttachment } from '../../types/testRun';
 import { TestResultForm } from './TestResultForm';
 
 type TestCaseRunnerProps = {
   result: TestResult;
+  runAssignee?: AuthUser;
+  draftComment?: string;
+  position: number;
+  total: number;
+  isLast: boolean;
   disabled: boolean;
   disabledReason?: string;
   isActive: boolean;
   isSubmitting: boolean;
   onActivate: () => void;
   onEditRunCase: (result: TestResult) => void;
+  onNext: (
+    result: TestResult,
+    payload: ExecuteTestResultPayload,
+    hasDraftChanges: boolean,
+  ) => Promise<void>;
+  onDraftCommentChange: (resultId: string, value: string) => void;
+  onOpenList: () => void;
   onRemoveRunCase: (result: TestResult) => void;
   onRemoveAttachment: (result: TestResult, attachment: TestResultAttachment) => Promise<void>;
   onSubmit: (result: TestResult, payload: ExecuteTestResultPayload) => Promise<void>;
@@ -84,18 +95,22 @@ function formatUploadDate(value?: string | null) {
   }).format(new Date(value));
 }
 
-function getStatusLabel(status?: TestResultStatus | null) {
-  return testResultStatusLabel(status);
-}
-
 export function TestCaseRunner({
   result,
+  runAssignee,
+  draftComment,
+  position,
+  total,
+  isLast,
   disabled,
   disabledReason,
   isActive,
   isSubmitting,
   onActivate,
   onEditRunCase,
+  onNext,
+  onDraftCommentChange,
+  onOpenList,
   onRemoveRunCase,
   onRemoveAttachment,
   onSubmit,
@@ -105,7 +120,6 @@ export function TestCaseRunner({
   const testCase = getResultTestCase(result);
   const steps = testCase.steps ?? [];
   const attachments = result.attachments ?? [];
-  const history = result.history ?? [];
   const projectName =
     testCase.suite?.project?.name ??
     result.testRun?.project?.name ??
@@ -170,7 +184,11 @@ export function TestCaseRunner({
           <div className="grid gap-2 text-sm text-slate-600 sm:grid-cols-2 lg:min-w-72 lg:grid-cols-1">
             <div className="flex items-center gap-2">
               <UserCheck className="h-4 w-4 text-slate-400" aria-hidden="true" />
-              <span>{result.executedBy?.name ?? 'Sem executor ainda'}</span>
+              <span>
+                {result.status === 'PENDING'
+                  ? runAssignee?.name ?? 'Sem executor ainda'
+                  : result.executedBy?.name ?? 'Sem executor ainda'}
+              </span>
             </div>
             <div className="flex items-center gap-2">
               <Clock3 className="h-4 w-4 text-slate-400" aria-hidden="true" />
@@ -236,10 +254,17 @@ export function TestCaseRunner({
               attachments={result.attachments}
               comment={result.comment}
               currentStatus={result.status}
+              draftComment={draftComment}
               disabled={disabled}
               isActive={isActive}
+              isLastResult={isLast}
               isSubmitting={isSubmitting}
               key={`${result.id}-${result.comment ?? ''}`}
+              navigationPosition={position}
+              navigationTotal={total}
+              onNext={(payload, hasDraftChanges) => onNext(result, payload, hasDraftChanges)}
+              onDraftCommentChange={(value) => onDraftCommentChange(result.id, value)}
+              onOpenList={onOpenList}
               onRemoveAttachment={(attachment) => onRemoveAttachment(result, attachment)}
               onSubmit={(payload) => onSubmit(result, payload)}
               onUploadAttachments={(files) => onUploadAttachments(result, files)}
@@ -346,37 +371,6 @@ export function TestCaseRunner({
             </section>
           ) : null}
 
-          {history.length > 0 ? (
-            <section>
-              <h3 className="text-xs font-medium uppercase text-slate-500">
-                Histórico de alterações
-              </h3>
-              <div className="mt-2 space-y-2">
-                {history.slice(0, 5).map((entry) => (
-                  <div className="rounded-lg border border-slate-200 bg-white px-3 py-2" key={entry.id}>
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="text-xs font-medium text-slate-700">
-                        {getStatusLabel(entry.previousStatus)} {'->'} {getStatusLabel(entry.newStatus)}
-                      </span>
-                      <span className="text-xs text-slate-500">{formatDate(entry.createdAt)}</span>
-                    </div>
-                    <p className="mt-1 text-xs text-slate-500">
-                      {entry.actor?.name ?? 'Sistema'}
-                      {entry.addedAttachments?.length
-                        ? ` adicionou ${entry.addedAttachments.length} arquivo(s) de evidência`
-                        : ''}
-                      {entry.removedAttachments?.length
-                        ? ` removeu ${entry.removedAttachments.length} arquivo(s) de evidência`
-                        : ''}
-                    </p>
-                    {entry.newComment && entry.newComment !== entry.previousComment ? (
-                      <p className="mt-1 line-clamp-2 text-xs text-slate-600">{entry.newComment}</p>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
-            </section>
-          ) : null}
         </div>
       </div>
 

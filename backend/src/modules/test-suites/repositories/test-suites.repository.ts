@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, TestCaseStatus, TestPriority, TestSeverity } from '@prisma/client';
+import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { CreateTestSuiteDto } from '../dto/create-test-suite.dto';
 import { UpdateTestSuiteDto } from '../dto/update-test-suite.dto';
+import { NormalizedImportedTestCase } from '../test-case-import.validation';
 
 type FindTestSuitesParams = {
   projectId?: string;
@@ -10,6 +12,15 @@ type FindTestSuitesParams = {
   skip: number;
   take: number;
 };
+
+function normalizeSectionKey(section: string) {
+  return section
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLowerCase();
+}
 
 @Injectable()
 export class TestSuitesRepository {
@@ -104,6 +115,73 @@ export class TestSuitesRepository {
     return this.prisma.testSuite.update({
       where: { id },
       data: dto,
+    });
+  }
+
+  importTestCases(suiteId: string, rows: NormalizedImportedTestCase[]) {
+    return this.prisma.$transaction(async (tx) => {
+      const existingSections = await tx.testCase.findMany({
+        where: {
+          suiteId,
+          section: {
+            not: '',
+          },
+        },
+        distinct: ['section'],
+        select: {
+          section: true,
+        },
+      });
+      const existingSectionKeys = new Set(
+        existingSections.map((item) => normalizeSectionKey(item.section)),
+      );
+      const incomingSections = [
+        ...new Map(
+          rows
+            .map((row) => row.section)
+            .filter(Boolean)
+            .map((section) => [normalizeSectionKey(section), section]),
+        ).values(),
+      ];
+      const createdSections = incomingSections.filter(
+        (section) => !existingSectionKeys.has(normalizeSectionKey(section)),
+      );
+      const caseRows = rows.map((row) => ({
+        id: randomUUID(),
+        suiteId,
+        title: row.title,
+        description: row.description,
+        preconditions: '',
+        expectedResult: row.expectedResult,
+        section: row.section,
+        status: TestCaseStatus.ACTIVE,
+        priority: TestPriority.MEDIUM,
+        severity: TestSeverity.MEDIUM,
+        tags: [],
+      }));
+      const steps = rows.flatMap((row, rowIndex) =>
+        row.steps.map((step, stepIndex) => ({
+          testCaseId: caseRows[rowIndex].id,
+          order: step.order ?? stepIndex + 1,
+          description: step.description,
+          expectedResult: step.expectedResult,
+        })),
+      );
+
+      await tx.testCase.createMany({
+        data: caseRows,
+      });
+
+      if (steps.length > 0) {
+        await tx.testStep.createMany({
+          data: steps,
+        });
+      }
+
+      return {
+        imported: caseRows.length,
+        createdSections,
+      };
     });
   }
 

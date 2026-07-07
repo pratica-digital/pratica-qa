@@ -28,11 +28,16 @@ import { testPlansApi, testRunsApi, testSuitesApi } from '../lib/api';
 type SuiteOption = ManagedTestSuite;
 type TabId = 'info' | 'suites';
 
+type ProjectReference = {
+  id?: string;
+  key?: string;
+  name?: string;
+};
+
 type TestRunForm = {
   name: string;
   planId: string;
   assignedToId: string;
-  description: string;
   scheduledAt: string;
 };
 
@@ -57,7 +62,6 @@ const initialForm: TestRunForm = {
   name: '',
   planId: '',
   assignedToId: '',
-  description: '',
   scheduledAt: '',
 };
 
@@ -114,6 +118,22 @@ function getTestTypeOption(type: TestRunTestType) {
   return TEST_TYPE_OPTIONS.find((option) => option.type === type) || TEST_TYPE_OPTIONS[0];
 }
 
+function getProjectLabel(project?: ProjectReference | null, fallbackId?: string | null) {
+  if (project?.name && project.key) {
+    return `${project.name} (${project.key})`;
+  }
+
+  return project?.name || project?.key || fallbackId || 'Projeto não identificado';
+}
+
+function getPlanProjectLabel(plan: TestPlan) {
+  return getProjectLabel(plan.project, plan.projectId);
+}
+
+function getSuiteProjectLabel(suite: SuiteOption) {
+  return getProjectLabel(suite.project, suite.projectId);
+}
+
 export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], projectId }: NewTestRunModalProps) {
   const { token } = useAuth();
   const [form, setForm] = useState<TestRunForm>(initialForm);
@@ -140,7 +160,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
 
       try {
         const [plansList, suitesList] = await Promise.all([
-          testPlansApi.list(token, { limit: 100 }),
+          testPlansApi.list(token, { limit: 100, projectId }),
           testSuitesApi.list(token, { limit: 100, projectId }),
         ]);
 
@@ -174,6 +194,32 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
   function setField<Field extends keyof TestRunForm>(field: Field, value: TestRunForm[Field]) {
     setForm((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: undefined }));
+  }
+
+  function handlePlanChange(planId: string) {
+    const nextPlan = testPlans.find((plan) => plan.id === planId);
+    const nextProjectId = projectId || nextPlan?.projectId;
+
+    setForm((current) => ({ ...current, planId }));
+    setSuiteAssignments((current) => {
+      if (!nextProjectId) {
+        return {};
+      }
+
+      return Object.entries(current).reduce<Partial<Record<string, TestRunTestType>>>(
+        (nextAssignments, [suiteId, assignedType]) => {
+          const suite = suites.find((suiteOption) => suiteOption.id === suiteId);
+
+          if (suite?.projectId === nextProjectId) {
+            nextAssignments[suiteId] = assignedType;
+          }
+
+          return nextAssignments;
+        },
+        {},
+      );
+    });
+    setErrors((current) => ({ ...current, planId: undefined, suites: undefined }));
   }
 
   function toggleTestType(type: TestRunTestType) {
@@ -229,6 +275,8 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
 
   function validate() {
     const nextErrors: TestRunFormErrors = {};
+    const selectedPlan = testPlans.find((plan) => plan.id === form.planId);
+    const selectedProjectId = projectId || selectedPlan?.projectId;
 
     if (!form.name.trim()) {
       nextErrors.name = 'Nome obrigatório';
@@ -236,6 +284,10 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
 
     if (!form.planId) {
       nextErrors.planId = 'Selecione um plano de teste';
+    }
+
+    if (projectId && selectedPlan && selectedPlan.projectId !== projectId) {
+      nextErrors.planId = 'Selecione um plano do projeto atual';
     }
 
     if (!form.assignedToId) {
@@ -252,6 +304,15 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
 
     if (hasSuiteOutsideSelectedTypes) {
       nextErrors.suites = 'Toda suíte deve estar vinculada a um tipo de teste selecionado';
+    }
+
+    const hasSuiteOutsideProject = Boolean(selectedProjectId) && Object.keys(suiteAssignments).some((suiteId) => {
+      const suite = suites.find((suiteOption) => suiteOption.id === suiteId);
+      return suite?.projectId !== selectedProjectId;
+    });
+
+    if (hasSuiteOutsideProject) {
+      nextErrors.suites = 'Todas as suítes devem pertencer ao projeto do plano selecionado';
     }
 
     return nextErrors;
@@ -277,7 +338,15 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
     try {
       const selectedSuiteOptions = suites.filter((suite) => suiteAssignments[suite.id]);
       const selectedPlan = testPlans.find((plan) => plan.id === form.planId);
-      const resolvedProjectId = projectId || selectedPlan?.projectId || selectedSuiteOptions[0]?.projectId;
+
+      if (!selectedPlan) {
+        setLoadError('Selecione um plano de teste válido.');
+        setActiveTab('info');
+        setSubmitting(false);
+        return;
+      }
+
+      const resolvedProjectId = projectId || selectedPlan.projectId || selectedSuiteOptions[0]?.projectId;
       const testTypes = selectedTestTypes.map((type) => ({
         type,
         suites: Object.entries(suiteAssignments)
@@ -291,12 +360,35 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
         return;
       }
 
+      if (selectedPlan.projectId !== resolvedProjectId) {
+        setLoadError(`O plano selecionado pertence ao projeto ${getPlanProjectLabel(selectedPlan)}.`);
+        setActiveTab('info');
+        setSubmitting(false);
+        return;
+      }
+
+      const suitesOutsideProject = selectedSuiteOptions.filter(
+        (suite) => suite.projectId !== resolvedProjectId,
+      );
+
+      if (suitesOutsideProject.length > 0) {
+        const suiteNames = suitesOutsideProject
+          .map((suite) => `${suite.name} (${getSuiteProjectLabel(suite)})`)
+          .join(', ');
+
+        setLoadError(
+          `Todas as suítes devem pertencer ao projeto ${getPlanProjectLabel(selectedPlan)}. Revise: ${suiteNames}.`,
+        );
+        setActiveTab('suites');
+        setSubmitting(false);
+        return;
+      }
+
       const createdRun = await testRunsApi.create(token, {
         projectId: resolvedProjectId,
         testPlanId: form.planId,
         assignedToId: form.assignedToId,
         name: form.name.trim(),
-        description: form.description.trim(),
         testTypes,
       });
       onCreate?.(createdRun);
@@ -314,8 +406,13 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
     }
   }
 
+  const selectedPlan = testPlans.find((plan) => plan.id === form.planId);
+  const activeProjectId = projectId || selectedPlan?.projectId;
+  const selectableSuites = activeProjectId
+    ? suites.filter((suite) => suite.projectId === activeProjectId)
+    : suites;
   const selectedSuiteOptions = suites.filter((suite) => suiteAssignments[suite.id]);
-  const unassignedSuites = suites.filter((suite) => !suiteAssignments[suite.id]);
+  const unassignedSuites = selectableSuites.filter((suite) => !suiteAssignments[suite.id]);
   const totalCasesSelected = selectedSuiteOptions.reduce(
     (sum, suite) => sum + (suite._count?.testCases || 0),
     0,
@@ -409,13 +506,13 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
                   <select
                     className="h-10 w-full appearance-none rounded-lg border border-slate-300 bg-white pl-9 pr-9 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                     disabled={isLoadingData}
-                    onChange={(event) => setField('planId', event.target.value)}
+                    onChange={(event) => handlePlanChange(event.target.value)}
                     value={form.planId}
                   >
                     <option value="">Selecione o plano...</option>
                     {testPlans.map((plan) => (
                       <option key={plan.id} value={plan.id}>
-                        {plan.name} (v{plan.version})
+                        {plan.name} (v{plan.version}) - Projeto: {getPlanProjectLabel(plan)}
                       </option>
                     ))}
                   </select>
@@ -464,15 +561,6 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
                 </div>
               </Field>
 
-              <Field label="Descrição" hint="Objetivo ou escopo desta execução">
-                <textarea
-                  className="w-full resize-none rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
-                  onChange={(event) => setField('description', event.target.value)}
-                  placeholder="Cobertura smoke da release"
-                  rows={3}
-                  value={form.description}
-                />
-              </Field>
             </div>
           ) : null}
 
@@ -575,7 +663,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
                               </option>
                               {unassignedSuites.map((suite) => (
                                 <option key={suite.id} value={suite.id}>
-                                  {suite.name}
+                                  {suite.name} - Projeto: {getSuiteProjectLabel(suite)}
                                 </option>
                               ))}
                             </select>
@@ -609,7 +697,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
                                   {suite.name}
                                 </p>
                                 <p className="text-xs text-slate-400">
-                                  {suite._count?.testCases || 0} caso(s)
+                                   {getSuiteProjectLabel(suite)} - {suite._count?.testCases || 0} caso(s)
                                 </p>
                               </div>
                               <button

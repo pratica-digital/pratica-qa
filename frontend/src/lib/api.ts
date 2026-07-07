@@ -10,6 +10,8 @@ import type {
   CreateTestRunPayload,
   CreateTestSuitePayload,
   ExecuteTestResultPayload,
+  ImportTestCasesPayload,
+  ImportTestCasesReport,
   ManagedTestCase,
   ManagedTestSuite,
   PaginatedResponse,
@@ -372,6 +374,12 @@ export const testSuitesApi = {
   update: (token: string, testSuiteId: string, payload: UpdateTestSuitePayload) =>
     apiRequest<ManagedTestSuite>(`/test-suites/${testSuiteId}`, {
       method: 'PATCH',
+      token,
+      body: payload,
+    }),
+  importCases: (token: string, testSuiteId: string, payload: ImportTestCasesPayload) =>
+    apiRequest<ImportTestCasesReport>(`/test-suites/${testSuiteId}/import-cases`, {
+      method: 'POST',
       token,
       body: payload,
     }),

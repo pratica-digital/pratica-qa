@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowDown, ArrowUp, Layers3, ListChecks, Save, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, FileSpreadsheet, Layers3, ListChecks, Save, X } from 'lucide-react';
 import type {
   ManagedTestCase,
   ManagedTestSuite,
@@ -12,6 +12,7 @@ type TestSuiteEditPanelProps = {
   cases: ManagedTestCase[];
   readOnly: boolean;
   onClose: () => void;
+  onImportCases?: () => void;
   onSave: (
     suite: ManagedTestSuite,
     payload: UpdateTestSuitePayload,
@@ -24,6 +25,7 @@ export function TestSuiteEditPanel({
   cases,
   readOnly,
   onClose,
+  onImportCases,
   onSave,
 }: TestSuiteEditPanelProps) {
   const [name, setName] = useState(suite.name);
@@ -141,11 +143,24 @@ export function TestSuiteEditPanel({
           </div>
 
           <section className="mt-5">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h3 className="text-sm font-semibold text-slate-950">Ordem dos casos</h3>
-              <span className="text-xs font-medium text-slate-500">
-                {orderedCases.length} caso{orderedCases.length === 1 ? '' : 's'}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-slate-500">
+                  {orderedCases.length} caso{orderedCases.length === 1 ? '' : 's'}
+                </span>
+                {onImportCases ? (
+                  <button
+                    className="inline-flex h-9 items-center gap-2 rounded-lg bg-blue-700 px-3 text-sm font-medium text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={readOnly || saving}
+                    onClick={onImportCases}
+                    type="button"
+                  >
+                    <FileSpreadsheet className="h-4 w-4" aria-hidden="true" />
+                    Importar Casos de Teste
+                  </button>
+                ) : null}
+              </div>
             </div>
 
             <div className="mt-3 space-y-2">

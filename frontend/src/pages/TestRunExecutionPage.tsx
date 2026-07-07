@@ -1,20 +1,21 @@
 import {
-  ArrowDown,
   ArrowLeft,
-  ArrowUp,
+  CheckCircle2,
+  Circle,
   ClipboardCheck,
-  Filter,
+  PlayCircle,
   RefreshCw,
-  RotateCcw,
-  Search,
+  SkipForward,
   UserRound,
+  X,
+  XCircle,
+  type LucideIcon,
 } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { canManageTests } from '../auth/permissions';
 import { useAuth } from '../auth/useAuth';
 import { DeleteConfirmationModal } from '../components/DeleteConfirmationModal';
 import { TestCaseRunner } from '../components/test-run/TestCaseRunner';
-import { TestRunStatusBadge, UserRoleBadge } from '../components/badges';
 import { ApiError, testResultsApi, testRunsApi } from '../lib/api';
 import { testResultStatusLabel } from '../lib/labels';
 import { getResultTestCase } from '../lib/testResultOverrides';
@@ -36,8 +37,6 @@ function countResults(results: TestResult[] | undefined, status: TestResult['sta
   return results?.filter((result) => result.status === status).length ?? 0;
 }
 
-type StatusFilter = 'ALL' | TestResultStatus;
-type SortMode = 'suite' | 'status' | 'date' | 'executor';
 type RunCaseEditDraft = {
   title: string;
   description: string;
@@ -49,32 +48,33 @@ type RunCaseEditDraft = {
   }>;
 };
 
-const statusFilters: Array<{ label: string; value: StatusFilter }> = [
-  { label: 'Todos', value: 'ALL' },
-  { label: 'Aprovados', value: 'PASSED' },
-  { label: 'Falhas', value: 'FAILED' },
-  { label: 'Ignorados', value: 'SKIPPED' },
-  { label: 'Não executados', value: 'PENDING' },
-];
-
-const statusOrder: Record<TestResultStatus, number> = {
-  FAILED: 0,
-  PASSED: 1,
-  SKIPPED: 2,
-  PENDING: 3,
+const navigationStatusConfig: Record<
+  TestResultStatus,
+  {
+    icon: LucideIcon;
+    className: string;
+  }
+> = {
+  PASSED: {
+    icon: CheckCircle2,
+    className: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+  },
+  FAILED: {
+    icon: XCircle,
+    className: 'border-red-200 bg-red-50 text-red-800',
+  },
+  SKIPPED: {
+    icon: SkipForward,
+    className: 'border-amber-200 bg-amber-50 text-amber-800',
+  },
+  PENDING: {
+    icon: Circle,
+    className: 'border-slate-200 bg-slate-50 text-slate-600',
+  },
 };
 
 function getResultSuiteName(result: TestResult) {
   return result.testCase.suite?.name ?? 'Suíte não atribuída';
-}
-
-function getResultProjectName(result: TestResult) {
-  return (
-    result.testCase.suite?.project?.name ??
-    result.testRun?.project?.name ??
-    result.testRun?.projectId ??
-    'Projeto'
-  );
 }
 
 function getStatusLabel(status: TestResultStatus) {
@@ -124,36 +124,121 @@ function getSuiteId(result: TestResult) {
   return result.testCase.suiteId ?? 'without-suite';
 }
 
-function groupResultsBySuite(run: TestRun, results: TestResult[]) {
+function orderResultsForNavigation(run: TestRun, results: TestResult[]) {
+  const originalOrder = new Map(results.map((result, index) => [result.id, index]));
   const suiteOrder = new Map(
     [...(run.suites ?? [])]
       .sort((left, right) => left.position - right.position)
       .map((suite, index) => [suite.testSuiteId, index]),
   );
 
-  const suiteNames = new Map(
-    (run.suites ?? []).map((suite) => [
-      suite.testSuiteId,
-      suite.testSuite?.name ?? `Suíte ${suite.position}`,
-    ]),
-  );
+  return [...results].sort((left, right) => {
+    const leftSuiteOrder = suiteOrder.get(getSuiteId(left)) ?? Number.MAX_SAFE_INTEGER;
+    const rightSuiteOrder = suiteOrder.get(getSuiteId(right)) ?? Number.MAX_SAFE_INTEGER;
 
-  const groups = new Map<string, TestResult[]>();
+    if (leftSuiteOrder !== rightSuiteOrder) {
+      return leftSuiteOrder - rightSuiteOrder;
+    }
 
-  results.forEach((result) => {
-    const suiteId = getSuiteId(result);
-    const current = groups.get(suiteId) ?? [];
-    groups.set(suiteId, [...current, result]);
+    return (originalOrder.get(left.id) ?? 0) - (originalOrder.get(right.id) ?? 0);
   });
+}
 
-  return [...groups.entries()]
-    .map(([suiteId, suiteResults]) => ({
-      suiteId,
-      suiteName: suiteNames.get(suiteId) ?? 'Suíte não atribuída',
-      order: suiteOrder.get(suiteId) ?? Number.MAX_SAFE_INTEGER,
-      results: suiteResults,
-    }))
-    .sort((left, right) => left.order - right.order || left.suiteName.localeCompare(right.suiteName));
+type TestCaseListPanelProps = {
+  activeResultId: string | null;
+  onClose: () => void;
+  onSelect: (resultId: string) => void;
+  results: TestResult[];
+};
+
+function TestCaseListPanel({
+  activeResultId,
+  onClose,
+  onSelect,
+  results,
+}: TestCaseListPanelProps) {
+  return (
+    <div
+      className="fixed inset-0 z-[9999] flex justify-end bg-slate-950/20 p-0 backdrop-blur-[1px] sm:p-3"
+      onClick={onClose}
+      role="presentation"
+    >
+      <aside
+        aria-label="Lista de casos de teste"
+        className="flex h-full w-full max-w-md flex-col overflow-hidden bg-white shadow-2xl sm:rounded-lg sm:border sm:border-slate-200"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
+          <div className="min-w-0">
+            <h2 className="text-sm font-semibold text-slate-950">Casos do Test Run</h2>
+            <p className="text-xs text-slate-500">{results.length} caso{results.length === 1 ? '' : 's'}</p>
+          </div>
+          <button
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+            onClick={onClose}
+            title="Fechar lista"
+            type="button"
+          >
+            <X className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto p-3">
+          <div className="space-y-2">
+            {results.map((result, index) => {
+              const testCase = getResultTestCase(result);
+              const isActive = result.id === activeResultId;
+              const statusConfig = navigationStatusConfig[result.status];
+              const StatusIcon = statusConfig.icon;
+
+              return (
+                <button
+                  className={`flex w-full gap-3 rounded-lg border p-3 text-left transition ${
+                    isActive
+                      ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500'
+                      : 'border-slate-200 bg-white hover:border-blue-200 hover:bg-blue-50'
+                  }`}
+                  key={result.id}
+                  onClick={() => onSelect(result.id)}
+                  type="button"
+                >
+                  <span
+                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-semibold ${
+                      isActive ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-600'
+                    }`}
+                  >
+                    {index + 1}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold text-slate-950">
+                      {testCase.title}
+                    </span>
+                    <span className="mt-1 block truncate text-xs text-slate-500">
+                      {index + 1}/{results.length} - {getResultSuiteName(result)}
+                    </span>
+                    <span className="mt-2 flex flex-wrap items-center gap-1.5">
+                      {isActive ? (
+                        <span className="inline-flex h-6 items-center gap-1 rounded-md border border-blue-200 bg-blue-100 px-2 text-xs font-medium text-blue-800">
+                          <PlayCircle className="h-3.5 w-3.5" aria-hidden="true" />
+                          Atual
+                        </span>
+                      ) : null}
+                      <span
+                        className={`inline-flex h-6 items-center gap-1 rounded-md border px-2 text-xs font-medium ${statusConfig.className}`}
+                      >
+                        <StatusIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                        {getStatusLabel(result.status)}
+                      </span>
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </aside>
+    </div>
+  );
 }
 
 export function TestRunExecutionPage({
@@ -165,11 +250,9 @@ export function TestRunExecutionPage({
   const [run, setRun] = useState(testRun);
   const [submittingResultId, setSubmittingResultId] = useState<string | null>(null);
   const [activeResultId, setActiveResultId] = useState(() => testRun.results?.[0]?.id ?? null);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
-  const [search, setSearch] = useState('');
-  const [sortMode, setSortMode] = useState<SortMode>('suite');
-  const [collapsedSuiteIds, setCollapsedSuiteIds] = useState<string[]>([]);
-  const [rerunning, setRerunning] = useState(false);
+  const contentTopRef = useRef<HTMLDivElement>(null);
+  const [caseListOpen, setCaseListOpen] = useState(false);
+  const [draftComments, setDraftComments] = useState<Record<string, string>>({});
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [editingResult, setEditingResult] = useState<TestResult | null>(null);
@@ -180,66 +263,24 @@ export function TestRunExecutionPage({
   const [removingResult, setRemovingResult] = useState(false);
 
   const results = useMemo(() => run.results ?? [], [run.results]);
-  const failedCount = countResults(results, 'FAILED');
-  const visibleResults = useMemo(() => {
-    const normalizedSearch = search.trim().toLowerCase();
-
-    return results
-      .filter((result) => statusFilter === 'ALL' || result.status === statusFilter)
-      .filter((result) => {
-        const testCase = getResultTestCase(result);
-
-        if (!normalizedSearch) {
-          return true;
-        }
-
-        return [
-          testCase.title,
-          testCase.description,
-          result.comment,
-          getResultProjectName(result),
-          getResultSuiteName(result),
-          result.executedBy?.name,
-          result.lastModifiedBy?.name,
-        ]
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase()
-          .includes(normalizedSearch);
-      })
-      .sort((left, right) => {
-        if (sortMode === 'status') {
-          return statusOrder[left.status] - statusOrder[right.status];
-        }
-
-        if (sortMode === 'date') {
-          return (
-            new Date(right.updatedAt ?? right.executedAt ?? 0).getTime() -
-            new Date(left.updatedAt ?? left.executedAt ?? 0).getTime()
-          );
-        }
-
-        if (sortMode === 'executor') {
-          return (left.executedBy?.name ?? '').localeCompare(right.executedBy?.name ?? '');
-        }
-
-        return getResultSuiteName(left).localeCompare(getResultSuiteName(right)) ||
-          getResultTestCase(left).title.localeCompare(getResultTestCase(right).title);
-      });
-  }, [results, search, sortMode, statusFilter]);
-  const effectiveActiveResultId = useMemo(() => {
-    if (visibleResults.length === 0) {
-      return null;
+  const navigationResults = useMemo(() => orderResultsForNavigation(run, results), [results, run]);
+  const navigationPositionById = useMemo(
+    () => new Map(navigationResults.map((result, index) => [result.id, index])),
+    [navigationResults],
+  );
+  const currentIndex = useMemo(() => {
+    if (navigationResults.length === 0) {
+      return -1;
     }
 
-    return visibleResults.some((result) => result.id === activeResultId)
-      ? activeResultId
-      : visibleResults[0].id;
-  }, [activeResultId, visibleResults]);
-  const groupedResults = useMemo(
-    () => groupResultsBySuite(run, visibleResults),
-    [run, visibleResults],
-  );
+    if (!activeResultId) {
+      return 0;
+    }
+
+    return navigationPositionById.get(activeResultId) ?? 0;
+  }, [activeResultId, navigationPositionById, navigationResults.length]);
+  const currentResult = currentIndex >= 0 ? navigationResults[currentIndex] : null;
+  const effectiveActiveResultId = currentResult?.id ?? null;
   const canExecute = Boolean(user && token && canManageTests(user));
 
   const applyUpdatedResult = useCallback(
@@ -304,30 +345,77 @@ export function TestRunExecutionPage({
     return 'A execução está disponível para usuários QA e administradores.';
   }, [user]);
 
-  const navigateResult = useCallback(
-    (direction: -1 | 1) => {
-      if (visibleResults.length === 0) {
-        return;
+  useEffect(() => {
+    if (navigationResults.length === 0) {
+      if (activeResultId !== null) {
+        setActiveResultId(null);
       }
 
-      const activeIndex = visibleResults.findIndex((result) => result.id === effectiveActiveResultId);
-      const nextIndex =
-        activeIndex === -1
-          ? 0
-          : Math.min(Math.max(activeIndex + direction, 0), visibleResults.length - 1);
-
-      setActiveResultId(visibleResults[nextIndex].id);
-    },
-    [effectiveActiveResultId, visibleResults],
-  );
-
-  const handleSubmit = async (result: TestResult, payload: ExecuteTestResultPayload) => {
-    if (!token) {
       return;
     }
 
+    if (!activeResultId || !navigationPositionById.has(activeResultId)) {
+      setActiveResultId(navigationResults[0].id);
+    }
+  }, [activeResultId, navigationPositionById, navigationResults]);
+
+  const selectResult = useCallback(
+    (resultId: string) => {
+      if (!navigationPositionById.has(resultId)) {
+        return;
+      }
+
+      setActiveResultId(resultId);
+    },
+    [navigationPositionById],
+  );
+
+  useEffect(() => {
+    if (!effectiveActiveResultId) {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      contentTopRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }, 50);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [effectiveActiveResultId]);
+
+  useEffect(() => {
+    if (!caseListOpen) {
+      return undefined;
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setCaseListOpen(false);
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [caseListOpen]);
+
+  const persistResult = useCallback(async (
+    result: TestResult,
+    payload: ExecuteTestResultPayload,
+    options: { announceSuccess?: boolean } = {},
+  ) => {
+    if (!token) {
+      return false;
+    }
+
+    const announceSuccess = options.announceSuccess ?? true;
+
     setError('');
-    setSuccess('');
+    if (announceSuccess) {
+      setSuccess('');
+    }
     setSubmittingResultId(result.id);
 
     try {
@@ -336,17 +424,64 @@ export function TestRunExecutionPage({
         comment: payload.comment,
       });
       applyUpdatedResult(updatedResult);
-      setSuccess(`${getResultTestCase(result).title} marcado como ${getStatusLabel(payload.status)}.`);
+      setDraftComments((current) => ({
+        ...current,
+        [result.id]: payload.comment ?? '',
+      }));
+      if (announceSuccess) {
+        setSuccess(`${getResultTestCase(result).title} marcado como ${getStatusLabel(payload.status)}.`);
+      }
+
+      return true;
     } catch (submitError) {
       if (submitError instanceof ApiError && submitError.status === 403) {
         setError('Você não tem permissão para atualizar este resultado.');
       } else {
         setError(submitError instanceof Error ? submitError.message : 'Não foi possível atualizar o resultado.');
       }
+
+      return false;
     } finally {
       setSubmittingResultId(null);
     }
+  }, [applyUpdatedResult, token]);
+
+  const handleSubmit = async (result: TestResult, payload: ExecuteTestResultPayload) => {
+    await persistResult(result, payload);
   };
+
+  const handleDraftCommentChange = useCallback((resultId: string, value: string) => {
+    setDraftComments((current) => ({ ...current, [resultId]: value }));
+  }, []);
+
+  const handleNavigateNext = useCallback(async (
+    result: TestResult,
+    payload: ExecuteTestResultPayload,
+    hasDraftChanges: boolean,
+  ) => {
+    if (hasDraftChanges) {
+      const saved = await persistResult(result, payload, { announceSuccess: false });
+
+      if (!saved) {
+        return;
+      }
+    }
+
+    const currentIndex = navigationPositionById.get(result.id) ?? -1;
+    const nextResult = currentIndex >= 0 ? navigationResults[currentIndex + 1] : undefined;
+
+    if (nextResult) {
+      selectResult(nextResult.id);
+    }
+  }, [navigationPositionById, navigationResults, persistResult, selectResult]);
+
+  const handleSelectFromList = useCallback(
+    (resultId: string) => {
+      setCaseListOpen(false);
+      selectResult(resultId);
+    },
+    [selectResult],
+  );
 
   const handleUploadAttachments = async (result: TestResult, files: File[]) => {
     if (!token || files.length === 0) {
@@ -505,47 +640,6 @@ export function TestRunExecutionPage({
     }
   };
 
-  const handleRerunFailed = async () => {
-    if (!token) {
-      return;
-    }
-
-    setError('');
-    setSuccess('');
-    setRerunning(true);
-
-    try {
-      const response = await testRunsApi.rerunFailed(token, run.id, {});
-
-      if (!response.testRun || response.failedCount === 0) {
-        setSuccess('Não há testes com falha para reexecutar.');
-        return;
-      }
-
-      setRun(response.testRun);
-      onRunUpdated(response.testRun);
-      setStatusFilter('ALL');
-      setActiveResultId(response.testRun.results?.[0]?.id ?? null);
-      setSuccess(`${response.failedCount} teste${response.failedCount === 1 ? '' : 's'} com falha enfileirado${response.failedCount === 1 ? '' : 's'} para reexecução.`);
-    } catch (rerunError) {
-      if (rerunError instanceof ApiError && rerunError.status === 403) {
-        setError('Você não tem permissão para reexecutar testes com falha.');
-      } else {
-        setError(rerunError instanceof Error ? rerunError.message : 'Não foi possível reexecutar os testes com falha.');
-      }
-    } finally {
-      setRerunning(false);
-    }
-  };
-
-  const toggleSuiteGroup = (suiteId: string) => {
-    setCollapsedSuiteIds((current) =>
-      current.includes(suiteId)
-        ? current.filter((item) => item !== suiteId)
-        : [...current, suiteId],
-    );
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -573,138 +667,38 @@ export function TestRunExecutionPage({
           </div>
         </div>
 
-        <div className="grid gap-2 sm:grid-cols-2 lg:min-w-80 lg:grid-cols-1">
-          <div className="rounded-lg border border-slate-200 bg-white p-3">
-            <div className="flex items-center gap-2 text-xs font-medium uppercase text-slate-500">
-              <UserRound className="h-4 w-4" aria-hidden="true" />
-              Responsável
-            </div>
-            <div className="mt-2 flex items-center justify-between gap-3">
-              <span className="min-w-0 truncate text-sm font-medium text-slate-950">
-                {run.assignedTo?.name ?? 'Não atribuído'}
-              </span>
-              {run.assignedTo?.role ? <UserRoleBadge role={run.assignedTo.role} /> : null}
-            </div>
-          </div>
-          <div className="rounded-lg border border-slate-200 bg-white p-3">
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-xs font-medium uppercase text-slate-500">
-                Status da execução
-              </span>
-              <TestRunStatusBadge status={run.status} />
-            </div>
-            <div className="mt-3 grid grid-cols-4 gap-2 text-center text-sm">
-              <div>
-                <p className="font-semibold text-slate-950">{countResults(results, 'PASSED')}</p>
-                <p className="text-xs text-slate-500">Aprov.</p>
-              </div>
-              <div>
-                <p className="font-semibold text-slate-950">{countResults(results, 'FAILED')}</p>
-                <p className="text-xs text-slate-500">Falha</p>
-              </div>
-              <div>
-                <p className="font-semibold text-slate-950">{countResults(results, 'SKIPPED')}</p>
-                <p className="text-xs text-slate-500">Ignor.</p>
-              </div>
-              <div>
-                <p className="font-semibold text-slate-950">{countResults(results, 'PENDING')}</p>
-                <p className="text-xs text-slate-500">Aberto</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        
       </div>
 
-      <div className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-1 flex-col gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            {statusFilters.map((filter) => {
-              const isActive = statusFilter === filter.value;
-
-              return (
-                <button
-                  className={`inline-flex h-9 items-center gap-2 rounded-lg border px-3 text-sm font-medium transition ${
-                    isActive
-                      ? 'border-blue-700 bg-blue-700 text-white shadow-sm'
-                      : 'border-slate-200 bg-white text-slate-700 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700'
-                  }`}
-                  key={filter.value}
-                  onClick={() => setStatusFilter(filter.value)}
-                  type="button"
-                >
-                  <Filter className="h-4 w-4" aria-hidden="true" />
-                  {filter.label}
-                  {filter.value !== 'ALL' ? (
-                    <span
-                      className={`rounded px-1.5 text-xs font-semibold ${
-                        isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
-                      }`}
-                    >
-                      {countResults(results, filter.value)}
-                    </span>
-                  ) : null}
-                </button>
-              );
-            })}
+      <div className="grid gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm md:grid-cols-[1fr_auto] md:items-center">
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <p className="text-xs font-medium uppercase text-slate-500">Progresso</p>
+            <p className="mt-1 text-sm font-semibold text-slate-950">
+              {currentIndex >= 0 ? currentIndex + 1 : 0}/{navigationResults.length}
+            </p>
           </div>
-          <div className="grid gap-2 md:grid-cols-[1fr_14rem]">
-            <label className="flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-500">
-              <Search className="h-4 w-4" aria-hidden="true" />
-              <input
-                className="w-full border-0 bg-transparent p-0 text-sm text-slate-900 outline-none placeholder:text-slate-400"
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Buscar caso, suíte, executor ou comentário"
-                type="search"
-                value={search}
-              />
-            </label>
-            <select
-              className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
-              onChange={(event) => setSortMode(event.target.value as SortMode)}
-              value={sortMode}
-            >
-              <option value="suite">Ordenar por suíte</option>
-              <option value="status">Ordenar por status</option>
-              <option value="date">Ordenar por última atualização</option>
-              <option value="executor">Ordenar por executor</option>
-            </select>
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+            <p className="text-xs font-medium uppercase text-emerald-700">Aprovados</p>
+            <p className="mt-1 text-sm font-semibold text-emerald-900">{countResults(results, 'PASSED')}</p>
           </div>
-          <button
-            className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-600 bg-slate-600 px-3 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={!canExecute || failedCount === 0 || rerunning}
-            onClick={() => void handleRerunFailed()}
-            type="button"
-          >
-            <RotateCcw className="h-4 w-4" aria-hidden="true" />
-            {rerunning ? 'Criando reexecução' : 'Reexecutar falhas'}
-          </button>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-slate-500">
-            {visibleResults.length} teste{visibleResults.length === 1 ? '' : 's'}
-          </span>
-          <button
-            className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-600 bg-slate-600 px-3 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={visibleResults.length === 0 || visibleResults[0]?.id === effectiveActiveResultId}
-            onClick={() => navigateResult(-1)}
-            type="button"
-          >
-            <ArrowUp className="h-4 w-4" aria-hidden="true" />
-            Anterior
-          </button>
-          <button
-            className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-600 bg-slate-600 px-3 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={
-              visibleResults.length === 0 ||
-              visibleResults[visibleResults.length - 1]?.id === effectiveActiveResultId
-            }
-            onClick={() => navigateResult(1)}
-            type="button"
-          >
-            <ArrowDown className="h-4 w-4" aria-hidden="true" />
-            Próximo
-          </button>
+          <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+            <p className="text-xs font-medium uppercase text-red-700">Falhas</p>
+            <p className="mt-1 text-sm font-semibold text-red-900">{countResults(results, 'FAILED')}</p>
+          </div>
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+            <p className="text-xs font-medium uppercase text-amber-700">Ignorados</p>
+            <p className="mt-1 text-sm font-semibold text-amber-900">{countResults(results, 'SKIPPED')}</p>
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-white p-3">
+            <p className="flex items-center gap-2 text-xs font-medium uppercase text-slate-500">
+              <UserRound className="h-4 w-4" aria-hidden="true" />
+              Responsável
+            </p>
+            <p className="mt-1 truncate text-sm font-semibold text-slate-950">
+              {run.assignedTo?.name ?? 'Não atribuído'}
+            </p>
+          </div>
         </div>
       </div>
 
@@ -720,54 +714,50 @@ export function TestRunExecutionPage({
         </p>
       ) : null}
 
-      {visibleResults.length > 0 ? (
-        <section className="space-y-5">
-          {groupedResults.map((group) => (
-            <section className="space-y-3" key={group.suiteId}>
-              <button
-                className="flex w-full items-center justify-between gap-3 border-b border-slate-200 pb-2 text-left"
-                onClick={() => toggleSuiteGroup(group.suiteId)}
-                type="button"
-              >
-                <h2 className="text-sm font-semibold text-slate-950">
-                  {group.suiteName}
-                </h2>
-                <span className="text-xs font-medium text-slate-500">
-                  {group.results.length} teste{group.results.length === 1 ? '' : 's'}
-                  {collapsedSuiteIds.includes(group.suiteId) ? ' - recolhida' : ''}
-                </span>
-              </button>
-              <div className={`space-y-4 ${collapsedSuiteIds.includes(group.suiteId) ? 'hidden' : ''}`}>
-                {group.results.map((result) => (
-                  <TestCaseRunner
-                    disabled={!canExecute}
-                    disabledReason={disabledReason}
-                    isActive={effectiveActiveResultId === result.id}
-                    isSubmitting={submittingResultId === result.id}
-                    key={result.id}
-                    onActivate={() => setActiveResultId(result.id)}
-                    onEditRunCase={openRunCaseEdit}
-                    onRemoveAttachment={handleRemoveAttachment}
-                    onRemoveRunCase={setRemoveTarget}
-                    onSubmit={handleSubmit}
-                    onUploadAttachments={handleUploadAttachments}
-                    result={result}
-                  />
-                ))}
-              </div>
-            </section>
-          ))}
+      {currentResult ? (
+        <section className="space-y-4" ref={contentTopRef}>
+          <div className="flex items-center justify-between gap-3 border-b border-slate-200 pb-2">
+            <div className="min-w-0">
+              <h2 className="truncate text-sm font-semibold text-slate-950">
+                {getResultSuiteName(currentResult)}
+              </h2>
+              <p className="mt-1 text-xs text-slate-500">
+                Caso {currentIndex + 1} de {navigationResults.length}
+              </p>
+            </div>
+          </div>
+
+          <TestCaseRunner
+            disabled={!canExecute}
+            disabledReason={disabledReason}
+            draftComment={draftComments[currentResult.id] ?? currentResult.comment ?? ''}
+            isActive
+            isLast={currentIndex === navigationResults.length - 1}
+            isSubmitting={submittingResultId === currentResult.id}
+            key={currentResult.id}
+            onActivate={() => setActiveResultId(currentResult.id)}
+            onDraftCommentChange={handleDraftCommentChange}
+            onEditRunCase={openRunCaseEdit}
+            onNext={handleNavigateNext}
+            onOpenList={() => setCaseListOpen(true)}
+            onRemoveAttachment={handleRemoveAttachment}
+            onRemoveRunCase={setRemoveTarget}
+            onSubmit={handleSubmit}
+            onUploadAttachments={handleUploadAttachments}
+            position={currentIndex + 1}
+            result={currentResult}
+            runAssignee={run.assignedTo}
+            total={navigationResults.length}
+          />
         </section>
       ) : (
         <div className="rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
           <ClipboardCheck className="mx-auto h-8 w-8 text-slate-400" aria-hidden="true" />
           <h2 className="mt-3 text-sm font-semibold text-slate-950">
-            {statusFilter === 'ALL' && !search.trim() ? 'Nenhum resultado ainda' : 'Nenhum resultado correspondente'}
+            Nenhum resultado ainda
           </h2>
           <p className="mt-1 text-sm text-slate-500">
-            {statusFilter === 'ALL' && !search.trim()
-              ? 'Esta execução não tem casos de teste enfileirados.'
-              : 'Ajuste o filtro de status ou a busca para ver mais testes.'}
+            Esta execução não tem casos de teste enfileirados.
           </p>
           <button
             className="mt-4 inline-flex h-9 items-center gap-2 rounded-lg border border-slate-600 bg-slate-600 px-3 text-sm font-medium text-white hover:bg-slate-700"
@@ -779,6 +769,15 @@ export function TestRunExecutionPage({
           </button>
         </div>
       )}
+
+      {caseListOpen ? (
+        <TestCaseListPanel
+          activeResultId={effectiveActiveResultId}
+          onClose={() => setCaseListOpen(false)}
+          onSelect={handleSelectFromList}
+          results={navigationResults}
+        />
+      ) : null}
 
       {editingResult && editDraft ? (
         <div
@@ -883,7 +882,8 @@ export function TestRunExecutionPage({
                           Passo {index + 1}
                         </span>
                         <button
-                          className="text-xs font-medium text-red-600 hover:text-red-700"
+                          className="text-xs font-medium text-red-600 hover:text-red-700 disabled:cursor-not-allowed disabled:text-slate-300"
+                          disabled={editDraft.steps.length === 1}
                           onClick={() =>
                             setEditDraft((current) =>
                               current
