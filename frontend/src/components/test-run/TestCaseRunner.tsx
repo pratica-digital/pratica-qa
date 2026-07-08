@@ -95,6 +95,18 @@ function formatUploadDate(value?: string | null) {
   }).format(new Date(value));
 }
 
+function isInteractiveTarget(target: EventTarget | null) {
+  if (!(target instanceof Element)) {
+    return false;
+  }
+
+  return Boolean(
+    target.closest(
+      'a, button, input, label, select, textarea, video, [contenteditable="true"], [role="button"]',
+    ),
+  );
+}
+
 export function TestCaseRunner({
   result,
   runAssignee,
@@ -136,8 +148,20 @@ export function TestCaseRunner({
           ? 'border-slate-950 ring-2 ring-slate-200'
           : 'border-slate-200'
       }`}
-      onClick={onActivate}
-      onFocus={onActivate}
+      onClick={(event) => {
+        if (isInteractiveTarget(event.target)) {
+          return;
+        }
+
+        onActivate();
+      }}
+      onFocus={(event) => {
+        if (isInteractiveTarget(event.target)) {
+          return;
+        }
+
+        onActivate();
+      }}
       tabIndex={0}
     >
       <div className="border-b border-slate-200 p-4">
