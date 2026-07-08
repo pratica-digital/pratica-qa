@@ -345,20 +345,6 @@ export function TestRunExecutionPage({
     return 'A execução está disponível para usuários QA e administradores.';
   }, [user]);
 
-  useEffect(() => {
-    if (navigationResults.length === 0) {
-      if (activeResultId !== null) {
-        setActiveResultId(null);
-      }
-
-      return;
-    }
-
-    if (!activeResultId || !navigationPositionById.has(activeResultId)) {
-      setActiveResultId(navigationResults[0].id);
-    }
-  }, [activeResultId, navigationPositionById, navigationResults]);
-
   const selectResult = useCallback(
     (resultId: string) => {
       if (!navigationPositionById.has(resultId)) {
