@@ -8,25 +8,36 @@ type PasswordResetTemplateParams = {
   userName: string;
 };
 
-export function renderPasswordResetTemplate(params: PasswordResetTemplateParams): MailTemplate {
-  const greeting = `Ola, ${params.userName}.`;
-  const intro = 'Recebemos uma solicitacao de recuperacao de senha para sua conta na QA Platform.';
-  const instruction = 'Use o token abaixo ou acesse o link seguro para criar uma nova senha.';
+export function renderPasswordResetTemplate(
+  params: PasswordResetTemplateParams,
+): MailTemplate {
+  const greeting = `Olá, ${params.userName}.`;
+  const intro =
+    'Recebemos uma solicitação de recuperação de senha para sua conta na QA Platform.';
+  const instruction =
+    'Use o token abaixo ou acesse o link seguro para criar uma nova senha.';
 
   return renderEmailShell({
     actionLabel: 'Redefinir senha',
     actionUrl: params.actionUrl,
-    body: [paragraph(greeting), paragraph(intro), paragraph(instruction)].join(''),
+    body: [
+      paragraph(greeting),
+      paragraph(intro),
+      paragraph(instruction),
+    ].join(''),
     expiresAt: params.expiresAt,
-    footerNote: 'Apos a criacao da nova senha, este link sera invalidado automaticamente.',
-    preheader: 'Redefina sua senha da QA Platform com seguranca.',
-    securityNotice: 'Se voce nao solicitou essa recuperacao, ignore este e-mail. Sua senha atual continuara valida.',
-    subject: 'Token para redefinicao de senha',
+    footerNote:
+      'Após a criação da nova senha, este link será invalidado automaticamente.',
+    preheader: 'Redefina sua senha da QA Platform com segurança.',
+    securityNotice:
+      'Se você não solicitou essa recuperação, ignore este e-mail. Sua senha atual continuará válida.',
+    subject: 'Token para redefinição de senha',
     textBody: [greeting, intro, instruction],
-    title: 'Recuperacao de senha',
+    title: 'Recuperação de senha',
     tokenBlock: {
-      helperText: 'Informe este token na tela de redefinicao caso prefira nao usar o link.',
-      label: 'Token de redefinicao',
+      helperText:
+        'Informe este token na tela de redefinição caso prefira não usar o link.',
+      label: 'Token de redefinição',
       value: params.token,
     },
   });

@@ -43,6 +43,18 @@ export const testSuiteStatusLabels: Record<TestSuiteStatus, string> = {
   ARCHIVED: 'Arquivada',
 };
 
+export const GENERAL_SUITE_PROJECT_LABEL = 'Geral';
+
+export function suiteProjectLabel(suite: {
+  project?: {
+    key?: string | null;
+    name?: string | null;
+  } | null;
+  projectId?: string | null;
+}) {
+  return suite.project?.name ?? suite.project?.key ?? suite.projectId ?? GENERAL_SUITE_PROJECT_LABEL;
+}
+
 export const testCaseStatusLabels = {
   ACTIVE: 'Ativo',
   ARCHIVED: 'Arquivado',

@@ -6,6 +6,7 @@ import { CaseStatusBadge } from '../components/badges';
 import { DeleteConfirmationModal } from '../components/DeleteConfirmationModal';
 import { TestCaseEditPanel } from '../components/test-cases/TestCaseEditPanel';
 import { ApiError, testCasesApi, testSuitesApi } from '../lib/api';
+import { suiteProjectLabel } from '../lib/labels';
 import type {
   CreateTestCasePayload,
   ManagedTestCase,
@@ -38,13 +39,7 @@ function getSuiteName(testCase: ManagedTestCase, suites: ManagedTestSuite[]) {
 function getProjectName(testCase: ManagedTestCase, suites: ManagedTestSuite[]) {
   const suite = getSuite(testCase, suites);
 
-  return (
-    suite?.project?.name ??
-    testCase.suite?.project?.name ??
-    suite?.projectId ??
-    testCase.suite?.projectId ??
-    'Projeto não atribuído'
-  );
+  return suiteProjectLabel(suite ?? testCase.suite ?? {});
 }
 
 export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {

@@ -29,6 +29,8 @@ const initialForm: SuiteForm = {
   project: '',
 };
 
+const GENERAL_PROJECT_OPTION_VALUE = '__general__';
+
 function Field({ label, required = false, children, hint }: FieldProps) {
   return (
     <div className="flex flex-col gap-1.5">
@@ -92,8 +94,6 @@ export function NewSuiteModal({
   }
 
   const projectOptions = (projects ?? []).map((project) => ({ id: project.id, name: project.name }));
-  const hasProjectOptions = projectOptions.length > 0;
-
   function setField<Field extends keyof SuiteForm>(field: Field, value: SuiteForm[Field]) {
     setForm((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: undefined }));
@@ -107,7 +107,7 @@ export function NewSuiteModal({
     }
 
     if (!form.project) {
-      nextErrors.project = !hasProjectOptions ? 'Crie um projeto antes de criar uma suíte' : 'Selecione um projeto';
+      nextErrors.project = 'Selecione um projeto ou a opção Geral';
     }
 
     return nextErrors;
@@ -126,7 +126,7 @@ export function NewSuiteModal({
 
     try {
       await onCreateFromApi?.({
-        projectId: form.project,
+        projectId: form.project === GENERAL_PROJECT_OPTION_VALUE ? null : form.project,
         name: form.name.trim(),
       });
 
@@ -179,8 +179,9 @@ export function NewSuiteModal({
           <Field label="Projeto" required>
             <Select value={form.project} onChange={(event) => setField('project', event.target.value)}>
               <option value="">
-                {!hasProjectOptions ? 'Nenhum projeto disponível' : 'Selecione...'}
+                Selecione...
               </option>
+              <option value={GENERAL_PROJECT_OPTION_VALUE}>Geral</option>
               {projectOptions.map((project) => (
                 <option key={project.id} value={project.id}>
                   {project.name}
@@ -207,7 +208,7 @@ export function NewSuiteModal({
           </button>
           <button
             className="inline-flex h-9 items-center gap-2 rounded-lg bg-blue-700 px-4 text-sm font-medium text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={submitting || !hasProjectOptions}
+            disabled={submitting}
             onClick={handleSubmit}
             type="button"
           >

@@ -9,6 +9,7 @@ import { TestCaseImportModal } from '../components/test-suites/TestCaseImportMod
 import { TestSuiteDetailPanel } from '../components/test-suites/TestSuiteDetailPanel';
 import { TestSuiteEditPanel } from '../components/test-suites/TestSuiteEditPanel';
 import { ApiError, projectsApi, testCasesApi, testSuitesApi } from '../lib/api';
+import { suiteProjectLabel } from '../lib/labels';
 import type {
   CreateTestSuitePayload,
   ImportTestCasesPayload,
@@ -169,6 +170,7 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
         suite.name,
         suite.project?.name,
         suite.project?.key,
+        !suite.projectId ? 'Geral' : undefined,
       ]
         .filter(Boolean)
         .join(' ')
@@ -443,7 +445,7 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
                   <tr>
                     <th className="px-4 py-3">Suíte</th>
                     <th className="px-4 py-3">Projeto</th>
-                    <th className="px-4 py-3">Posição</th>
+                    
                     <th className="px-4 py-3">Casos</th>
                     <th className="px-4 py-3">Atualizado</th>
                     <th className="px-4 py-3 text-right"></th>
@@ -461,9 +463,9 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
                         
                       </td>
                       <td className="px-4 py-3 text-slate-600">
-                        {suite.project?.name ?? suite.projectId}
+                        {suiteProjectLabel(suite)}
                       </td>
-                      <td className="px-4 py-3 text-slate-600">{suite.position}</td>
+                      
                       <td className="px-4 py-3 text-slate-600">
                         {getSuiteCases(suite, cases, caseOrder).length}
                       </td>

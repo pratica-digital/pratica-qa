@@ -13,7 +13,9 @@ COPY nest-cli.json tsconfig*.json prisma.config.ts ./
 COPY prisma ./prisma
 COPY src ./src
 
-RUN npm run build
+# Prisma only validates the URL format while generating the client. The real
+# DATABASE_URL is injected by Docker Compose when the container starts.
+RUN DATABASE_URL=postgresql://build:build@localhost:5432/build npm run build
 
 FROM node:24-alpine AS runner
 

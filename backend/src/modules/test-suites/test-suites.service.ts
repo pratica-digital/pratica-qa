@@ -16,10 +16,12 @@ export class TestSuitesService {
   ) {}
 
   async create(dto: CreateTestSuiteDto) {
-    const project = await this.projectsRepository.findById(dto.projectId);
+    if (dto.projectId) {
+      const project = await this.projectsRepository.findById(dto.projectId);
 
-    if (!project) {
-      throw new NotFoundException('Project not found');
+      if (!project) {
+        throw new NotFoundException('Project not found');
+      }
     }
 
     return this.testSuitesRepository.create(dto);

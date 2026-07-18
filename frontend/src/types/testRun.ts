@@ -85,7 +85,7 @@ export type RunnerTestCase = {
   suite?: {
     id: string;
     name: string;
-    projectId: string;
+    projectId?: string | null;
     project?: {
       id: string;
       name: string;
@@ -130,7 +130,7 @@ export type ProjectSummary = {
 
 export type ManagedTestSuite = {
   id: string;
-  projectId: string;
+  projectId?: string | null;
   name: string;
   position: number;
   createdAt?: string;
@@ -163,7 +163,7 @@ export type ManagedTestCase = {
   suite?: {
     id: string;
     name: string;
-    projectId: string;
+    projectId?: string | null;
     project?: {
       id: string;
       name: string;
@@ -233,7 +233,7 @@ export type TestRunSuite = {
   testSuite?: {
     id: string;
     name: string;
-    projectId: string;
+    projectId?: string | null;
   };
 };
 
@@ -587,7 +587,7 @@ export type UpdateTestSuitePayload = Partial<{
 }>;
 
 export type CreateTestSuitePayload = {
-  projectId: string;
+  projectId?: string | null;
   name: string;
   position?: number;
 };

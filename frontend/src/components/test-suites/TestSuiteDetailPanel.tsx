@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { FileSpreadsheet, Layers3, ListChecks, X } from 'lucide-react';
 import { ActionMenu } from '../ActionMenu';
 import { CaseStatusBadge } from '../badges';
+import { suiteProjectLabel } from '../../lib/labels';
 import type { ManagedTestCase, ManagedTestSuite } from '../../types/testRun';
 
 type TestSuiteDetailPanelProps = {
@@ -57,7 +58,7 @@ export function TestSuiteDetailPanel({
               {suite.name}
             </h2>
             <p className="truncate text-xs text-slate-500">
-              {suite.project?.name ?? suite.projectId}
+              {suiteProjectLabel(suite)}
             </p>
           </div>
           {onImportCases ? (
@@ -115,7 +116,7 @@ export function TestSuiteDetailPanel({
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
               <p className="text-xs font-medium uppercase text-slate-500">Projeto / Suíte</p>
               <p className="mt-2 text-sm font-medium text-slate-950">
-                {suite.project?.name ?? suite.projectId}
+                {suiteProjectLabel(suite)}
               </p>
               <p className="mt-1 text-sm text-slate-600">{suite.name}</p>
               <p className="mt-3 text-xs text-slate-500">
@@ -159,7 +160,7 @@ export function TestSuiteDetailPanel({
                       {testCase.title}
                     </span>
                     <span className="mt-1 line-clamp-1 block text-xs text-slate-500">
-                      {suite.project?.name ?? suite.projectId} / {suite.name}
+                      {suiteProjectLabel(suite)} / {suite.name}
                       {testCase.section ? ` / ${testCase.section}` : ''}
                     </span>
                   </span>

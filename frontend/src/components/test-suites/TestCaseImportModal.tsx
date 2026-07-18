@@ -13,6 +13,7 @@ import type {
   ImportTestCasesReport,
   ManagedTestSuite,
 } from '../../types/testRun';
+import { suiteProjectLabel } from '../../lib/labels';
 import {
   isSupportedSpreadsheetFile,
   parseSpreadsheetFile,
@@ -178,7 +179,7 @@ export function TestCaseImportModal({
                 Importar Casos de Teste
               </h2>
               <p className="truncate text-xs text-slate-500">
-                {suite.project?.name ?? suite.projectId} / {suite.name}
+                {suiteProjectLabel(suite)} / {suite.name}
               </p>
             </div>
             <button

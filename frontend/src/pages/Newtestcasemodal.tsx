@@ -8,6 +8,7 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertCircle, ChevronDown, GripVertical, ListChecks, Plus, Trash2, X } from 'lucide-react';
+import { suiteProjectLabel } from '../lib/labels';
 import type { CreateTestCasePayload, ManagedTestSuite } from '../types/testRun';
 
 type TabId = 'basic' | 'steps';
@@ -172,7 +173,7 @@ export function NewTestCaseModal({
   const suiteOptions = (suites ?? []).map((suite) => ({
     id: suite.id,
     name: suite.name,
-    projectName: suite.project?.name ?? suite.projectId,
+    projectName: suiteProjectLabel(suite),
   }));
   const hasSuiteOptions = suiteOptions.length > 0;
   const selectedSuite = suiteOptions.find((suite) => suite.id === form.suiteId);

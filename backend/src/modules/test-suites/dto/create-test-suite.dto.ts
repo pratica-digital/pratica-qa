@@ -2,8 +2,9 @@ import { Type } from 'class-transformer';
 import { IsInt, IsNotEmpty, IsOptional, IsString, IsUUID, MaxLength, Min } from 'class-validator';
 
 export class CreateTestSuiteDto {
+  @IsOptional()
   @IsUUID()
-  projectId: string;
+  projectId?: string | null;
 
   @IsString()
   @IsNotEmpty()

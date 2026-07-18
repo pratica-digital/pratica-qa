@@ -47,10 +47,10 @@ describe('ShortcutService', () => {
 
     await expect(
       service.createStory({
-        name: '[FAIL] Case',
+        name: '[BUG]',
         description: 'description',
       }),
-    ).resolves.toEqual({ id: '123', appUrl: 'https://story.url', name: '[FAIL] Case' });
+    ).resolves.toEqual({ id: '123', appUrl: 'https://story.url', name: '[BUG]' });
 
     expect(global.fetch).toHaveBeenCalledTimes(1);
     expect(global.fetch).toHaveBeenCalledWith(
@@ -63,7 +63,7 @@ describe('ShortcutService', () => {
         },
         body: JSON.stringify({
           description: 'description',
-          name: '[FAIL] Case',
+          name: '[BUG]',
           story_type: 'bug',
           workflow_state_id: 2001,
           group_id: 'team-uuid',
