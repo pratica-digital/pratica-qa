@@ -194,7 +194,9 @@ export class TestCasesRepository {
   ): Prisma.TestCaseWhereInput {
     return {
       suiteId: params.suiteId,
-      suite: params.projectId ? { projectId: params.projectId } : undefined,
+      suite: params.projectId
+        ? { OR: [{ projectId: params.projectId }, { projectId: null }] }
+        : undefined,
       status: params.status,
       severity: params.severity,
       tags: params.tag ? { has: params.tag } : undefined,

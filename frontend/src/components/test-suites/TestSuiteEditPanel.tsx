@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowDown, ArrowUp, FileSpreadsheet, Layers3, ListChecks, Save, X } from 'lucide-react';
+import { suiteProjectLabel } from '../../lib/labels';
 import type {
   ManagedTestCase,
   ManagedTestSuite,
@@ -104,7 +105,7 @@ export function TestSuiteEditPanel({
               Editar suíte de teste
             </h2>
             <p className="truncate text-xs text-slate-500">
-              {suite.project?.name ?? 'Projeto'}
+              {suiteProjectLabel(suite)}
             </p>
           </div>
           <button

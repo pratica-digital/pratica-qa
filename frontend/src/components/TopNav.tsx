@@ -30,7 +30,7 @@ import {
   testSuitesApi,
   usersApi,
 } from '../lib/api';
-import { pageLabels, testRunStatusLabel, userRoleLabel } from '../lib/labels';
+import { pageLabels, suiteProjectLabel, testRunStatusLabel, userRoleLabel } from '../lib/labels';
 import type {
   AuthUser,
   ManagedTestCase,
@@ -192,7 +192,7 @@ function getPlanSubtitle(plan: TestPlan) {
 }
 
 function getSuiteSubtitle(suite: ManagedTestSuite) {
-  return suite.project?.name ?? 'Suíte de teste';
+  return suiteProjectLabel(suite);
 }
 
 function getCaseSubtitle(testCase: ManagedTestCase) {

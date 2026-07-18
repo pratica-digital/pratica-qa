@@ -24,6 +24,7 @@ import type {
 } from '../types/testRun';
 import { useAuth } from '../auth/useAuth';
 import { testPlansApi, testRunsApi, testSuitesApi } from '../lib/api';
+import { suiteProjectLabel } from '../lib/labels';
 
 type SuiteOption = ManagedTestSuite;
 type TabId = 'info' | 'suites';
@@ -131,7 +132,7 @@ function getPlanProjectLabel(plan: TestPlan) {
 }
 
 function getSuiteProjectLabel(suite: SuiteOption) {
-  return getProjectLabel(suite.project, suite.projectId);
+  return suiteProjectLabel(suite);
 }
 
 export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], projectId }: NewTestRunModalProps) {
@@ -210,7 +211,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
         (nextAssignments, [suiteId, assignedType]) => {
           const suite = suites.find((suiteOption) => suiteOption.id === suiteId);
 
-          if (suite?.projectId === nextProjectId) {
+          if (suite && (!suite.projectId || suite.projectId === nextProjectId)) {
             nextAssignments[suiteId] = assignedType;
           }
 
@@ -308,7 +309,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
 
     const hasSuiteOutsideProject = Boolean(selectedProjectId) && Object.keys(suiteAssignments).some((suiteId) => {
       const suite = suites.find((suiteOption) => suiteOption.id === suiteId);
-      return suite?.projectId !== selectedProjectId;
+      return Boolean(suite?.projectId && suite.projectId !== selectedProjectId);
     });
 
     if (hasSuiteOutsideProject) {
@@ -368,7 +369,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
       }
 
       const suitesOutsideProject = selectedSuiteOptions.filter(
-        (suite) => suite.projectId !== resolvedProjectId,
+        (suite) => suite.projectId && suite.projectId !== resolvedProjectId,
       );
 
       if (suitesOutsideProject.length > 0) {
@@ -409,7 +410,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
   const selectedPlan = testPlans.find((plan) => plan.id === form.planId);
   const activeProjectId = projectId || selectedPlan?.projectId;
   const selectableSuites = activeProjectId
-    ? suites.filter((suite) => suite.projectId === activeProjectId)
+    ? suites.filter((suite) => !suite.projectId || suite.projectId === activeProjectId)
     : suites;
   const selectedSuiteOptions = suites.filter((suite) => suiteAssignments[suite.id]);
   const unassignedSuites = selectableSuites.filter((suite) => !suiteAssignments[suite.id]);

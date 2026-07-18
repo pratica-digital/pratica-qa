@@ -29,7 +29,7 @@ export class TestSuitesRepository {
   create(dto: CreateTestSuiteDto) {
     return this.prisma.testSuite.create({
       data: {
-        projectId: dto.projectId,
+        projectId: dto.projectId ?? null,
         name: dto.name,
         position: dto.position ?? 0,
       },
@@ -105,7 +105,7 @@ export class TestSuitesRepository {
     return this.prisma.testSuite.count({
       where: {
         id: { in: ids },
-        projectId,
+        OR: [{ projectId }, { projectId: null }],
         deletedAt: null,
       },
     });
@@ -196,10 +196,10 @@ export class TestSuitesRepository {
     search?: string;
   }): Prisma.TestSuiteWhereInput {
     return {
-      projectId: params.projectId,
-      OR: params.search
-        ? [{ name: { contains: params.search, mode: 'insensitive' } }]
-        : undefined,
+      AND: [
+        params.projectId ? { OR: [{ projectId: params.projectId }, { projectId: null }] } : {},
+        params.search ? { name: { contains: params.search, mode: 'insensitive' } } : {},
+      ],
     };
   }
 }

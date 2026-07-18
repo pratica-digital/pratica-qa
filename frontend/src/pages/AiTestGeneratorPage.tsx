@@ -11,6 +11,7 @@ import {
 import { canManageTests } from '../auth/permissions';
 import { useAuth } from '../auth/useAuth';
 import { aiTestGeneratorApi, testSuitesApi } from '../lib/api';
+import { suiteProjectLabel } from '../lib/labels';
 import type {
   AiExtractedRelease,
   AiGeneratedStep,
@@ -530,7 +531,7 @@ export function AiTestGeneratorPage({ embedded = false }: AiTestGeneratorPagePro
                 <option value="">Selecione a suíte</option>
                 {suites.map((suite) => (
                   <option key={suite.id} value={suite.id}>
-                    {suite.project?.name ?? suite.projectId} / {suite.name}
+                    {suiteProjectLabel(suite)} / {suite.name}
                   </option>
                 ))}
               </select>
