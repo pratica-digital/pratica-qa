@@ -167,13 +167,10 @@ function EmptyBlock({ label }: { label: string }) {
 
 function DashboardMetricCard({
   active,
-  delta,
   description,
   icon: Icon,
-  inverseDelta = false,
   label,
   onClick,
-  periodLabel,
   tone,
   value,
 }: {
@@ -188,22 +185,6 @@ function DashboardMetricCard({
   tone: keyof typeof metricToneClasses;
   value: number;
 }) {
-  const deltaTone =
-    !delta || delta.direction === 'flat'
-      ? 'text-slate-500'
-      : (delta.direction === 'up' && !inverseDelta) || (delta.direction === 'down' && inverseDelta)
-        ? 'text-emerald-600'
-        : 'text-red-600';
-  const deltaSign =
-    !delta || delta.direction === 'flat'
-      ? ''
-      : delta.direction === 'up'
-        ? '+'
-        : '-';
-  const deltaPercent = delta
-    ? new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 }).format(Math.abs(delta.percent))
-    : '';
-
   return (
     <button
       className={`group rounded-lg border bg-white p-6 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50 ${

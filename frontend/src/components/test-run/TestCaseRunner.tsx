@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   Clock3,
   Download,
@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { ActionMenu } from '../ActionMenu';
 import { TestResultStatusBadge } from '../badges';
-import { resolveApiAssetUrl } from '../../lib/api';
+import { useAuthenticatedAttachmentUrl } from '../../hooks/useAuthenticatedAttachmentUrl';
 import { getResultTestCase } from '../../lib/testResultOverrides';
 import type { AuthUser, ExecuteTestResultPayload, TestResult, TestResultAttachment } from '../../types/testRun';
 import { TestResultForm } from './TestResultForm';
@@ -105,6 +105,16 @@ function isInteractiveTarget(target: EventTarget | null) {
       'a, button, input, label, select, textarea, video, [contenteditable="true"], [role="button"]',
     ),
   );
+}
+
+function AuthenticatedAttachmentAsset({
+  attachment,
+  children,
+}: {
+  attachment: TestResultAttachment;
+  children: (url: string) => ReactNode;
+}) {
+  return children(useAuthenticatedAttachmentUrl(attachment.id));
 }
 
 export function TestCaseRunner({
@@ -314,10 +324,8 @@ export function TestCaseRunner({
               </h3>
               <div className="mt-2 grid gap-2 sm:grid-cols-2">
                 {attachments.map((attachment) => (
-                  <div
-                    className="overflow-hidden rounded-lg border border-slate-200 bg-white"
-                    key={attachment.id}
-                  >
+                  <AuthenticatedAttachmentAsset attachment={attachment} key={attachment.id}>
+                    {(assetUrl) => <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
                     {isImageAttachment(attachment) ? (
                       <button
                         className="block aspect-video w-full bg-slate-100"
@@ -330,7 +338,7 @@ export function TestCaseRunner({
                         <img
                           alt={getAttachmentName(attachment)}
                           className="h-full w-full object-cover"
-                          src={resolveApiAssetUrl(getAttachmentUrl(attachment))}
+                          src={assetUrl}
                         />
                       </button>
                     ) : isVideoAttachment(attachment) ? (
@@ -339,11 +347,11 @@ export function TestCaseRunner({
                           className="aspect-video w-full bg-slate-950"
                           controls
                           preload="metadata"
-                          src={resolveApiAssetUrl(getAttachmentUrl(attachment))}
+                          src={assetUrl}
                         >
                           <a
                             className="text-white underline"
-                            href={resolveApiAssetUrl(getAttachmentUrl(attachment))}
+                            href={assetUrl}
                           >
                             {getAttachmentName(attachment)}
                           </a>
@@ -370,7 +378,7 @@ export function TestCaseRunner({
                         ) : null}
                         <a
                           className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-                          href={resolveApiAssetUrl(getAttachmentUrl(attachment))}
+                          href={assetUrl}
                           onClick={(event) => event.stopPropagation()}
                           rel="noreferrer"
                           target="_blank"
@@ -381,7 +389,7 @@ export function TestCaseRunner({
                         <a
                           className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
                           download={getAttachmentName(attachment)}
-                          href={resolveApiAssetUrl(getAttachmentUrl(attachment))}
+                          href={assetUrl}
                           onClick={(event) => event.stopPropagation()}
                           title="Baixar evidência"
                         >
@@ -389,7 +397,8 @@ export function TestCaseRunner({
                         </a>
                       </span>
                     </div>
-                  </div>
+                    </div>}
+                  </AuthenticatedAttachmentAsset>
                 ))}
               </div>
             </section>
@@ -421,11 +430,13 @@ export function TestCaseRunner({
                 <X className="h-4 w-4" aria-hidden="true" />
               </button>
             </div>
-            <img
-              alt={getAttachmentName(previewAttachment)}
-              className="max-h-[80vh] max-w-full object-contain"
-              src={resolveApiAssetUrl(getAttachmentUrl(previewAttachment))}
-            />
+            <AuthenticatedAttachmentAsset attachment={previewAttachment}>
+              {(assetUrl) => assetUrl ? <img
+                alt={getAttachmentName(previewAttachment)}
+                className="max-h-[80vh] max-w-full object-contain"
+                src={assetUrl}
+              /> : null}
+            </AuthenticatedAttachmentAsset>
           </div>
         </div>
       ) : null}

@@ -132,6 +132,7 @@ export class TestSuitesRepository {
       const existingSections = await tx.testCase.findMany({
         where: {
           suiteId,
+          deletedAt: null,
           section: {
             not: '',
           },
@@ -195,8 +196,25 @@ export class TestSuitesRepository {
   }
 
   delete(id: string) {
-    return this.prisma.testSuite.delete({
-      where: { id },
+    const deletedAt = new Date();
+
+    return this.prisma.$transaction(async (tx) => {
+      await tx.testRun.updateMany({
+        where: {
+          deletedAt: null,
+          suites: { some: { testSuiteId: id } },
+        },
+        data: { deletedAt },
+      });
+      await tx.testCase.updateMany({
+        where: { suiteId: id, deletedAt: null },
+        data: { deletedAt, status: TestCaseStatus.ARCHIVED },
+      });
+
+      return tx.testSuite.update({
+        where: { id },
+        data: { deletedAt },
+      });
     });
   }
 

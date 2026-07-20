@@ -54,4 +54,18 @@ describe('TestCasesRepository', () => {
       where: { id: 'case-id' },
     }));
   });
+
+  it('soft deletes and archives a test case', async () => {
+    const prisma = {
+      testCase: { update: jest.fn().mockResolvedValue({ id: 'case-id' }) },
+    };
+    const repository = new TestCasesRepository(prisma as never);
+
+    await repository.delete('case-id');
+
+    expect(prisma.testCase.update).toHaveBeenCalledWith({
+      where: { id: 'case-id' },
+      data: { deletedAt: expect.any(Date), status: 'ARCHIVED' },
+    });
+  });
 });

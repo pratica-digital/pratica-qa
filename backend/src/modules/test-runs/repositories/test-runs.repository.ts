@@ -222,7 +222,7 @@ export class TestRunsRepository {
       where: this.buildWhere(params),
       skip: params.skip,
       take: params.take,
-      orderBy: { updatedAt: 'desc' },
+      orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }],
       include: TEST_RUN_INCLUDE,
     });
   }

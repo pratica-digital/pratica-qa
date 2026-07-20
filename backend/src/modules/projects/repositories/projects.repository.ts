@@ -29,27 +29,19 @@ export class ProjectsRepository {
   }
 
   findMany({ search, status, skip, take }: FindProjectsParams) {
-    const where: Prisma.ProjectWhereInput = {
-      status,
-      OR: search
-        ? [
-            { name: { contains: search, mode: 'insensitive' } },
-            { key: { contains: search, mode: 'insensitive' } },
-          ]
-        : undefined,
-    };
+    const where = this.buildWhere({ search, status });
 
     return this.prisma.project.findMany({
       where,
       skip,
       take,
-      orderBy: { updatedAt: 'desc' },
+      orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }],
       include: {
         _count: {
           select: {
-            suites: true,
-            testPlans: true,
-            testRuns: true,
+            suites: { where: { deletedAt: null } },
+            testPlans: { where: { deletedAt: null } },
+            testRuns: { where: { deletedAt: null } },
           },
         },
       },
@@ -57,28 +49,20 @@ export class ProjectsRepository {
   }
 
   count(search?: string, status?: ProjectStatus) {
-    const where: Prisma.ProjectWhereInput = {
-      status,
-      OR: search
-        ? [
-            { name: { contains: search, mode: 'insensitive' } },
-            { key: { contains: search, mode: 'insensitive' } },
-          ]
-        : undefined,
-    };
-
-    return this.prisma.project.count({ where });
+    return this.prisma.project.count({
+      where: this.buildWhere({ search, status }),
+    });
   }
 
   findById(id: string) {
-    return this.prisma.project.findUnique({
-      where: { id },
+    return this.prisma.project.findFirst({
+      where: { id, deletedAt: null },
       include: {
         _count: {
           select: {
-            suites: true,
-            testPlans: true,
-            testRuns: true,
+            suites: { where: { deletedAt: null } },
+            testPlans: { where: { deletedAt: null } },
+            testRuns: { where: { deletedAt: null } },
           },
         },
       },
@@ -130,8 +114,46 @@ export class ProjectsRepository {
   }
 
   delete(id: string) {
-    return this.prisma.project.delete({
-      where: { id },
+    const deletedAt = new Date();
+
+    return this.prisma.$transaction(async (tx) => {
+      await tx.testRun.updateMany({
+        where: { projectId: id, deletedAt: null },
+        data: { deletedAt },
+      });
+      await tx.testPlan.updateMany({
+        where: { projectId: id, deletedAt: null },
+        data: { deletedAt },
+      });
+      await tx.testCase.updateMany({
+        where: { suite: { projectId: id }, deletedAt: null },
+        data: { deletedAt, status: 'ARCHIVED' },
+      });
+      await tx.testSuite.updateMany({
+        where: { projectId: id, deletedAt: null },
+        data: { deletedAt },
+      });
+
+      return tx.project.update({
+        where: { id },
+        data: { deletedAt, status: 'ARCHIVED' },
+      });
     });
+  }
+
+  private buildWhere(params: {
+    search?: string;
+    status?: ProjectStatus;
+  }): Prisma.ProjectWhereInput {
+    return {
+      deletedAt: null,
+      status: params.status,
+      OR: params.search
+        ? [
+            { name: { contains: params.search, mode: 'insensitive' } },
+            { key: { contains: params.search, mode: 'insensitive' } },
+          ]
+        : undefined,
+    };
   }
 }

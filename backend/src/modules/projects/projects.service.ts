@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { getPagination } from '../../common/dto/pagination-query.dto';
+import { removeRuntimeUpload } from '../../common/files/runtime-upload-storage';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { QueryProjectsDto } from './dto/query-projects.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
@@ -11,7 +12,13 @@ export class ProjectsService {
 
   async create(dto: CreateProjectDto) {
     const key = dto.key ?? await this.createUniqueProjectKey(dto.name);
-    return this.projectsRepository.create({ ...dto, key });
+
+    try {
+      return await this.projectsRepository.create({ ...dto, key });
+    } catch (error) {
+      await removeRuntimeUpload(dto.imageUrl);
+      throw error;
+    }
   }
 
   async findAll(query: QueryProjectsDto) {
@@ -47,8 +54,24 @@ export class ProjectsService {
   }
 
   async update(id: string, dto: UpdateProjectDto) {
-    await this.findOne(id);
-    return this.projectsRepository.update(id, dto);
+    const current = await this.findOne(id);
+
+    try {
+      const updated = await this.projectsRepository.update(id, dto);
+      const imageWasReplaced = dto.imageUrl !== undefined && dto.imageUrl !== current.imageUrl;
+
+      if ((imageWasReplaced || dto.removeImage) && current.imageUrl) {
+        await removeRuntimeUpload(current.imageUrl);
+      }
+
+      return updated;
+    } catch (error) {
+      if (dto.imageUrl && dto.imageUrl !== current.imageUrl) {
+        await removeRuntimeUpload(dto.imageUrl);
+      }
+
+      throw error;
+    }
   }
 
   async remove(id: string) {

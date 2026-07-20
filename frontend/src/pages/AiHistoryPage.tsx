@@ -46,8 +46,7 @@ export function AiHistoryPage({ embedded = false }: AiHistoryPageProps = {}) {
     setError('');
 
     try {
-      const response = await aiTestGeneratorApi.history(token, { limit: 50 });
-      setItems(response.data);
+      setItems(await aiTestGeneratorApi.historyAll(token));
     } catch (fetchError) {
       setError(fetchError instanceof Error ? fetchError.message : 'Não foi possível carregar o histórico.');
     } finally {

@@ -2,6 +2,27 @@ import { TestResultStatus } from '@prisma/client';
 import { TestResultsRepository } from './test-results.repository';
 
 describe('TestResultsRepository', () => {
+  it('keeps deleted runs out of both result lists and counters', async () => {
+    const prisma = {
+      testResult: {
+        count: jest.fn().mockResolvedValue(0),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+    };
+    const repository = new TestResultsRepository(prisma as never);
+    const filters = { testRunId: undefined, testCaseId: undefined, status: undefined };
+
+    await repository.findMany({ ...filters, skip: 0, take: 25 });
+    await repository.count(filters);
+
+    const listWhere = prisma.testResult.findMany.mock.calls[0][0].where;
+    expect(listWhere).toEqual(prisma.testResult.count.mock.calls[0][0].where);
+    expect(listWhere).toMatchObject({
+      removedAt: null,
+      testRun: { deletedAt: null },
+    });
+  });
+
   it('persists the changed status and records its audit history', async () => {
     const current = {
       comment: 'Falha encontrada',

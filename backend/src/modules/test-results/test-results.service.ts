@@ -7,6 +7,9 @@ import {
 import { TestResultStatus, UserRole } from '@prisma/client';
 import { AuthenticatedUser } from '../../auth/types/authenticated-user';
 import { getPagination } from '../../common/dto/pagination-query.dto';
+import { removeRuntimeUpload, removeRuntimeUploads } from '../../common/files/runtime-upload-storage';
+import { resolveRuntimeUploadPath } from '../../common/files/runtime-upload-storage';
+import { stat } from 'node:fs/promises';
 import { ShortcutFailureStoryService } from '../../shortcut/shortcut-failure-story.service';
 import { TestCasesRepository } from '../test-cases/repositories/test-cases.repository';
 import { TestRunsRepository } from '../test-runs/repositories/test-runs.repository';
@@ -104,39 +107,51 @@ export class TestResultsService {
     dto: AddPersistedTestResultAttachmentsDto,
     user: AuthenticatedUser,
   ) {
-    const testResult = await this.findOne(id);
-    this.ensureCanExecuteResult(testResult.testRun.assignedToId, user);
+    let persisted = false;
 
-    if (!dto.attachments?.length) {
-      throw new BadRequestException('At least one attachment is required');
+    try {
+      const testResult = await this.findOne(id);
+      this.ensureCanExecuteResult(testResult.testRun.assignedToId, user);
+
+      if (!dto.attachments?.length) {
+        throw new BadRequestException('At least one attachment is required');
+      }
+
+      if (
+        dto.testStepId &&
+        !testResult.testCase.steps?.some((step) => step.id === dto.testStepId)
+      ) {
+        throw new BadRequestException('Test step does not belong to this test case');
+      }
+
+      const updatedResult = await this.testResultsRepository.addAttachments(
+        id,
+        dto.attachments,
+        user.id,
+        dto.testStepId,
+      );
+
+      if (!updatedResult) {
+        throw new NotFoundException('Test result not found');
+      }
+
+      persisted = true;
+      await this.shortcutFailureStoryService.createForFailedResult(updatedResult);
+
+      return this.testResultsRepository.findById(updatedResult.id);
+    } catch (error) {
+      if (!persisted) {
+        await removeRuntimeUploads(dto.attachments?.map((attachment) => attachment.url) ?? []);
+      }
+
+      throw error;
     }
-
-    if (
-      dto.testStepId &&
-      !testResult.testCase.steps?.some((step) => step.id === dto.testStepId)
-    ) {
-      throw new BadRequestException('Test step does not belong to this test case');
-    }
-
-    const updatedResult = await this.testResultsRepository.addAttachments(
-      id,
-      dto.attachments,
-      user.id,
-      dto.testStepId,
-    );
-
-    if (!updatedResult) {
-      throw new NotFoundException('Test result not found');
-    }
-
-    await this.shortcutFailureStoryService.createForFailedResult(updatedResult);
-
-    return this.testResultsRepository.findById(updatedResult.id);
   }
 
   async removeAttachment(id: string, attachmentId: string, user: AuthenticatedUser) {
     const testResult = await this.findOne(id);
     this.ensureCanExecuteResult(testResult.testRun.assignedToId, user);
+    const attachment = testResult.attachments.find((item) => item.id === attachmentId);
 
     const updatedResult = await this.testResultsRepository.removeAttachment(
       id,
@@ -148,7 +163,26 @@ export class TestResultsService {
       throw new NotFoundException('Attachment not found');
     }
 
+    await removeRuntimeUpload(attachment?.url);
+
     return updatedResult;
+  }
+
+  async getAttachmentContent(attachmentId: string) {
+    const attachment = await this.testResultsRepository.findAttachmentById(attachmentId);
+    const filePath = attachment ? resolveRuntimeUploadPath(attachment.url) : null;
+
+    if (!attachment || !filePath) {
+      throw new NotFoundException('Attachment not found');
+    }
+
+    try {
+      await stat(filePath);
+    } catch {
+      throw new NotFoundException('Attachment file not found');
+    }
+
+    return { attachment, filePath };
   }
 
   async remove(id: string, user: AuthenticatedUser) {
@@ -156,6 +190,7 @@ export class TestResultsService {
     this.ensureCanExecuteResult(testResult.testRun.assignedToId, user);
 
     const deletedResult = await this.testResultsRepository.delete(id, user.id);
+    await removeRuntimeUploads(testResult.attachments.map((attachment) => attachment.url));
     await this.testRunsRepository.refreshExecutionStatus(testResult.testRunId);
 
     return deletedResult;

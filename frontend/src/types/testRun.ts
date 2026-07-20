@@ -12,6 +12,7 @@ export type AuthUser = {
   passwordChangedAt?: string | null;
   createdAt?: string;
   updatedAt?: string;
+  deletedAt?: string | null;
 };
 
 export type CreateUserPayload = {
@@ -473,6 +474,7 @@ export type AiSettings = {
   updatedById?: string | null;
   createdAt?: string;
   updatedAt?: string;
+  deletedAt?: string | null;
 };
 
 export type AiReleaseSection = {
