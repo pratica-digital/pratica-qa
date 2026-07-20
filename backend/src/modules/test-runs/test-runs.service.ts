@@ -35,14 +35,16 @@ export class TestRunsService {
   ) {}
 
   async create(dto: CreateTestRunDto) {
-    const testPlan = await this.testPlansRepository.findById(dto.testPlanId);
+    if (dto.testPlanId) {
+      const testPlan = await this.testPlansRepository.findById(dto.testPlanId);
 
-    if (!testPlan || testPlan.deletedAt) {
-      throw new NotFoundException('Test plan not found');
-    }
+      if (!testPlan || testPlan.deletedAt) {
+        throw new NotFoundException('Test plan not found');
+      }
 
-    if (testPlan.projectId !== dto.projectId) {
-      throw new BadRequestException('Test plan does not belong to the project');
+      if (testPlan.projectId !== dto.projectId) {
+        throw new BadRequestException('Test plan does not belong to the project');
+      }
     }
 
     const suiteAssignments = this.buildSuiteAssignments(dto);
