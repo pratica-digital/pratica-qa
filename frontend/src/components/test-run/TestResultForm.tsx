@@ -9,6 +9,7 @@ import {
   XCircle,
   type LucideIcon,
 } from 'lucide-react';
+import { getAttachmentName } from '../../lib/attachments';
 import type {
   ExecuteTestResultPayload,
   TestResultAttachment,
@@ -81,10 +82,6 @@ function formatFileSize(bytes: number) {
   }
 
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function getAttachmentName(attachment: TestResultAttachment) {
-  return attachment.originalName || attachment.fileName || attachment.url.split('/').pop() || 'Evidência';
 }
 
 function formatUploadDate(value?: string | null) {

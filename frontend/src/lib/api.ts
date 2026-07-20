@@ -6,10 +6,8 @@ import type {
   CreateProjectPayload,
   CreateTestCasePayload,
   CreateTestPlanPayload,
-  CreateTestResultPayload,
   CreateTestRunPayload,
   CreateTestSuitePayload,
-  ExecuteTestResultPayload,
   ImportTestCasesPayload,
   ImportTestCasesReport,
   ManagedTestCase,
@@ -529,18 +527,6 @@ export const testRunsApi = {
       token,
       body: { assignedToId },
     }),
-  execute: (token: string, testRunId: string, payload: ExecuteTestResultPayload) =>
-    apiRequest<TestResult>(`/test-runs/${testRunId}/execute`, {
-      method: 'POST',
-      token,
-      body: payload,
-    }),
-  rerunFailed: (token: string, testRunId: string, payload: { name?: string; description?: string }) =>
-    apiRequest<{ testRun: TestRun | null; failedCount: number }>(`/test-runs/${testRunId}/rerun-failed`, {
-      method: 'POST',
-      token,
-      body: payload,
-    }),
   remove: (token: string, testRunId: string) =>
     apiRequest<void>(`/test-runs/${testRunId}`, {
       method: 'DELETE',
@@ -562,16 +548,6 @@ export const testResultsApi = {
 
     return unwrapPage(response);
   },
-  list: async (
-    token: string,
-    params: { testRunId?: string; testCaseId?: string; status?: string; limit?: number } = {},
-  ) => collectAllPages((page) => testResultsApi.listPage(token, { ...params, page })),
-  create: (token: string, payload: CreateTestResultPayload) =>
-    apiRequest<TestResult>('/test-results', {
-      method: 'POST',
-      token,
-      body: payload,
-    }),
   update: (token: string, resultId: string, payload: UpdateTestResultPayload) =>
     apiRequest<TestResult>(`/test-results/${resultId}`, {
       method: 'PATCH',
@@ -614,13 +590,6 @@ export const testResultsApi = {
       token,
     }),
 
-  rerunFailed: (token: string, testRunId: string, payload: Record<string, never>) =>
-    apiRequest<{ testRun: TestRun; failedCount: number }>(`/test-runs/${testRunId}/rerun-failed`,{
-      method: 'POST',
-      token,
-      body: payload,
-    },
-  ),
 };
 
 export const aiTestGeneratorApi = {

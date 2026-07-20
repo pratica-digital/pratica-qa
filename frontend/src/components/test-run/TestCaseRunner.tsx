@@ -17,6 +17,11 @@ import {
 import { ActionMenu } from '../ActionMenu';
 import { TestResultStatusBadge } from '../badges';
 import { useAuthenticatedAttachmentUrl } from '../../hooks/useAuthenticatedAttachmentUrl';
+import {
+  getAttachmentName,
+  isImageAttachment,
+  isVideoAttachment,
+} from '../../lib/attachments';
 import { getResultTestCase } from '../../lib/testResultOverrides';
 import type { AuthUser, ExecuteTestResultPayload, TestResult, TestResultAttachment } from '../../types/testRun';
 import { TestResultForm } from './TestResultForm';
@@ -56,32 +61,6 @@ function formatDate(value?: string | null) {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
-}
-
-function getAttachmentUrl(attachment: TestResultAttachment) {
-  return attachment.url;
-}
-
-function getAttachmentName(attachment: TestResultAttachment) {
-  return (
-    attachment.originalName ||
-    attachment.fileName ||
-    decodeURIComponent(getAttachmentUrl(attachment).split('/').pop() ?? 'Evidência')
-  );
-}
-
-function isImageAttachment(attachment: TestResultAttachment) {
-  return (
-    attachment.mimeType.startsWith('image/') ||
-    /\.(gif|jpe?g|png|webp)$/i.test(getAttachmentUrl(attachment).split('?')[0] ?? '')
-  );
-}
-
-function isVideoAttachment(attachment: TestResultAttachment) {
-  return (
-    attachment.mimeType.startsWith('video/') ||
-    /\.(mp4|mov|webm)$/i.test(getAttachmentUrl(attachment).split('?')[0] ?? '')
-  );
 }
 
 function formatUploadDate(value?: string | null) {

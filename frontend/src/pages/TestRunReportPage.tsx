@@ -24,6 +24,12 @@ import { useAuthenticatedAttachmentUrl } from '../hooks/useAuthenticatedAttachme
 import type { TestResult, TestResultAttachment, TestRun } from '../types/testRun';
 import { useTestRunReport } from "../hooks/useTestRunReport";
 import { testResultsApi } from '../lib/api';
+import {
+  getAttachmentName,
+  getAttachmentUrl,
+  isImageAttachment,
+  isVideoAttachment,
+} from '../lib/attachments';
 import { testRunStatusLabel } from '../lib/labels';
 import {
   applyPdfInternalLinks,
@@ -70,32 +76,6 @@ function testTypeLabel(type?: string) {
 }
 
 // ─── Status config ────────────────────────────────────────────────────────────
-
-function getAttachmentUrl(attachment: TestResultAttachment) {
-  return attachment.url;
-}
-
-function getAttachmentName(attachment: TestResultAttachment) {
-  return (
-    attachment.originalName ||
-    attachment.fileName ||
-    decodeURIComponent(getAttachmentUrl(attachment).split('/').pop() ?? 'Evidência')
-  );
-}
-
-function isImageAttachment(attachment: TestResultAttachment) {
-  return (
-    attachment.mimeType.startsWith('image/') ||
-    /\.(gif|jpe?g|png|webp)$/i.test(getAttachmentUrl(attachment).split('?')[0] ?? '')
-  );
-}
-
-function isVideoAttachment(attachment: TestResultAttachment) {
-  return (
-    attachment.mimeType.startsWith('video/') ||
-    /\.(mp4|mov|webm)$/i.test(getAttachmentUrl(attachment).split('?')[0] ?? '')
-  );
-}
 
 function attachmentMeta(attachment: TestResultAttachment) {
   const parts = [fmt(attachment.createdAt)];

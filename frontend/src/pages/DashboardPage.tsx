@@ -33,7 +33,7 @@ import {
   testRunsApi,
   testSuitesApi,
 } from '../lib/api';
-import type { PageId } from '../data/workspace';
+import type { PageId } from '../data/navigation';
 import type {
   DashboardAnalytics,
   DashboardMetricDelta,

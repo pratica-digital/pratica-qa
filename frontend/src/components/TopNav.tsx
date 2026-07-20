@@ -21,7 +21,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { canManageTests } from '../auth/permissions';
 import { useAuth } from '../auth/useAuth';
-import type { PageId } from '../data/workspace';
+import type { PageId } from '../data/navigation';
 import {
   projectsApi,
   testCasesApi,
