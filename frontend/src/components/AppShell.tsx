@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../auth/useAuth';
-import type { PageId } from '../data/workspace';
+import type { PageId } from '../data/navigation';
 import { AiTestGeneratorModulePage } from '../pages/AiTestGeneratorModulePage';
 import { DashboardPage } from '../pages/DashboardPage';
 import { ProfilePage } from '../pages/ProfilePage';

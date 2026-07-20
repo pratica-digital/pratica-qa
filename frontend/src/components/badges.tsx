@@ -1,22 +1,15 @@
 import type { ReactNode } from 'react';
-import type { TestCase, TestSuite, Project } from '../data/workspace';
 import type {
   ProjectSummary,
   TestCaseStatus,
-  TestPriority,
   TestResultStatus,
-  TestRunStatus,
-  TestSuiteStatus,
   UserRole,
   UserStatus,
 } from '../types/testRun';
 import {
-  priorityLabels,
   projectStatusLabels,
   testCaseStatusLabels,
   testResultStatusLabel,
-  testRunStatusLabel,
-  testSuiteStatusLabels,
   userRoleLabel,
   userStatusLabel,
 } from '../lib/labels';
@@ -46,55 +39,15 @@ function Badge({ children, tone }: BadgeProps) {
   );
 }
 
-export function ProjectStatusBadge({ status }: { status: Project['status'] | ProjectSummary['status'] }) {
-  const tone = status === 'Active' || status === 'ACTIVE' ? 'green' : status === 'At risk' ? 'amber' : 'slate';
-  const label =
-    status === 'Active'
-      ? 'Ativo'
-      : status === 'At risk'
-        ? 'Em risco'
-        : status === 'Archived'
-          ? 'Arquivado'
-          : status
-            ? projectStatusLabels[status]
-            : 'Ativo';
+export function ProjectStatusBadge({ status }: { status: ProjectSummary['status'] }) {
+  const tone = status === 'ACTIVE' ? 'green' : 'slate';
+  const label = status ? projectStatusLabels[status] : 'Ativo';
   return <Badge tone={tone}>{label}</Badge>;
 }
 
-export function SuiteStatusBadge({ status }: { status: TestSuite['status'] | TestSuiteStatus }) {
-  const tone = status === 'Active' || status === 'ACTIVE' ? 'green' : status === 'Draft' ? 'blue' : 'slate';
-  const label =
-    status === 'Active'
-      ? 'Ativa'
-      : status === 'Draft'
-        ? 'Rascunho'
-        : status === 'Archived'
-          ? 'Arquivada'
-          : testSuiteStatusLabels[status];
-  return <Badge tone={tone}>{label}</Badge>;
-}
-
-export function CaseStatusBadge({ status }: { status: TestCase['status'] | TestCaseStatus }) {
-  const tone = status === 'Ready' || status === 'ACTIVE' ? 'green' : status === 'Needs review' ? 'amber' : 'slate';
+export function CaseStatusBadge({ status }: { status: TestCaseStatus }) {
+  const tone = status === 'ACTIVE' ? 'green' : 'slate';
   return <Badge tone={tone}>{testCaseStatusLabels[status]}</Badge>;
-}
-
-export function PriorityBadge({ priority }: { priority: TestCase['priority'] | TestPriority }) {
-  const tone = priority === 'High' || priority === 'HIGH' ? 'red' : priority === 'Medium' || priority === 'MEDIUM' ? 'amber' : 'slate';
-  const label =
-    priority === 'High'
-      ? 'Alta'
-      : priority === 'Medium'
-        ? 'Média'
-        : priority === 'Low'
-          ? 'Baixa'
-          : priorityLabels[priority];
-  return <Badge tone={tone}>{label}</Badge>;
-}
-
-export function TestRunStatusBadge({ status }: { status: TestRunStatus }) {
-  const tone = status === 'COMPLETED' ? 'green' : status === 'IN_PROGRESS' ? 'blue' : 'slate';
-  return <Badge tone={tone}>{testRunStatusLabel(status)}</Badge>;
 }
 
 export function TestResultStatusBadge({ status }: { status: TestResultStatus }) {

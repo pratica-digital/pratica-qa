@@ -1,10 +1,7 @@
 import type {
   ProjectStatus,
-  TestPriority,
   TestResultStatus,
   TestRunStatus,
-  TestSeverity,
-  TestSuiteStatus,
   UserRole,
   UserStatus,
 } from '../types/testRun';
@@ -38,11 +35,6 @@ export const projectStatusLabels: Record<ProjectStatus, string> = {
   ARCHIVED: 'Arquivado',
 };
 
-export const testSuiteStatusLabels: Record<TestSuiteStatus, string> = {
-  ACTIVE: 'Ativa',
-  ARCHIVED: 'Arquivada',
-};
-
 export const GENERAL_SUITE_PROJECT_LABEL = 'Geral';
 
 export function suiteProjectLabel(suite: {
@@ -58,23 +50,7 @@ export function suiteProjectLabel(suite: {
 export const testCaseStatusLabels = {
   ACTIVE: 'Ativo',
   ARCHIVED: 'Arquivado',
-  Draft: 'Rascunho',
-  Ready: 'Pronto',
-  'Needs review': 'Precisa de revisão',
 } as const;
-
-export const priorityLabels: Record<TestPriority, string> = {
-  LOW: 'Baixa',
-  MEDIUM: 'Média',
-  HIGH: 'Alta',
-};
-
-export const severityLabels: Record<TestSeverity, string> = {
-  LOW: 'Baixa',
-  MEDIUM: 'Média',
-  HIGH: 'Alta',
-  CRITICAL: 'Crítica',
-};
 
 export const userRoleLabels: Record<UserRole, string> = {
   ADMIN: 'Administrador',

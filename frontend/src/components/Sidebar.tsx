@@ -2,8 +2,8 @@ import { ChevronLeft, ChevronRight, UserRound, X } from 'lucide-react';
 import praticaLogo from '../assets/logo-branca.png';
 import simquality2 from '../assets/quality-green-l.png';
 import { useAuth } from '../auth/useAuth';
-import type { PageId } from '../data/workspace';
-import { navigationItems } from '../data/workspace';
+import type { PageId } from '../data/navigation';
+import { navigationItems } from '../data/navigation';
 import { useSidebar } from './useSidebar';
 
 type SidebarProps = {

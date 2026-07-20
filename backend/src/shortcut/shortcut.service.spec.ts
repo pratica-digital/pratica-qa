@@ -50,7 +50,7 @@ describe('ShortcutService', () => {
         name: '[BUG]',
         description: 'description',
       }),
-    ).resolves.toEqual({ id: '123', appUrl: 'https://story.url', name: '[BUG]' });
+    ).resolves.toEqual({ id: '123', appUrl: 'https://story.url', name: '[FAIL] Case' });
 
     expect(global.fetch).toHaveBeenCalledTimes(1);
     expect(global.fetch).toHaveBeenCalledWith(
