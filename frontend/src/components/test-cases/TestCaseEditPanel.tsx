@@ -62,6 +62,7 @@ export function TestCaseEditPanel({
   const [description, setDescription] = useState(testCase.description ?? '');
   const [expectedResult, setExpectedResult] = useState(testCase.expectedResult ?? '');
   const [section, setSection] = useState(testCase.section ?? '');
+  const [suiteId, setSuiteId] = useState(testCase.suiteId);
   const [status, setStatus] = useState<TestCaseStatus>(testCase.status ?? 'ACTIVE');
   const [steps, setSteps] = useState<StepDraft[]>(() => toStepDrafts(testCase));
   const [saving, setSaving] = useState(false);
@@ -76,7 +77,7 @@ export function TestCaseEditPanel({
     };
   }, []);
 
-  const suite = suites.find((item) => item.id === testCase.suiteId);
+  const suite = suites.find((item) => item.id === suiteId);
   const suiteName = suite?.name ?? testCase.suite?.name ?? 'Suíte';
   const projectName =
     suite?.project?.name ??
@@ -126,6 +127,11 @@ export function TestCaseEditPanel({
       return;
     }
 
+    if (!suiteId) {
+      setError('Selecione uma suíte.');
+      return;
+    }
+
     if (normalizedSteps.length !== steps.length) {
       setError('Passos vazios devem ser removidos ou preenchidos antes de salvar.');
       return;
@@ -138,6 +144,7 @@ export function TestCaseEditPanel({
       await onSave(
         testCase,
         {
+          suiteId,
           title: title.trim(),
           description: description.trim(),
           expectedResult: expectedResult.trim(),
@@ -193,7 +200,7 @@ export function TestCaseEditPanel({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
-          <div className="grid gap-4 lg:grid-cols-[1fr_14rem_12rem]">
+          <div className="grid gap-4 lg:grid-cols-[1fr_18rem_14rem_12rem]">
             <label className="block text-sm font-medium text-slate-700">
               Título
               <input
@@ -202,6 +209,22 @@ export function TestCaseEditPanel({
                 onChange={(event) => setTitle(event.target.value)}
                 value={title}
               />
+            </label>
+
+            <label className="block text-sm font-medium text-slate-700">
+              Suíte
+              <select
+                className="mt-1.5 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50"
+                disabled={readOnly || saving}
+                onChange={(event) => setSuiteId(event.target.value)}
+                value={suiteId}
+              >
+                {suites.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}{item.project?.name ? ` — ${item.project.name}` : ' — Geral'}
+                  </option>
+                ))}
+              </select>
             </label>
 
             <label className="block text-sm font-medium text-slate-700">

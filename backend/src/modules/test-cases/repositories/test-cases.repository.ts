@@ -68,7 +68,7 @@ export class TestCasesRepository {
       where: this.buildWhere(params),
       skip: params.skip,
       take: params.take,
-      orderBy: { updatedAt: 'desc' },
+      orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }],
       include: TEST_CASE_INCLUDE,
     });
   }
@@ -80,8 +80,12 @@ export class TestCasesRepository {
   }
 
   findById(id: string) {
-    return this.prisma.testCase.findUnique({
-      where: { id },
+    return this.prisma.testCase.findFirst({
+      where: {
+        id,
+        deletedAt: null,
+        suite: { deletedAt: null },
+      },
       include: TEST_CASE_INCLUDE,
     });
   }
@@ -92,6 +96,7 @@ export class TestCasesRepository {
     return this.prisma.testCase.update({
       where: { id },
       data: {
+        suiteId: dto.suiteId,
         title: dto.title,
         description: dto.description,
         preconditions: dto.preconditions,
@@ -194,9 +199,13 @@ export class TestCasesRepository {
   ): Prisma.TestCaseWhereInput {
     return {
       suiteId: params.suiteId,
-      suite: params.projectId
-        ? { OR: [{ projectId: params.projectId }, { projectId: null }] }
-        : undefined,
+      deletedAt: null,
+      suite: {
+        deletedAt: null,
+        ...(params.projectId
+          ? { OR: [{ projectId: params.projectId }, { projectId: null }] }
+          : {}),
+      },
       status: params.status,
       severity: params.severity,
       tags: params.tag ? { has: params.tag } : undefined,

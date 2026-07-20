@@ -34,6 +34,7 @@ import type {
   UpdateTestSuitePayload,
   UpdateUserPayload,
 } from '../types/testRun';
+import { collectAllPages } from './pagination';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, '');
 
@@ -339,7 +340,7 @@ export const reportsApi = {
 export const testSuitesApi = {
   listPage: async (
     token: string,
-    params: { projectId?: string; search?: string; limit?: number } = {},
+    params: { projectId?: string; search?: string; page?: number; limit?: number } = {},
   ) => {
     const response = await apiRequest<ManagedTestSuite[] | PaginatedResponse<ManagedTestSuite>>(
       withQuery('/test-suites', { ...params, limit: params.limit ?? 100 }),
@@ -353,16 +354,14 @@ export const testSuitesApi = {
   list: async (
     token: string,
     params: { projectId?: string; search?: string; limit?: number } = {},
-  ) => {
+  ) => collectAllPages(async (page) => {
     const response = await apiRequest<ManagedTestSuite[] | PaginatedResponse<ManagedTestSuite>>(
-      withQuery('/test-suites', { ...params, limit: params.limit ?? 100 }),
-      {
-        token,
-      },
+      withQuery('/test-suites', { ...params, page, limit: params.limit ?? 100 }),
+      { token },
     );
 
-    return unwrapList(response);
-  },
+    return unwrapPage(response);
+  }),
   get: (token: string, testSuiteId: string) =>
     apiRequest<ManagedTestSuite>(`/test-suites/${testSuiteId}`, { token }),
   create: (token: string, payload: CreateTestSuitePayload) =>
@@ -448,6 +447,7 @@ export const testCasesApi = {
       tag?: string;
       status?: string;
       severity?: string;
+      page?: number;
       limit?: number;
     } = {},
   ) => {
@@ -471,16 +471,14 @@ export const testCasesApi = {
       severity?: string;
       limit?: number;
     } = {},
-  ) => {
+  ) => collectAllPages(async (page) => {
     const response = await apiRequest<ManagedTestCase[] | PaginatedResponse<ManagedTestCase>>(
-      withQuery('/test-cases', { ...params, limit: params.limit ?? 100 }),
-      {
-        token,
-      },
+      withQuery('/test-cases', { ...params, page, limit: params.limit ?? 100 }),
+      { token },
     );
 
-    return unwrapList(response);
-  },
+    return unwrapPage(response);
+  }),
   get: (token: string, testCaseId: string) =>
     apiRequest<ManagedTestCase>(`/test-cases/${testCaseId}`, { token }),
   create: (token: string, payload: CreateTestCasePayload) =>
