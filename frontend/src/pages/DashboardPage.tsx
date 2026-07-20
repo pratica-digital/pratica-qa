@@ -232,17 +232,6 @@ function DashboardMetricCard({
 
       {description ? <p className="mt-2 text-xs text-slate-500">{description}</p> : null}
 
-      {delta || periodLabel ? (
-        <div className="mt-4 flex items-center justify-between gap-3 text-xs">
-          <span className="truncate text-slate-400">{periodLabel}</span>
-          {delta ? (
-            <span className={`shrink-0 font-medium ${deltaTone}`}>
-              {deltaSign}
-              {deltaPercent}%
-            </span>
-          ) : null}
-        </div>
-      ) : null}
     </button>
   );
 }
