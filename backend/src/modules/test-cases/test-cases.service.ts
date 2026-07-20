@@ -62,6 +62,11 @@ export class TestCasesService {
 
   async update(id: string, dto: UpdateTestCaseDto) {
     await this.findOne(id);
+
+    if (dto.suiteId) {
+      await this.ensureSuiteExists(dto.suiteId);
+    }
+
     return this.testCasesRepository.update(id, dto);
   }
 

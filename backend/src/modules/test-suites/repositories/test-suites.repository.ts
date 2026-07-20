@@ -43,7 +43,7 @@ export class TestSuitesRepository {
         },
         _count: {
           select: {
-            testCases: true,
+            testCases: { where: { deletedAt: null } },
           },
         },
       },
@@ -57,7 +57,7 @@ export class TestSuitesRepository {
       where,
       skip,
       take,
-      orderBy: [{ position: 'asc' }, { updatedAt: 'desc' }],
+      orderBy: [{ position: 'asc' }, { updatedAt: 'desc' }, { id: 'asc' }],
       include: {
         project: {
           select: {
@@ -68,7 +68,7 @@ export class TestSuitesRepository {
         },
         _count: {
           select: {
-            testCases: true,
+            testCases: { where: { deletedAt: null } },
           },
         },
       },
@@ -82,8 +82,8 @@ export class TestSuitesRepository {
   }
 
   findById(id: string) {
-    return this.prisma.testSuite.findUnique({
-      where: { id },
+    return this.prisma.testSuite.findFirst({
+      where: { id, deletedAt: null },
       include: {
         project: {
           select: {
@@ -94,7 +94,7 @@ export class TestSuitesRepository {
         },
         _count: {
           select: {
-            testCases: true,
+            testCases: { where: { deletedAt: null } },
           },
         },
       },
@@ -205,6 +205,7 @@ export class TestSuitesRepository {
     search?: string;
   }): Prisma.TestSuiteWhereInput {
     return {
+      deletedAt: null,
       AND: [
         params.projectId ? { OR: [{ projectId: params.projectId }, { projectId: null }] } : {},
         params.search ? { name: { contains: params.search, mode: 'insensitive' } } : {},

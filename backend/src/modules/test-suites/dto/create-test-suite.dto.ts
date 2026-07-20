@@ -1,5 +1,5 @@
-import { Type } from 'class-transformer';
-import { IsInt, IsNotEmpty, IsOptional, IsString, IsUUID, MaxLength, Min } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import { IsInt, IsNotEmpty, IsOptional, IsString, IsUUID, Matches, MaxLength, Min } from 'class-validator';
 
 export class CreateTestSuiteDto {
   @IsOptional()
@@ -8,6 +8,8 @@ export class CreateTestSuiteDto {
 
   @IsString()
   @IsNotEmpty()
+  @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
+  @Matches(/^(?!untitled$).+/i, { message: 'Suite name cannot be Untitled' })
   @MaxLength(160)
   name: string;
 

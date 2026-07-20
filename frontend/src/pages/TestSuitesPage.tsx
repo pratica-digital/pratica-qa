@@ -179,6 +179,14 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
       return searchable.includes(normalizedSearch);
     });
   }, [search, suites]);
+  const visibleSuiteIds = useMemo(
+    () => new Set(visibleSuites.map((suite) => suite.id)),
+    [visibleSuites],
+  );
+  const visibleCaseCount = useMemo(
+    () => cases.filter((testCase) => visibleSuiteIds.has(testCase.suiteId)).length,
+    [cases, visibleSuiteIds],
+  );
 
   async function handleCreate(payload: CreateTestSuitePayload) {
     if (!token) {
@@ -240,9 +248,13 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
     await testCasesApi.update(token, testCase.id, payload);
     const updatedCase = await testCasesApi.replaceSteps(token, testCase.id, steps);
 
-    setCases((current) =>
-      current.map((item) => (item.id === testCase.id ? updatedCase : item)),
-    );
+    const [nextSuites, nextCases] = await Promise.all([
+      testSuitesApi.list(token),
+      testCasesApi.list(token),
+    ]);
+
+    setSuites(nextSuites);
+    setCases(nextCases);
     setSelectedCase(updatedCase);
     setSuccess('Test case updated.');
   }
@@ -412,7 +424,7 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
         </label>
         <span className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-600">
           <Filter className="h-4 w-4" aria-hidden="true" />
-          {visibleSuites.length} exibida{visibleSuites.length === 1 ? '' : 's'}
+          {visibleSuites.length} suíte{visibleSuites.length === 1 ? '' : 's'} · {visibleCaseCount} caso{visibleCaseCount === 1 ? '' : 's'}
         </span>
       </div>
 

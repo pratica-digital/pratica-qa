@@ -1,7 +1,11 @@
 import { TestCaseStatus, TestPriority, TestSeverity } from '@prisma/client';
-import { ArrayMaxSize, IsArray, IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsEnum, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 
 export class UpdateTestCaseDto {
+  @IsOptional()
+  @IsUUID()
+  suiteId?: string;
+
   @IsOptional()
   @IsString()
   @MaxLength(180)

@@ -397,6 +397,7 @@ export type CreateTestResultPayload = {
 };
 
 export type UpdateTestCasePayload = Partial<{
+  suiteId: string;
   title: string;
   description: string;
   expectedResult: string;
