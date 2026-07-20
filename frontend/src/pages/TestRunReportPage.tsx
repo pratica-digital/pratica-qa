@@ -12,6 +12,7 @@ import {
   FileVideo,
   Loader2,
   MinusCircle,
+  Pencil,
   RefreshCw,
   Tag,
   User,
@@ -22,7 +23,14 @@ import type { TestResult, TestResultAttachment, TestRun } from '../types/testRun
 import { useTestRunReport } from "../hooks/useTestRunReport";
 import { resolveApiAssetUrl } from '../lib/api';
 import { testRunStatusLabel } from '../lib/labels';
+import {
+  applyPdfInternalLinks,
+  buildPdfInternalLinks,
+  type PdfLinkArea,
+  type PdfPosition,
+} from '../lib/pdfInternalLinks';
 import { getResultTestCase } from '../lib/testResultOverrides';
+import { summarizeTestResults } from '../lib/testRunSummary';
 import praticaLogoUrl from '../assets/pratica-logo.png';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -30,6 +38,7 @@ import praticaLogoUrl from '../assets/pratica-logo.png';
 type TestRunReportPageProps = {
   testRunId: string;
   onBack: () => void;
+  onEditResults?: (testRun: TestRun) => void;
 };
 
 type StatusGroup = 'PASSED' | 'FAILED' | 'SKIPPED' | 'PENDING';
@@ -615,11 +624,11 @@ async function generatePDF(testRun: TestRun, results: TestResult[]) {
     }
   }
 
-  // Registra coordenadas y de início de cada seção de status (para TOC / links internos)
-  // jsPDF não suporta âncoras internas nativas — guardamos page+y para uso futuro
-  const sectionAnchors: Record<StatusGroup, { page: number; y: number } | null> = {
+  // Coordenadas dos cards e destinos usados pelas anotações internas do PDF.
+  const sectionAnchors: Record<StatusGroup, PdfPosition | null> = {
     FAILED: null, PASSED: null, SKIPPED: null, PENDING: null,
   };
+  const kpiLinkAreas: Partial<Record<StatusGroup, PdfLinkArea>> = {};
 
   // ── Paginação ─────────────────────────────────────────────────────────────
   let pageNum = 1;
@@ -740,16 +749,10 @@ async function generatePDF(testRun: TestRun, results: TestResult[]) {
   doc.text('RESUMO DE EXECUÇÃO', margin, y);
   y += 8;
 
-  const passed  = results.filter((r) => r.status === 'PASSED').length;
-  const failed  = results.filter((r) => r.status === 'FAILED').length;
-  const skipped = results.filter((r) => r.status === 'SKIPPED').length;
-  const notRun  = results.filter((r) => r.status === 'PENDING').length;
-  const total   = results.length;
+  const summary = summarizeTestResults(results);
+  const { failed, notRun, passed, skipped, total } = summary;
 
   // KPI cards — 4 colunas
-  // Nota: jsPDF não suporta links internos entre páginas via doc.link().
-  // Os cards terão visual de "clicável" (ícone de seta) como indicador visual,
-  // mas a navegação interna não é tecnicamente possível com esta biblioteca.
   const kpiItems = [
     { label: 'Aprovados',      value: passed,  status: 'PASSED'  as StatusGroup },
     { label: 'Falhas',         value: failed,  status: 'FAILED'  as StatusGroup },
@@ -764,6 +767,16 @@ async function generatePDF(testRun: TestRun, results: TestResult[]) {
   kpiItems.forEach((item, i) => {
     const sc = STATUS_COLORS[item.status];
     const cx = margin + i * (cardW + 3);
+
+    if (item.value > 0) {
+      kpiLinkAreas[item.status] = {
+        h: cardH,
+        page: doc.getNumberOfPages(),
+        w: cardW,
+        x: cx,
+        y,
+      };
+    }
 
     // Sombra simulada (retângulo deslocado levemente)
     fr(cx + 1, y + 1, cardW, cardH, C.border, 3);
@@ -784,9 +797,15 @@ async function generatePDF(testRun: TestRun, results: TestResult[]) {
     sf('normal', 6.5, C.textSub);
     doc.text(item.label.toUpperCase(), cx + cardW / 2, y + 25, { align: 'center' });
 
-    // Indicador visual "ver detalhes" — seta pequena no canto inferior direito
-    sf('normal', 6, C.textMuted);
-    doc.text('↓', cx + cardW - 5, y + cardH - 3);
+    if (item.value > 0) {
+      // Indicador visual discreto de que o card leva à seção correspondente.
+      sf('normal', 6, sc.fg);
+      doc.text('↓', cx + cardW - 5, y + cardH - 3);
+      const labelWidth = doc.getTextWidth(item.label.toUpperCase());
+      doc.setDrawColor(...sc.fg);
+      doc.setLineWidth(0.15);
+      doc.line(cx + (cardW - labelWidth) / 2, y + 26, cx + (cardW + labelWidth) / 2, y + 26);
+    }
   });
 
   y += cardH + 10;
@@ -1002,6 +1021,14 @@ async function generatePDF(testRun: TestRun, results: TestResult[]) {
 
   drawFooter();
 
+  const internalLinks = buildPdfInternalLinks(
+    ORDER,
+    summary.byStatus,
+    kpiLinkAreas,
+    sectionAnchors,
+  );
+  applyPdfInternalLinks(doc, internalLinks);
+
   // ── Salvar ────────────────────────────────────────────────────────────────
   const safeName = testRun.name
     .normalize('NFD')
@@ -1018,21 +1045,24 @@ async function generatePDF(testRun: TestRun, results: TestResult[]) {
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
-export function TestRunReportPage({ testRunId, onBack }: TestRunReportPageProps) {
+export function TestRunReportPage({ testRunId, onBack, onEditResults }: TestRunReportPageProps) {
   const { report, isLoading, error, refetch } = useTestRunReport(testRunId);
   const [isExporting, setIsExporting] = useState(false);
 
   const handleExport = useCallback(async () => {
-    if (!report) return;
     setIsExporting(true);
     try {
-      await generatePDF(report.testRun, report.results);
+      const latestReport = await refetch();
+
+      if (latestReport) {
+        await generatePDF(latestReport.testRun, latestReport.results);
+      }
     } catch (err) {
       console.error('Erro ao gerar PDF:', err);
     } finally {
       setIsExporting(false);
     }
-  }, [report]);
+  }, [refetch]);
 
   // ── Loading ──
   if (isLoading) {
@@ -1096,6 +1126,17 @@ export function TestRunReportPage({ testRunId, onBack }: TestRunReportPageProps)
         </div>
 
         <div className="flex items-center gap-2">
+          {onEditResults ? (
+            <button
+              className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 text-sm font-medium text-blue-700 hover:bg-blue-100"
+              onClick={() => onEditResults(testRun)}
+              type="button"
+            >
+              <Pencil className="h-4 w-4" />
+              Editar resultados
+            </button>
+          ) : null}
+
           <button
             className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-slate-600 bg-slate-600 px-3 text-sm font-medium text-white hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
             disabled={isLoading}
@@ -1198,7 +1239,8 @@ export function TestRunReportPage({ testRunId, onBack }: TestRunReportPageProps)
           <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
             <span className="font-medium">Progresso geral</span>
             <span>
-              {summary.passed + summary.failed + summary.skipped} / {summary.total} executados
+              {summary.executed} / {summary.total} executados ({summary.progressPercentage}%) · Aprovação{' '}
+              {summary.approvalPercentage}%
             </span>
           </div>
           <div className="h-2.5 w-full rounded-full overflow-hidden bg-slate-100 flex">

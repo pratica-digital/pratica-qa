@@ -79,6 +79,16 @@ function AppShellContent() {
     }
   }, []);
 
+  const handleEditCompletedRun = useCallback((testRun: TestRun) => {
+    setSelectedTestRun(testRun);
+    setReportRunId(null);
+  }, []);
+
+  const handleOpenReport = useCallback((testRunId: string) => {
+    setReportRunId(testRunId);
+    setSelectedTestRun(null);
+  }, []);
+
   useEffect(() => {
     const previousRunState = previousRunStateRef.current;
     const currentRunId = selectedTestRun?.id ?? null;
@@ -104,6 +114,7 @@ function AppShellContent() {
         <TestRunReportPage
           testRunId={reportRunId}
           onBack={() => setReportRunId(null)}
+          onEditResults={handleEditCompletedRun}
         />
       );
     }
@@ -113,6 +124,7 @@ function AppShellContent() {
         <TestRunExecutionPage
           key={selectedTestRun.id}
           onBack={() => setSelectedTestRun(null)}
+          onOpenReport={handleOpenReport}
           onRunUpdated={setSelectedTestRun}
           testRun={selectedTestRun}
         />
@@ -149,7 +161,7 @@ function AppShellContent() {
       default:
       return <DashboardPage onNavigate={handleNavigate} onOpenRun={handleOpenRun} />; // ← era setSelectedTestRun
   }
- }, [createActionEventId, effectiveActivePage, handleNavigate, handleOpenRun, reportRunId, selectedTestRun]);
+ }, [createActionEventId, effectiveActivePage, handleEditCompletedRun, handleNavigate, handleOpenReport, handleOpenRun, reportRunId, selectedTestRun]);
 
   const createActionLabel = selectedTestRun ? undefined : createActionLabels[effectiveActivePage];
 
