@@ -266,7 +266,7 @@ export type TestRun = {
 
 export type CreateTestRunPayload = {
   projectId: string;
-  testPlanId: string;
+  testPlanId?: string;
   assignedToId: string;
   name: string;
   description?: string;

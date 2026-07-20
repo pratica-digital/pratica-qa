@@ -283,10 +283,6 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
       nextErrors.name = 'Nome obrigatório';
     }
 
-    if (!form.planId) {
-      nextErrors.planId = 'Selecione um plano de teste';
-    }
-
     if (projectId && selectedPlan && selectedPlan.projectId !== projectId) {
       nextErrors.planId = 'Selecione um plano do projeto atual';
     }
@@ -340,14 +336,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
       const selectedSuiteOptions = suites.filter((suite) => suiteAssignments[suite.id]);
       const selectedPlan = testPlans.find((plan) => plan.id === form.planId);
 
-      if (!selectedPlan) {
-        setLoadError('Selecione um plano de teste válido.');
-        setActiveTab('info');
-        setSubmitting(false);
-        return;
-      }
-
-      const resolvedProjectId = projectId || selectedPlan.projectId || selectedSuiteOptions[0]?.projectId;
+      const resolvedProjectId = projectId || selectedPlan?.projectId || selectedSuiteOptions[0]?.projectId;
       const testTypes = selectedTestTypes.map((type) => ({
         type,
         suites: Object.entries(suiteAssignments)
@@ -361,7 +350,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
         return;
       }
 
-      if (selectedPlan.projectId !== resolvedProjectId) {
+      if (selectedPlan && selectedPlan.projectId !== resolvedProjectId) {
         setLoadError(`O plano selecionado pertence ao projeto ${getPlanProjectLabel(selectedPlan)}.`);
         setActiveTab('info');
         setSubmitting(false);
@@ -378,7 +367,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
           .join(', ');
 
         setLoadError(
-          `Todas as suítes devem pertencer ao projeto ${getPlanProjectLabel(selectedPlan)}. Revise: ${suiteNames}.`,
+          `Todas as suítes devem pertencer ao mesmo projeto da execução. Revise: ${suiteNames}.`,
         );
         setActiveTab('suites');
         setSubmitting(false);
@@ -387,7 +376,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
 
       const createdRun = await testRunsApi.create(token, {
         projectId: resolvedProjectId,
-        testPlanId: form.planId,
+        ...(form.planId ? { testPlanId: form.planId } : {}),
         assignedToId: form.assignedToId,
         name: form.name.trim(),
         testTypes,
@@ -501,7 +490,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
                 ) : null}
               </Field>
 
-              <Field label="Plano de teste" required hint="A execução será vinculada a este plano">
+              <Field label="Plano de teste" hint="Opcional: vincule a execução a um plano existente">
                 <div className="relative">
                   <ClipboardList className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <select
@@ -510,7 +499,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
                     onChange={(event) => handlePlanChange(event.target.value)}
                     value={form.planId}
                   >
-                    <option value="">Selecione o plano...</option>
+                    <option value="">Sem plano de teste</option>
                     {testPlans.map((plan) => (
                       <option key={plan.id} value={plan.id}>
                         {plan.name} (v{plan.version}) - Projeto: {getPlanProjectLabel(plan)}

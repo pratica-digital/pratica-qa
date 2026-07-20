@@ -27,8 +27,9 @@ export class CreateTestRunDto {
   @IsUUID()
   projectId: string;
 
+  @IsOptional()
   @IsUUID()
-  testPlanId: string;
+  testPlanId?: string;
 
   @IsOptional()
   @IsUUID()
