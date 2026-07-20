@@ -344,12 +344,6 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
           .map(([suiteId]) => suiteId),
       }));
 
-      if (!resolvedProjectId) {
-        setLoadError('Selecione ao menos uma suíte vinculada a um projeto.');
-        setSubmitting(false);
-        return;
-      }
-
       if (selectedPlan && selectedPlan.projectId !== resolvedProjectId) {
         setLoadError(`O plano selecionado pertence ao projeto ${getPlanProjectLabel(selectedPlan)}.`);
         setActiveTab('info');
@@ -375,7 +369,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
       }
 
       const createdRun = await testRunsApi.create(token, {
-        projectId: resolvedProjectId,
+        ...(resolvedProjectId ? { projectId: resolvedProjectId } : {}),
         ...(form.planId ? { testPlanId: form.planId } : {}),
         assignedToId: form.assignedToId,
         name: form.name.trim(),

@@ -432,13 +432,26 @@ export function TestRunExecutionPage({
     }
   }, [applyUpdatedResult, token]);
 
-  const handleSubmit = async (result: TestResult, payload: ExecuteTestResultPayload) => {
-    await persistResult(result, payload);
-  };
-
   const handleDraftCommentChange = useCallback((resultId: string, value: string) => {
     setDraftComments((current) => ({ ...current, [resultId]: value }));
   }, []);
+
+  const navigateToNextResult = useCallback((resultId: string) => {
+    const currentIndex = navigationPositionById.get(resultId) ?? -1;
+    const nextResult = currentIndex >= 0 ? navigationResults[currentIndex + 1] : undefined;
+
+    if (nextResult) {
+      selectResult(nextResult.id);
+    }
+  }, [navigationPositionById, navigationResults, selectResult]);
+
+  const handleSubmit = async (result: TestResult, payload: ExecuteTestResultPayload) => {
+    const saved = await persistResult(result, payload);
+
+    if (saved) {
+      navigateToNextResult(result.id);
+    }
+  };
 
   const handleNavigateNext = useCallback(async (
     result: TestResult,
@@ -453,13 +466,8 @@ export function TestRunExecutionPage({
       }
     }
 
-    const currentIndex = navigationPositionById.get(result.id) ?? -1;
-    const nextResult = currentIndex >= 0 ? navigationResults[currentIndex + 1] : undefined;
-
-    if (nextResult) {
-      selectResult(nextResult.id);
-    }
-  }, [navigationPositionById, navigationResults, persistResult, selectResult]);
+    navigateToNextResult(result.id);
+  }, [navigateToNextResult, persistResult]);
 
   const handleSelectFromList = useCallback(
     (resultId: string) => {
