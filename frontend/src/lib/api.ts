@@ -201,10 +201,6 @@ function projectPayloadToFormData(payload: CreateProjectPayload | UpdateProjectP
   return formData;
 }
 
-function unwrapList<T>(response: T[] | PaginatedResponse<T>) {
-  return Array.isArray(response) ? response : response.data;
-}
-
 function unwrapPage<T>(response: T[] | PaginatedResponse<T>): PaginatedResponse<T> {
   if (Array.isArray(response)) {
     return {
@@ -246,13 +242,12 @@ export const authApi = {
 };
 
 export const usersApi = {
-  list: async (token: string) => {
-    const response = await apiRequest<AuthUser[] | PaginatedResponse<AuthUser>>('/users?limit=100', {
-      token,
-    });
-
-    return unwrapList(response);
-  },
+  list: async (token: string) => collectAllPages(async (page) => {
+    return unwrapPage(await apiRequest<AuthUser[] | PaginatedResponse<AuthUser>>(
+      withQuery('/users', { page, limit: 100 }),
+      { token },
+    ));
+  }),
   create: (token: string, payload: CreateUserPayload) =>
     apiRequest<UserEmailNotificationResponse>('/users', {
       method: 'POST',
@@ -289,7 +284,10 @@ export const usersApi = {
 };
 
 export const projectsApi = {
-  listPage: async (token: string, params: { search?: string; status?: string; limit?: number } = {}) => {
+  listPage: async (
+    token: string,
+    params: { search?: string; status?: string; page?: number; limit?: number } = {},
+  ) => {
     const response = await apiRequest<ProjectSummary[] | PaginatedResponse<ProjectSummary>>(
       withQuery('/projects', { ...params, limit: params.limit ?? 100 }),
       {
@@ -299,16 +297,10 @@ export const projectsApi = {
 
     return unwrapPage(response);
   },
-  list: async (token: string) => {
-    const response = await apiRequest<ProjectSummary[] | PaginatedResponse<ProjectSummary>>(
-      '/projects?limit=100',
-      {
-        token,
-      },
-    );
-
-    return unwrapList(response);
-  },
+  list: async (token: string) => collectAllPages((page) => projectsApi.listPage(token, {
+    page,
+    limit: 100,
+  })),
   get: (token: string, projectId: string) =>
     apiRequest<ProjectSummary>(`/projects/${projectId}`, { token }),
   create: (token: string, payload: CreateProjectPayload) =>
@@ -392,7 +384,7 @@ export const testSuitesApi = {
 export const testPlansApi = {
   listPage: async (
     token: string,
-    params: { projectId?: string; search?: string; version?: string; limit?: number } = {},
+    params: { projectId?: string; search?: string; version?: string; page?: number; limit?: number } = {},
   ) => {
     const response = await apiRequest<TestPlan[] | PaginatedResponse<TestPlan>>(
       withQuery('/test-plans', { ...params, limit: params.limit ?? 100 }),
@@ -406,16 +398,7 @@ export const testPlansApi = {
   list: async (
     token: string,
     params: { projectId?: string; search?: string; version?: string; limit?: number } = {},
-  ) => {
-    const response = await apiRequest<TestPlan[] | PaginatedResponse<TestPlan>>(
-      withQuery('/test-plans', { ...params, limit: params.limit ?? 100 }),
-      {
-        token,
-      },
-    );
-
-    return unwrapList(response);
-  },
+  ) => collectAllPages((page) => testPlansApi.listPage(token, { ...params, page })),
   get: (token: string, testPlanId: string) =>
     apiRequest<TestPlan>(`/test-plans/${testPlanId}`, { token }),
   create: (token: string, payload: CreateTestPlanPayload) =>
@@ -516,7 +499,14 @@ export const testRunsApi = {
   assignableUsers: (token: string) => apiRequest<AuthUser[]>('/test-runs/assignable-users', { token }),
   listPage: async (
     token: string,
-    params: { projectId?: string; testPlanId?: string; search?: string; status?: string; limit?: number } = {},
+    params: {
+      projectId?: string;
+      testPlanId?: string;
+      search?: string;
+      status?: string;
+      page?: number;
+      limit?: number;
+    } = {},
   ) => {
     const response = await apiRequest<TestRun[] | PaginatedResponse<TestRun>>(
       withQuery('/test-runs', { ...params, limit: params.limit ?? 100 }),
@@ -530,16 +520,7 @@ export const testRunsApi = {
   list: async (
     token: string,
     params: { projectId?: string; testPlanId?: string; search?: string; status?: string; limit?: number } = {},
-  ) => {
-    const response = await apiRequest<TestRun[] | PaginatedResponse<TestRun>>(
-      withQuery('/test-runs', { ...params, limit: params.limit ?? 100 }),
-      {
-        token,
-      },
-    );
-
-    return unwrapList(response);
-  },
+  ) => collectAllPages((page) => testRunsApi.listPage(token, { ...params, page })),
   get: (token: string, testRunId: string) =>
     apiRequest<TestRun>(`/test-runs/${testRunId}`, { token }),
   assign: (token: string, testRunId: string, assignedToId: string) =>
@@ -570,7 +551,7 @@ export const testRunsApi = {
 export const testResultsApi = {
   listPage: async (
     token: string,
-    params: { testRunId?: string; testCaseId?: string; status?: string; limit?: number } = {},
+    params: { testRunId?: string; testCaseId?: string; status?: string; page?: number; limit?: number } = {},
   ) => {
     const response = await apiRequest<TestResult[] | PaginatedResponse<TestResult>>(
       withQuery('/test-results', { ...params, limit: params.limit ?? 100 }),
@@ -584,16 +565,7 @@ export const testResultsApi = {
   list: async (
     token: string,
     params: { testRunId?: string; testCaseId?: string; status?: string; limit?: number } = {},
-  ) => {
-    const response = await apiRequest<TestResult[] | PaginatedResponse<TestResult>>(
-      withQuery('/test-results', { ...params, limit: params.limit ?? 100 }),
-      {
-        token,
-      },
-    );
-
-    return unwrapList(response);
-  },
+  ) => collectAllPages((page) => testResultsApi.listPage(token, { ...params, page })),
   create: (token: string, payload: CreateTestResultPayload) =>
     apiRequest<TestResult>('/test-results', {
       method: 'POST',
@@ -625,6 +597,17 @@ export const testResultsApi = {
       method: 'DELETE',
       token,
     }),
+  getAttachmentBlob: async (token: string, attachmentId: string) => {
+    const response = await fetch(buildUrl(`/test-results/attachments/${attachmentId}/content`), {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!response.ok) {
+      throw new ApiError(await readErrorMessage(response), response.status);
+    }
+
+    return response.blob();
+  },
   remove: (token: string, resultId: string) =>
     apiRequest<TestResult>(`/test-results/${resultId}`, {
       method: 'DELETE',
@@ -709,6 +692,8 @@ export const aiTestGeneratorApi = {
       withQuery('/ai-test-generator/history', { page: params.page, limit: params.limit ?? 50 }),
       { token },
     ),
+  historyAll: (token: string, limit = 100) => collectAllPages((page) =>
+    aiTestGeneratorApi.history(token, { page, limit })),
   getHistory: (token: string, id: string) =>
     apiRequest<AiGenerationRecord>(`/ai-test-generator/history/${id}`, { token }),
   regenerate: (token: string, id: string) =>

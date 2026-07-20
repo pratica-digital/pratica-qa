@@ -12,7 +12,6 @@ import {
 import { useAuth } from '../auth/useAuth';
 import { usersApi } from '../lib/api';
 import type { AuthUser, CreateUserPayload, UpdateUserPayload, UserRole, UserStatus } from '../types/testRun';
-import { UserRoleBadge, UserStatusBadge } from '../components/badges';
 import { userRoleLabel, userStatusLabel } from '../lib/labels';
 
 const roleOptions: UserRole[] = ['ADMIN', 'QA', 'VIEWER'];
@@ -95,7 +94,9 @@ export function UsersPage() {
   }, [search, users]);
 
   const updateUserInState = (updatedUser: AuthUser) => {
-    setUsers((current) => current.map((item) => (item.id === updatedUser.id ? updatedUser : item)));
+    setUsers((current) => updatedUser.deletedAt
+      ? current.filter((item) => item.id !== updatedUser.id)
+      : current.map((item) => (item.id === updatedUser.id ? updatedUser : item)));
   };
 
   const getDraft = (item: AuthUser): Required<Pick<CreateUserPayload, 'name' | 'email' | 'role' | 'status'>> => ({

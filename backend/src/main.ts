@@ -27,7 +27,9 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
 
   app.setGlobalPrefix('api');
-  app.useStaticAssets(join(process.cwd(), 'uploads'), { prefix: '/uploads/' });
+  app.useStaticAssets(join(process.cwd(), 'uploads', 'project-images'), {
+    prefix: '/uploads/project-images/',
+  });
   app.enableCors({
     credentials: true,
     origin: getCorsOrigins(configService),

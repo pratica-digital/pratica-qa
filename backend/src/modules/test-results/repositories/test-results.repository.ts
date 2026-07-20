@@ -158,7 +158,7 @@ export class TestResultsRepository {
       where: this.buildWhere(params),
       skip: params.skip,
       take: params.take,
-      orderBy: [{ executedAt: 'desc' }, { createdAt: 'asc' }],
+      orderBy: [{ executedAt: 'desc' }, { createdAt: 'asc' }, { id: 'asc' }],
       include: TEST_RESULT_INCLUDE,
     });
   }
@@ -170,9 +170,25 @@ export class TestResultsRepository {
   }
 
   findById(id: string) {
-    return this.prisma.testResult.findUnique({
-      where: { id },
+    return this.prisma.testResult.findFirst({
+      where: {
+        id,
+        removedAt: null,
+        testRun: { deletedAt: null },
+      },
       include: TEST_RESULT_INCLUDE,
+    });
+  }
+
+  findAttachmentById(id: string) {
+    return this.prisma.testResultAttachment.findFirst({
+      where: {
+        id,
+        testResult: {
+          removedAt: null,
+          testRun: { deletedAt: null },
+        },
+      },
     });
   }
 
@@ -401,6 +417,7 @@ export class TestResultsRepository {
       testCaseId: params.testCaseId,
       status: params.status,
       removedAt: null,
+      testRun: { deletedAt: null },
     };
   }
 }

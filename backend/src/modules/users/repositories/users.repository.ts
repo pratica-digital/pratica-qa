@@ -40,7 +40,14 @@ export class UsersRepository {
       where: this.buildWhere(params),
       skip: params.skip,
       take: params.take,
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
+    });
+  }
+
+  findAll(params: Omit<FindUsersParams, 'skip' | 'take'>) {
+    return this.prisma.user.findMany({
+      where: this.buildWhere(params),
+      orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
     });
   }
 

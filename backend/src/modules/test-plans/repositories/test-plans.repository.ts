@@ -15,7 +15,7 @@ const TEST_PLAN_INCLUDE = {
   },
   _count: {
     select: {
-      testRuns: true,
+      testRuns: { where: { deletedAt: null } },
     },
   },
 } satisfies Prisma.TestPlanInclude;
@@ -50,7 +50,7 @@ export class TestPlansRepository {
       where: this.buildWhere(params),
       skip: params.skip,
       take: params.take,
-      orderBy: { updatedAt: 'desc' },
+      orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }],
       include: TEST_PLAN_INCLUDE,
     });
   }
@@ -62,8 +62,8 @@ export class TestPlansRepository {
   }
 
   findById(id: string) {
-    return this.prisma.testPlan.findUnique({
-      where: { id },
+    return this.prisma.testPlan.findFirst({
+      where: { id, deletedAt: null },
       include: TEST_PLAN_INCLUDE,
     });
   }

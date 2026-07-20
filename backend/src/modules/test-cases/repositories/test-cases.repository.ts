@@ -189,8 +189,12 @@ export class TestCasesRepository {
   }
 
   delete(id: string) {
-    return this.prisma.testCase.delete({
+    return this.prisma.testCase.update({
       where: { id },
+      data: {
+        deletedAt: new Date(),
+        status: TestCaseStatus.ARCHIVED,
+      },
     });
   }
 

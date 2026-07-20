@@ -187,12 +187,14 @@ export class UsersService {
       throw new BadRequestException('Admins cannot remove their own administrative access');
     }
 
-    const user = await this.usersRepository.update(id, {
-      name: dto.name,
-      email: dto.email,
-      role: dto.role,
-      status: dto.status,
-    });
+    const user = dto.status === UserStatus.INACTIVE
+      ? await this.usersRepository.delete(id)
+      : await this.usersRepository.update(id, {
+          name: dto.name,
+          email: dto.email,
+          role: dto.role,
+          status: dto.status,
+        });
 
     await this.auditService.logAdminAction({
       actorUserId: actor.id,
@@ -202,6 +204,7 @@ export class UsersService {
         changedFields: Object.entries(dto)
           .filter(([, value]) => value !== undefined)
           .map(([key]) => key),
+        softDeleted: dto.status === UserStatus.INACTIVE,
       },
       metadata,
     });
@@ -250,14 +253,13 @@ export class UsersService {
       throw new BadRequestException('Admins cannot deactivate their own account');
     }
 
-    const user = await this.usersRepository.update(id, {
-      status: UserStatus.INACTIVE,
-    });
+    const user = await this.usersRepository.delete(id);
 
     await this.auditService.logAdminAction({
       actorUserId: actor.id,
       targetUserId: id,
       action: 'USER_DEACTIVATED',
+      details: { softDeleted: true },
       metadata,
     });
 

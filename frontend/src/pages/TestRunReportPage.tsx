@@ -19,9 +19,11 @@ import {
   XCircle,
 } from 'lucide-react';
 import { useCallback, useState } from 'react';
+import { useAuth } from '../auth/useAuth';
+import { useAuthenticatedAttachmentUrl } from '../hooks/useAuthenticatedAttachmentUrl';
 import type { TestResult, TestResultAttachment, TestRun } from '../types/testRun';
 import { useTestRunReport } from "../hooks/useTestRunReport";
-import { resolveApiAssetUrl } from '../lib/api';
+import { testResultsApi } from '../lib/api';
 import { testRunStatusLabel } from '../lib/labels';
 import {
   applyPdfInternalLinks,
@@ -143,7 +145,7 @@ function ShortcutStorySection({ result }: { result: TestResult }) {
 }
 
 function EvidenceAttachmentCard({ attachment }: { attachment: TestResultAttachment }) {
-  const assetUrl = resolveApiAssetUrl(getAttachmentUrl(attachment));
+  const assetUrl = useAuthenticatedAttachmentUrl(attachment.id);
   const name = getAttachmentName(attachment);
 
   return (
@@ -231,12 +233,25 @@ function getPdfImageFormat(attachment: TestResultAttachment) {
   return 'JPEG';
 }
 
-async function loadAttachmentImageDataUrl(attachment: TestResultAttachment) {
+async function loadAttachmentImageDataUrl(attachment: TestResultAttachment, token: string) {
   if (!isImageAttachment(attachment)) {
     return null;
   }
 
-  return loadImageDataUrl(resolveApiAssetUrl(getAttachmentUrl(attachment)));
+  try {
+    return loadBlobDataUrl(await testResultsApi.getAttachmentBlob(token, attachment.id));
+  } catch {
+    return null;
+  }
+}
+
+function loadBlobDataUrl(blob: Blob) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
 }
 
 async function loadImageDataUrl(url: string) {
@@ -533,7 +548,7 @@ function StatusSection({
 }
 
 // ─── PDF generation ───────────────────────────────────────────────────────────
-async function generatePDF(testRun: TestRun, results: TestResult[]) {
+async function generatePDF(testRun: TestRun, results: TestResult[], token: string) {
   const { default: jsPDF } = await import('jspdf');
 
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -990,7 +1005,7 @@ async function generatePDF(testRun: TestRun, results: TestResult[]) {
           cy += 4;
           for (const attachment of attachments) {
             if (isImageAttachment(attachment)) {
-              const imgUrl = await loadAttachmentImageDataUrl(attachment);
+              const imgUrl = await loadAttachmentImageDataUrl(attachment, token);
               if (imgUrl) {
                 try {
                   doc.addImage(imgUrl, getPdfImageFormat(attachment), cx + 2, cy, 50, 28);
@@ -1046,6 +1061,7 @@ async function generatePDF(testRun: TestRun, results: TestResult[]) {
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export function TestRunReportPage({ testRunId, onBack, onEditResults }: TestRunReportPageProps) {
+  const { token } = useAuth();
   const { report, isLoading, error, refetch } = useTestRunReport(testRunId);
   const [isExporting, setIsExporting] = useState(false);
 
@@ -1054,15 +1070,15 @@ export function TestRunReportPage({ testRunId, onBack, onEditResults }: TestRunR
     try {
       const latestReport = await refetch();
 
-      if (latestReport) {
-        await generatePDF(latestReport.testRun, latestReport.results);
+      if (latestReport && token) {
+        await generatePDF(latestReport.testRun, latestReport.results, token);
       }
     } catch (err) {
       console.error('Erro ao gerar PDF:', err);
     } finally {
       setIsExporting(false);
     }
-  }, [refetch]);
+  }, [refetch, token]);
 
   // ── Loading ──
   if (isLoading) {

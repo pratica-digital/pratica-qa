@@ -8,9 +8,11 @@ import {
   Patch,
   Post,
   Query,
+  StreamableFile,
   UploadedFiles,
   UseInterceptors,
 } from '@nestjs/common';
+import { createReadStream } from 'node:fs';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { UserRole } from '@prisma/client';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
@@ -51,6 +53,20 @@ export class TestResultsController {
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.testResultsService.findOne(id);
+  }
+
+  @Get('attachments/:attachmentId/content')
+  async getAttachmentContent(
+    @Param('attachmentId', ParseUUIDPipe) attachmentId: string,
+  ) {
+    const { attachment, filePath } = await this.testResultsService.getAttachmentContent(attachmentId);
+    const encodedName = encodeURIComponent(attachment.originalName || attachment.fileName);
+
+    return new StreamableFile(createReadStream(filePath), {
+      type: attachment.mimeType,
+      disposition: `inline; filename*=UTF-8''${encodedName}`,
+      length: attachment.size,
+    });
   }
 
   @Roles(UserRole.ADMIN, UserRole.QA)

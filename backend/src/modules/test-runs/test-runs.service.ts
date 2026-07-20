@@ -104,11 +104,9 @@ export class TestRunsService {
   }
 
   async findAssignableUsers() {
-    const users = await this.usersRepository.findMany({
+    const users = await this.usersRepository.findAll({
       role: UserRole.QA,
       status: UserStatus.ACTIVE,
-      skip: 0,
-      take: 100,
     });
 
     return users.map((user) => this.usersRepository.toPublicUser(user));
