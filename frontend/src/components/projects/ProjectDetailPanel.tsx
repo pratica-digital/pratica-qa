@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { ClipboardList, FolderOpen, Layers3, PlaySquare, X } from 'lucide-react';
 import { useAuth } from '../../auth/useAuth';
 import { ActionMenu } from '../ActionMenu';
+import { MarkdownContent } from '../MarkdownContent';
 import { projectsApi, testPlansApi, testRunsApi, testSuitesApi } from '../../lib/api';
 import type { ManagedTestSuite, ProjectSummary, TestPlan, TestRun } from '../../types/testRun';
 
@@ -133,9 +134,11 @@ export function ProjectDetailPanel({ project, onClose, onDelete }: ProjectDetail
           <section className="grid gap-3 md:grid-cols-4">
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 md:col-span-2">
               <p className="text-xs font-medium uppercase text-slate-500">Informações do projeto</p>
-              <p className="mt-2 text-sm text-slate-700">
-                {projectDetail.description || 'Sem descrição'}
-              </p>
+              <MarkdownContent
+                className="mt-2 text-sm text-slate-700"
+                content={projectDetail.description}
+                fallback={<p className="mt-2 text-sm text-slate-700">Sem descrição</p>}
+              />
               <p className="mt-3 text-xs text-slate-500">
                 Atualizado {formatUpdatedAt(projectDetail.updatedAt)}
               </p>

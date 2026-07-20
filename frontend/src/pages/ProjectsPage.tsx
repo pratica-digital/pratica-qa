@@ -18,6 +18,7 @@ import { useAuth } from '../auth/useAuth';
 import { ActionMenu } from '../components/ActionMenu';
 import { ProjectStatusBadge } from '../components/badges';
 import { DeleteConfirmationModal } from '../components/DeleteConfirmationModal';
+import { MarkdownContent } from '../components/MarkdownContent';
 import { ApiError, projectsApi, resolveApiAssetUrl } from '../lib/api';
 import type {
   CreateProjectPayload,
@@ -477,9 +478,11 @@ function ProjectDetailsPanel({
             <section className="mt-5 grid gap-3 md:grid-cols-4">
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 md:col-span-2">
                 <p className="text-xs font-medium uppercase text-slate-500">Informações do projeto</p>
-                <p className="mt-2 text-sm text-slate-700">
-                  {project.description || 'Sem descrição'}
-                </p>
+                <MarkdownContent
+                  className="mt-2 text-sm text-slate-700"
+                  content={project.description}
+                  fallback={<p className="mt-2 text-sm text-slate-700">Sem descrição</p>}
+                />
                 <p className="mt-3 text-xs text-slate-500">
                   {project.status ? <ProjectStatusBadge status={project.status} /> : null}
                 </p>
@@ -854,9 +857,11 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
                           <h3 className="truncate text-sm font-semibold text-slate-950">
                             {project.name}
                           </h3>
-                          <p className="truncate text-xs text-slate-500">
-                            {project.description || 'Sem descrição'}
-                          </p>
+                          <MarkdownContent
+                            className="line-clamp-1 text-xs text-slate-500"
+                            content={project.description}
+                            fallback={<p className="truncate text-xs text-slate-500">Sem descrição</p>}
+                          />
                         </div>
                         <div className="flex shrink-0 items-center gap-1">
                           <ActionMenu

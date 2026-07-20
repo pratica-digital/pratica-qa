@@ -4,6 +4,7 @@ import { canManageTests } from '../auth/permissions';
 import { useAuth } from '../auth/useAuth';
 import { ActionMenu } from '../components/ActionMenu';
 import { DeleteConfirmationModal } from '../components/DeleteConfirmationModal';
+import { MarkdownContent } from '../components/MarkdownContent';
 import { TestPlanDetailPanel } from '../components/test-plan/TestPlanDetailPanel';
 import { TestPlanEditPanel } from '../components/test-plan/TestPlanEditPanel';
 import { ApiError, testPlansApi } from '../lib/api';
@@ -177,7 +178,7 @@ export function TestPlansPage() {
                     v{plan.version} - {plan.sections?.length ?? 0} seção{(plan.sections?.length ?? 0) === 1 ? '' : 'ões'}
                   </p>
                   {plan.description ? (
-                    <p className="mt-2 line-clamp-2 text-sm text-slate-600">{plan.description}</p>
+                    <MarkdownContent className="mt-2 line-clamp-2 text-sm text-slate-600" content={plan.description} />
                   ) : null}
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
