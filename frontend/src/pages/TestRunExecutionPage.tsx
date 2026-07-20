@@ -16,6 +16,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { canManageTests } from '../auth/permissions';
 import { useAuth } from '../auth/useAuth';
 import { DeleteConfirmationModal } from '../components/DeleteConfirmationModal';
+import { MarkdownContent } from '../components/MarkdownContent';
 import { TestCaseRunner } from '../components/test-run/TestCaseRunner';
 import { ApiError, testResultsApi, testRunsApi } from '../lib/api';
 import { testResultStatusLabel } from '../lib/labels';
@@ -656,9 +657,7 @@ export function TestRunExecutionPage({
               {run.name}
             </h1>
             {run.description ? (
-              <p className="mt-2 max-w-3xl text-sm text-slate-600">
-                {run.description}
-              </p>
+              <MarkdownContent className="mt-2 max-w-3xl text-sm text-slate-600" content={run.description} />
             ) : null}
           </div>
         </div>

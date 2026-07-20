@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { ClipboardList, X } from 'lucide-react';
 import { ActionMenu } from '../ActionMenu';
+import { MarkdownContent } from '../MarkdownContent';
 import type { TestPlan } from '../../types/testRun';
 
 type TestPlanDetailPanelProps = {
@@ -84,9 +85,11 @@ export function TestPlanDetailPanel({ testPlan, onClose, onDelete, onEdit }: Tes
           <section className="grid gap-3 md:grid-cols-[1fr_12rem]">
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
               <p className="text-xs font-medium uppercase text-slate-500">Informações do plano</p>
-              <p className="mt-2 text-sm text-slate-700">
-                {testPlan.description || 'Sem descrição'}
-              </p>
+              <MarkdownContent
+                className="mt-2 text-sm text-slate-700"
+                content={testPlan.description}
+                fallback={<p className="mt-2 text-sm text-slate-700">Sem descrição</p>}
+              />
               <p className="mt-3 text-xs text-slate-500">
                 Atualizado {formatUpdatedAt(testPlan.updatedAt)}
               </p>
@@ -120,9 +123,7 @@ export function TestPlanDetailPanel({ testPlan, onClose, onDelete, onEdit }: Tes
                     <h4 className="text-sm font-semibold text-slate-950">
                       {section.title}
                     </h4>
-                    <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">
-                      {section.content}
-                    </p>
+                    <MarkdownContent className="mt-2 text-sm text-slate-700" content={section.content} />
                   </div>
                 </article>
               ))}

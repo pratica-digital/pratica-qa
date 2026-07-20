@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowDown, ArrowUp, ListChecks, Plus, Save, Trash2, X } from 'lucide-react';
 import { ActionMenu } from '../ActionMenu';
+import { MarkdownContent } from '../MarkdownContent';
 import { suiteProjectLabel, testCaseStatusLabels } from '../../lib/labels';
 import type {
   ManagedTestCase,
@@ -265,25 +266,47 @@ export function TestCaseEditPanel({
           </div>
 
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
-            <label className="block text-sm font-medium text-slate-700">
-              Descrição
-              <textarea
-                className="mt-1.5 min-h-28 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50"
-                disabled={readOnly || saving}
-                onChange={(event) => setDescription(event.target.value)}
-                value={description}
-              />
-            </label>
+            {readOnly ? (
+              <div className="text-sm font-medium text-slate-700">
+                Descrição
+                <MarkdownContent
+                  className="mt-1.5 min-h-28 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 font-normal text-slate-950"
+                  content={description}
+                  fallback={<p className="mt-1.5 text-sm font-normal text-slate-500">Sem descrição.</p>}
+                />
+              </div>
+            ) : (
+              <label className="block text-sm font-medium text-slate-700">
+                Descrição
+                <textarea
+                  className="mt-1.5 min-h-28 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50"
+                  disabled={saving}
+                  onChange={(event) => setDescription(event.target.value)}
+                  value={description}
+                />
+              </label>
+            )}
 
-            <label className="block text-sm font-medium text-slate-700">
-              Resultado esperado
-              <textarea
-                className="mt-1.5 min-h-28 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50"
-                disabled={readOnly || saving}
-                onChange={(event) => setExpectedResult(event.target.value)}
-                value={expectedResult}
-              />
-            </label>
+            {readOnly ? (
+              <div className="text-sm font-medium text-slate-700">
+                Resultado esperado
+                <MarkdownContent
+                  className="mt-1.5 min-h-28 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 font-normal text-slate-950"
+                  content={expectedResult}
+                  fallback={<p className="mt-1.5 text-sm font-normal text-slate-500">Sem resultado esperado.</p>}
+                />
+              </div>
+            ) : (
+              <label className="block text-sm font-medium text-slate-700">
+                Resultado esperado
+                <textarea
+                  className="mt-1.5 min-h-28 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50"
+                  disabled={saving}
+                  onChange={(event) => setExpectedResult(event.target.value)}
+                  value={expectedResult}
+                />
+              </label>
+            )}
           </div>
 
           <section className="mt-5">
@@ -315,20 +338,28 @@ export function TestCaseEditPanel({
                   <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-sm font-semibold text-slate-600">
                     {index + 1}
                   </span>
-                  <input
-                    className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50"
-                    disabled={readOnly || saving}
-                    onChange={(event) => updateStep(index, 'description', event.target.value)}
-                    placeholder="Descrição do passo"
-                    value={step.description}
-                  />
-                  <input
-                    className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50"
-                    disabled={readOnly || saving}
-                    onChange={(event) => updateStep(index, 'expectedResult', event.target.value)}
-                    placeholder="Resultado esperado do passo"
-                    value={step.expectedResult}
-                  />
+                  {readOnly ? (
+                    <MarkdownContent className="min-h-10 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950" content={step.description} />
+                  ) : (
+                    <input
+                      className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50"
+                      disabled={saving}
+                      onChange={(event) => updateStep(index, 'description', event.target.value)}
+                      placeholder="Descrição do passo"
+                      value={step.description}
+                    />
+                  )}
+                  {readOnly ? (
+                    <MarkdownContent className="min-h-10 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-950" content={step.expectedResult} />
+                  ) : (
+                    <input
+                      className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-50"
+                      disabled={saving}
+                      onChange={(event) => updateStep(index, 'expectedResult', event.target.value)}
+                      placeholder="Resultado esperado do passo"
+                      value={step.expectedResult}
+                    />
+                  )}
                   <div className="flex h-10 items-center justify-end gap-1">
                     <button
                       className="rounded-lg p-2 text-slate-400 hover:bg-white hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-30"

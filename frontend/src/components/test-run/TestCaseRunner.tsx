@@ -15,6 +15,7 @@ import {
   X,
 } from 'lucide-react';
 import { ActionMenu } from '../ActionMenu';
+import { MarkdownContent } from '../MarkdownContent';
 import { TestResultStatusBadge } from '../badges';
 import { useAuthenticatedAttachmentUrl } from '../../hooks/useAuthenticatedAttachmentUrl';
 import {
@@ -189,9 +190,11 @@ export function TestCaseRunner({
             <h2 className="mt-3 text-base font-semibold tracking-normal text-slate-950">
               {testCase.title}
             </h2>
-            <p className="mt-2 text-sm text-slate-600">
-              {testCase.description || 'Nenhuma descrição registrada para este caso.'}
-            </p>
+            <MarkdownContent
+              className="mt-2 text-sm text-slate-600"
+              content={testCase.description}
+              fallback={<p className="mt-2 text-sm text-slate-600">Nenhuma descrição registrada para este caso.</p>}
+            />
           </div>
 
           <div className="grid gap-2 text-sm text-slate-600 sm:grid-cols-2 lg:min-w-72 lg:grid-cols-1">
@@ -231,11 +234,12 @@ export function TestCaseRunner({
                       {step.order}
                     </span>
                     <div className="min-w-0">
-                      <p className="text-sm text-slate-800">{step.description}</p>
+                      <MarkdownContent className="text-sm text-slate-800" content={step.description} />
                       {step.expectedResult ? (
-                        <p className="mt-1 text-xs text-slate-500">
-                          Esperado: {step.expectedResult}
-                        </p>
+                        <div className="mt-1 flex gap-1 text-xs text-slate-500">
+                          <span className="shrink-0">Esperado:</span>
+                          <MarkdownContent className="min-w-0" content={step.expectedResult} />
+                        </div>
                       ) : null}
                     </div>
                   </li>
@@ -252,9 +256,11 @@ export function TestCaseRunner({
             <h3 className="text-xs font-medium uppercase text-slate-500">
               Resultado esperado
             </h3>
-            <p className="mt-2 text-sm text-slate-700">
-              {testCase.expectedResult || 'Use os resultados esperados dos passos para verificação.'}
-            </p>
+            <MarkdownContent
+              className="mt-2 text-sm text-slate-700"
+              content={testCase.expectedResult}
+              fallback={<p className="mt-2 text-sm text-slate-700">Use os resultados esperados dos passos para verificação.</p>}
+            />
           </section>
 
           <section className="rounded-lg border border-slate-200 bg-slate-50 p-3">

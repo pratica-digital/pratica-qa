@@ -21,6 +21,7 @@ import {
 import { useCallback, useState } from 'react';
 import { useAuth } from '../auth/useAuth';
 import { useAuthenticatedAttachmentUrl } from '../hooks/useAuthenticatedAttachmentUrl';
+import { MarkdownContent } from '../components/MarkdownContent';
 import type { TestResult, TestResultAttachment, TestRun } from '../types/testRun';
 import { useTestRunReport } from "../hooks/useTestRunReport";
 import { testResultsApi } from '../lib/api';
@@ -409,7 +410,7 @@ function TestCaseAccordion({ result }: { result: TestResult }) {
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">
                 Descrição
               </p>
-              <p className="text-sm text-slate-700">{tc.description}</p>
+              <MarkdownContent className="text-sm text-slate-700" content={tc.description} />
             </div>
           )}
 
@@ -425,11 +426,12 @@ function TestCaseAccordion({ result }: { result: TestResult }) {
                       {step.order}
                     </span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-slate-700">{step.description}</p>
+                      <MarkdownContent className="text-slate-700" content={step.description} />
                       {step.expectedResult && (
-                        <p className="mt-1 text-xs text-slate-500 italic">
-                          Esperado: {step.expectedResult}
-                        </p>
+                        <div className="mt-1 flex gap-1 text-xs italic text-slate-500">
+                          <span className="shrink-0">Esperado:</span>
+                          <MarkdownContent content={step.expectedResult} />
+                        </div>
                       )}
                     </div>
                   </li>
@@ -443,7 +445,7 @@ function TestCaseAccordion({ result }: { result: TestResult }) {
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-1">
                 Resultado Esperado
               </p>
-              <p className="text-sm text-slate-700">{tc.expectedResult}</p>
+              <MarkdownContent className="text-sm text-slate-700" content={tc.expectedResult} />
             </div>
           )}
 
