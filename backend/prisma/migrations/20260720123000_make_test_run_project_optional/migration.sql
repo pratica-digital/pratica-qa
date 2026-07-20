@@ -1,0 +1,2 @@
+ALTER TABLE "test_runs"
+ALTER COLUMN "projectId" DROP NOT NULL;

@@ -111,6 +111,15 @@ export class TestSuitesRepository {
     });
   }
 
+  countByIds(ids: string[]) {
+    return this.prisma.testSuite.count({
+      where: {
+        id: { in: ids },
+        deletedAt: null,
+      },
+    });
+  }
+
   update(id: string, dto: UpdateTestSuiteDto) {
     return this.prisma.testSuite.update({
       where: { id },

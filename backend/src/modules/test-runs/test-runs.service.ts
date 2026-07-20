@@ -35,6 +35,8 @@ export class TestRunsService {
   ) {}
 
   async create(dto: CreateTestRunDto) {
+    let resolvedProjectId = dto.projectId;
+
     if (dto.testPlanId) {
       const testPlan = await this.testPlansRepository.findById(dto.testPlanId);
 
@@ -42,25 +44,36 @@ export class TestRunsService {
         throw new NotFoundException('Test plan not found');
       }
 
-      if (testPlan.projectId !== dto.projectId) {
+      if (resolvedProjectId && testPlan.projectId !== resolvedProjectId) {
         throw new BadRequestException('Test plan does not belong to the project');
       }
+
+      resolvedProjectId ??= testPlan.projectId;
     }
 
     const suiteAssignments = this.buildSuiteAssignments(dto);
     const suiteIds = suiteAssignments.map((assignment) => assignment.suiteId);
 
     if (suiteIds.length > 0) {
-      const suiteCount = await this.testSuitesRepository.countByIdsInProject(suiteIds, dto.projectId);
+      const suiteCount = resolvedProjectId
+        ? await this.testSuitesRepository.countByIdsInProject(suiteIds, resolvedProjectId)
+        : await this.testSuitesRepository.countByIds(suiteIds);
 
       if (suiteCount !== suiteIds.length) {
-        throw new BadRequestException('All test suites must belong to the project');
+        throw new BadRequestException(
+          resolvedProjectId
+            ? 'All test suites must belong to the project'
+            : 'One or more test suites were not found',
+        );
       }
     }
 
     await this.ensureAssignableUser(dto.assignedToId);
 
-    return this.testRunsRepository.create(dto, suiteAssignments);
+    return this.testRunsRepository.create(
+      { ...dto, projectId: resolvedProjectId },
+      suiteAssignments,
+    );
   }
 
   async findAll(query: QueryTestRunsDto) {
