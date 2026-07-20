@@ -46,21 +46,29 @@ export class TestCasesRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   create(dto: CreateTestCaseDto) {
-    return this.prisma.testCase.create({
-      data: {
-        suiteId: dto.suiteId,
-        title: dto.title,
-        description: dto.description ?? '',
-        preconditions: dto.preconditions ?? '',
-        expectedResult: dto.expectedResult ?? '',
-        section: dto.section ?? '',
-        status: dto.status,
-        priority: dto.priority,
-        severity: dto.severity,
-        tags: dto.tags ?? [],
-        steps: this.toNestedSteps(dto.steps),
-      },
-      include: TEST_CASE_INCLUDE,
+    return this.prisma.$transaction(async (tx) => {
+      const lastCase = await tx.testCase.aggregate({
+        where: { suiteId: dto.suiteId },
+        _max: { position: true },
+      });
+
+      return tx.testCase.create({
+        data: {
+          suiteId: dto.suiteId,
+          position: (lastCase._max.position ?? 0) + 1,
+          title: dto.title,
+          description: dto.description ?? '',
+          preconditions: dto.preconditions ?? '',
+          expectedResult: dto.expectedResult ?? '',
+          section: dto.section ?? '',
+          status: dto.status,
+          priority: dto.priority,
+          severity: dto.severity,
+          tags: dto.tags ?? [],
+          steps: this.toNestedSteps(dto.steps),
+        },
+        include: TEST_CASE_INCLUDE,
+      });
     });
   }
 
@@ -69,7 +77,7 @@ export class TestCasesRepository {
       where: this.buildWhere(params),
       skip: params.skip,
       take: params.take,
-      orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }],
+      orderBy: [{ suite: { position: 'asc' } }, { position: 'asc' }, { id: 'asc' }],
       include: TEST_CASE_INCLUDE,
     });
   }
@@ -91,25 +99,39 @@ export class TestCasesRepository {
     });
   }
 
-  update(id: string, dto: UpdateTestCaseDto) {
+  async update(id: string, dto: UpdateTestCaseDto) {
     const shouldIncrementVersion = Object.keys(dto).length > 0;
 
-    return this.prisma.testCase.update({
-      where: { id },
-      data: {
-        suiteId: dto.suiteId,
-        title: dto.title,
-        description: dto.description,
-        preconditions: dto.preconditions,
-        expectedResult: dto.expectedResult,
-        section: dto.section,
-        status: dto.status,
-        priority: dto.priority,
-        severity: dto.severity,
-        tags: dto.tags,
-        version: shouldIncrementVersion ? { increment: 1 } : undefined,
-      },
-      include: TEST_CASE_INCLUDE,
+    return this.prisma.$transaction(async (tx) => {
+      const current = await tx.testCase.findUniqueOrThrow({ where: { id } });
+      let position: number | undefined;
+
+      if (dto.suiteId && dto.suiteId !== current.suiteId) {
+        const lastCase = await tx.testCase.aggregate({
+          where: { suiteId: dto.suiteId },
+          _max: { position: true },
+        });
+        position = (lastCase._max.position ?? 0) + 1;
+      }
+
+      return tx.testCase.update({
+        where: { id },
+        data: {
+          suiteId: dto.suiteId,
+          position,
+          title: dto.title,
+          description: dto.description,
+          preconditions: dto.preconditions,
+          expectedResult: dto.expectedResult,
+          section: dto.section,
+          status: dto.status,
+          priority: dto.priority,
+          severity: dto.severity,
+          tags: dto.tags,
+          version: shouldIncrementVersion ? { increment: 1 } : undefined,
+        },
+        include: TEST_CASE_INCLUDE,
+      });
     });
   }
 
@@ -144,28 +166,37 @@ export class TestCasesRepository {
       return null;
     }
 
-    return this.prisma.testCase.create({
-      data: {
-        suiteId: dto.suiteId ?? source.suiteId,
-        clonedFromId: source.id,
-        title: dto.title ?? `${source.title} (copy)`,
-        description: source.description,
-        preconditions: source.preconditions,
-        expectedResult: source.expectedResult,
-        section: source.section,
-        status: source.status,
-        priority: source.priority,
-        severity: source.severity,
-        tags: source.tags,
-        steps: {
-          create: source.steps.map((step) => ({
-            order: step.order,
-            description: step.description,
-            expectedResult: step.expectedResult,
-          })),
+    return this.prisma.$transaction(async (tx) => {
+      const suiteId = dto.suiteId ?? source.suiteId;
+      const lastCase = await tx.testCase.aggregate({
+        where: { suiteId },
+        _max: { position: true },
+      });
+
+      return tx.testCase.create({
+        data: {
+          suiteId,
+          position: (lastCase._max.position ?? 0) + 1,
+          clonedFromId: source.id,
+          title: dto.title ?? `${source.title} (copy)`,
+          description: source.description,
+          preconditions: source.preconditions,
+          expectedResult: source.expectedResult,
+          section: source.section,
+          status: source.status,
+          priority: source.priority,
+          severity: source.severity,
+          tags: source.tags,
+          steps: {
+            create: source.steps.map((step) => ({
+              order: step.order,
+              description: step.description,
+              expectedResult: step.expectedResult,
+            })),
+          },
         },
-      },
-      include: TEST_CASE_INCLUDE,
+        include: TEST_CASE_INCLUDE,
+      });
     });
   }
 

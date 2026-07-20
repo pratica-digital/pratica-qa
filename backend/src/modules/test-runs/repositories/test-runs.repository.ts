@@ -74,6 +74,7 @@ const TEST_RUN_INCLUDE = {
           id: true,
           title: true,
           suiteId: true,
+          position: true,
           description: true,
           expectedResult: true,
           priority: true,
@@ -135,9 +136,7 @@ const TEST_RUN_INCLUDE = {
         },
       },
     },
-    orderBy: {
-      createdAt: 'asc',
-    },
+    orderBy: [{ position: 'asc' }, { id: 'asc' }],
   },
 } satisfies Prisma.TestRunInclude;
 
@@ -172,8 +171,19 @@ export class TestRunsRepository {
             deletedAt: null,
           },
         },
-        select: { id: true },
-        orderBy: [{ suiteId: 'asc' }, { title: 'asc' }],
+        select: { id: true, position: true, suiteId: true },
+        orderBy: [{ position: 'asc' }, { id: 'asc' }],
+      });
+
+      const suitePositionById = new Map(
+        suiteAssignments.map((assignment, index) => [assignment.suiteId, index]),
+      );
+      const orderedTestCases = [...testCases].sort((left, right) => {
+        const suiteDifference =
+          (suitePositionById.get(left.suiteId) ?? Number.MAX_SAFE_INTEGER) -
+          (suitePositionById.get(right.suiteId) ?? Number.MAX_SAFE_INTEGER);
+
+        return suiteDifference || left.position - right.position || left.id.localeCompare(right.id);
       });
 
       const testRun = await tx.testRun.create({
@@ -194,11 +204,12 @@ export class TestRunsRepository {
         },
       });
 
-      if (testCases.length > 0) {
+      if (orderedTestCases.length > 0) {
         await tx.testResult.createMany({
-          data: testCases.map((testCase) => ({
+          data: orderedTestCases.map((testCase, index) => ({
             testRunId: testRun.id,
             testCaseId: testCase.id,
+            position: index + 1,
             status: TestResultStatus.PENDING,
           })),
         });
@@ -328,9 +339,7 @@ export class TestRunsRepository {
     }
 
     const nextComment = dto.comment ?? testResult.comment;
-    const changed =
-      testResult.status !== dto.status ||
-      testResult.comment !== nextComment;
+    const changed = testResult.status !== dto.status || testResult.comment !== nextComment;
 
     const updatedResult = await this.prisma.testResult.update({
       where: { id: testResult.id },

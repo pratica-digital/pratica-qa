@@ -50,6 +50,7 @@ model TestCase {
   preconditions  String                 @default("")
   expectedResult String                 @default("")
   section        String                 @default("")
+  position       Int                    @default(0)
   status         TestCaseStatus         @default(ACTIVE)
   priority       TestPriority           @default(MEDIUM)
   severity       TestSeverity           @default(MEDIUM)
@@ -67,6 +68,7 @@ model TestCase {
   requirements   Requirement[]          @relation("RequirementToTestCase")
 
   @@index([suiteId])
+  @@index([suiteId, position])
   @@index([suiteId, section])
   @@index([status])
   @@index([priority])
@@ -165,6 +167,7 @@ model TestResult {
   executedById           String?                @db.Uuid
   lastModifiedById       String?                @db.Uuid
   status                 TestResultStatus       @default(PENDING)
+  position               Int                    @default(0)
   comment                String                 @default("")
   titleOverride          String?
   descriptionOverride    String?
@@ -188,6 +191,7 @@ model TestResult {
 
   @@unique([testRunId, testCaseId])
   @@index([testCaseId])
+  @@index([testRunId, position])
   @@index([status])
   @@index([lastModifiedById])
   @@index([shortcutStoryId])

@@ -31,14 +31,14 @@ import type {
   UpdateTestResultPayload,
   UpdateTestSuitePayload,
   UpdateUserPayload,
-} from '../types/testRun';
-import { collectAllPages } from './pagination';
+} from "../types/testRun";
+import { collectAllPages } from "./pagination";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, '');
+const API_BASE_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, "");
 
 function getApiBaseUrl() {
   if (!API_BASE_URL) {
-    throw new Error('VITE_API_URL is required');
+    throw new Error("VITE_API_URL is required");
   }
 
   return API_BASE_URL;
@@ -53,7 +53,7 @@ type RequestOptions = {
 
 type LoginResponse = {
   accessToken: string;
-  tokenType: 'Bearer';
+  tokenType: "Bearer";
   user: AuthUser;
 };
 
@@ -66,24 +66,24 @@ export class ApiError extends Error {
 
   constructor(message: string, status: number) {
     super(message);
-    this.name = 'ApiError';
+    this.name = "ApiError";
     this.status = status;
   }
 }
 
 function buildUrl(path: string) {
-  if (path.startsWith('http')) {
+  if (path.startsWith("http")) {
     return path;
   }
 
-  return `${getApiBaseUrl()}${path.startsWith('/') ? path : `/${path}`}`;
+  return `${getApiBaseUrl()}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
 function buildQuery(params: Record<string, string | number | undefined>) {
   const query = new URLSearchParams();
 
   Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== '') {
+    if (value !== undefined && value !== "") {
       query.set(key, String(value));
     }
   });
@@ -91,7 +91,10 @@ function buildQuery(params: Record<string, string | number | undefined>) {
   return query.toString();
 }
 
-function withQuery(path: string, params: Record<string, string | number | undefined> = {}) {
+function withQuery(
+  path: string,
+  params: Record<string, string | number | undefined> = {},
+) {
   const query = buildQuery(params);
   return query ? `${path}?${query}` : path;
 }
@@ -101,7 +104,7 @@ async function readErrorMessage(response: Response) {
     const data = (await response.json()) as { message?: string | string[] };
 
     if (Array.isArray(data.message)) {
-      return data.message.join(', ');
+      return data.message.join(", ");
     }
 
     return data.message ?? `Request failed with status ${response.status}`;
@@ -111,21 +114,24 @@ async function readErrorMessage(response: Response) {
 }
 
 function isFormData(body: unknown): body is FormData {
-  return typeof FormData !== 'undefined' && body instanceof FormData;
+  return typeof FormData !== "undefined" && body instanceof FormData;
 }
 
-export async function apiRequest<T>(path: string, options: RequestOptions = {}) {
+export async function apiRequest<T>(
+  path: string,
+  options: RequestOptions = {},
+) {
   const headers = new Headers();
   const body = options.body;
   const formDataBody = isFormData(body);
   let requestBody: BodyInit | undefined;
 
   if (body !== undefined && !formDataBody) {
-    headers.set('Content-Type', 'application/json');
+    headers.set("Content-Type", "application/json");
   }
 
   if (options.token) {
-    headers.set('Authorization', `Bearer ${options.token}`);
+    headers.set("Authorization", `Bearer ${options.token}`);
   }
 
   if (formDataBody) {
@@ -135,7 +141,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}) 
   }
 
   const response = await fetch(buildUrl(path), {
-    method: options.method ?? 'GET',
+    method: options.method ?? "GET",
     headers,
     body: requestBody,
     signal: options.signal,
@@ -154,7 +160,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}) 
 
 export function resolveApiAssetUrl(value?: string | null) {
   if (!value) {
-    return '';
+    return "";
   }
 
   if (/^(https?:|data:|blob:)/.test(value)) {
@@ -162,44 +168,48 @@ export function resolveApiAssetUrl(value?: string | null) {
   }
 
   const apiOrigin = new URL(getApiBaseUrl(), window.location.origin).origin;
-  return `${apiOrigin}${value.startsWith('/') ? value : `/${value}`}`;
+  return `${apiOrigin}${value.startsWith("/") ? value : `/${value}`}`;
 }
 
-function projectPayloadToFormData(payload: CreateProjectPayload | UpdateProjectPayload) {
+function projectPayloadToFormData(
+  payload: CreateProjectPayload | UpdateProjectPayload,
+) {
   const formData = new FormData();
 
-  if ('name' in payload && payload.name !== undefined) {
-    formData.set('name', payload.name);
+  if ("name" in payload && payload.name !== undefined) {
+    formData.set("name", payload.name);
   }
 
-  if ('key' in payload && payload.key !== undefined) {
-    formData.set('key', payload.key);
+  if ("key" in payload && payload.key !== undefined) {
+    formData.set("key", payload.key);
   }
 
-  if ('description' in payload && payload.description !== undefined) {
-    formData.set('description', payload.description);
+  if ("description" in payload && payload.description !== undefined) {
+    formData.set("description", payload.description);
   }
 
-  if ('status' in payload && payload.status !== undefined) {
-    formData.set('status', payload.status);
+  if ("status" in payload && payload.status !== undefined) {
+    formData.set("status", payload.status);
   }
 
-  if ('category' in payload && payload.category !== undefined) {
-    formData.set('category', payload.category);
+  if ("category" in payload && payload.category !== undefined) {
+    formData.set("category", payload.category);
   }
 
-  if ('removeImage' in payload && payload.removeImage !== undefined) {
-    formData.set('removeImage', String(payload.removeImage));
+  if ("removeImage" in payload && payload.removeImage !== undefined) {
+    formData.set("removeImage", String(payload.removeImage));
   }
 
-  if ('imageFile' in payload && payload.imageFile) {
-    formData.set('image', payload.imageFile);
+  if ("imageFile" in payload && payload.imageFile) {
+    formData.set("image", payload.imageFile);
   }
 
   return formData;
 }
 
-function unwrapPage<T>(response: T[] | PaginatedResponse<T>): PaginatedResponse<T> {
+function unwrapPage<T>(
+  response: T[] | PaginatedResponse<T>,
+): PaginatedResponse<T> {
   if (Array.isArray(response)) {
     return {
       data: response,
@@ -216,165 +226,216 @@ function unwrapPage<T>(response: T[] | PaginatedResponse<T>): PaginatedResponse<
 
 export const authApi = {
   login: (email: string, password: string) =>
-    apiRequest<LoginResponse>('/auth/login', {
-      method: 'POST',
+    apiRequest<LoginResponse>("/auth/login", {
+      method: "POST",
       body: { email, password },
     }),
-  me: (token: string) => apiRequest<AuthUser>('/users/me', { token }),
-  changePassword: (token: string, currentPassword: string, newPassword: string) =>
-    apiRequest<AuthUser>('/auth/change-password', {
-      method: 'POST',
+  me: (token: string) => apiRequest<AuthUser>("/users/me", { token }),
+  changePassword: (
+    token: string,
+    currentPassword: string,
+    newPassword: string,
+  ) =>
+    apiRequest<AuthUser>("/auth/change-password", {
+      method: "POST",
       token,
       body: { currentPassword, newPassword },
     }),
   requestPasswordRecovery: (email: string) =>
-    apiRequest<PasswordRecoveryResponse>('/auth/password-recovery', {
-      method: 'POST',
+    apiRequest<PasswordRecoveryResponse>("/auth/password-recovery", {
+      method: "POST",
       body: { email },
     }),
   resetPassword: (email: string, token: string, newPassword: string) =>
-    apiRequest<AuthUser>('/auth/password-reset', {
-      method: 'POST',
+    apiRequest<AuthUser>("/auth/password-reset", {
+      method: "POST",
       body: { email, token, newPassword },
     }),
 };
 
 export const usersApi = {
-  list: async (token: string) => collectAllPages(async (page) => {
-    return unwrapPage(await apiRequest<AuthUser[] | PaginatedResponse<AuthUser>>(
-      withQuery('/users', { page, limit: 100 }),
-      { token },
-    ));
-  }),
+  list: async (token: string) =>
+    collectAllPages(async (page) => {
+      return unwrapPage(
+        await apiRequest<AuthUser[] | PaginatedResponse<AuthUser>>(
+          withQuery("/users", { page, limit: 100 }),
+          { token },
+        ),
+      );
+    }),
   create: (token: string, payload: CreateUserPayload) =>
-    apiRequest<UserEmailNotificationResponse>('/users', {
-      method: 'POST',
+    apiRequest<UserEmailNotificationResponse>("/users", {
+      method: "POST",
       token,
       body: payload,
     }),
   update: (token: string, userId: string, payload: UpdateUserPayload) =>
     apiRequest<AuthUser>(`/users/${userId}`, {
-      method: 'PATCH',
+      method: "PATCH",
       token,
       body: payload,
     }),
-  updateMe: (token: string, payload: Pick<CreateUserPayload, 'name' | 'email'>) =>
-    apiRequest<AuthUser>('/users/me', {
-      method: 'PATCH',
+  updateMe: (
+    token: string,
+    payload: Pick<CreateUserPayload, "name" | "email">,
+  ) =>
+    apiRequest<AuthUser>("/users/me", {
+      method: "PATCH",
       token,
       body: payload,
     }),
   activate: (token: string, userId: string) =>
     apiRequest<AuthUser>(`/users/${userId}/activate`, {
-      method: 'POST',
+      method: "POST",
       token,
     }),
   deactivate: (token: string, userId: string) =>
     apiRequest<AuthUser>(`/users/${userId}/deactivate`, {
-      method: 'POST',
+      method: "POST",
       token,
     }),
   resetPassword: (token: string, userId: string) =>
-    apiRequest<UserEmailNotificationResponse>(`/users/${userId}/reset-password`, {
-      method: 'POST',
-      token,
-    }),
+    apiRequest<UserEmailNotificationResponse>(
+      `/users/${userId}/reset-password`,
+      {
+        method: "POST",
+        token,
+      },
+    ),
 };
 
 export const projectsApi = {
   listPage: async (
     token: string,
-    params: { search?: string; status?: string; page?: number; limit?: number } = {},
+    params: {
+      search?: string;
+      status?: string;
+      page?: number;
+      limit?: number;
+    } = {},
   ) => {
-    const response = await apiRequest<ProjectSummary[] | PaginatedResponse<ProjectSummary>>(
-      withQuery('/projects', { ...params, limit: params.limit ?? 100 }),
-      {
-        token,
-      },
-    );
+    const response = await apiRequest<
+      ProjectSummary[] | PaginatedResponse<ProjectSummary>
+    >(withQuery("/projects", { ...params, limit: params.limit ?? 100 }), {
+      token,
+    });
 
     return unwrapPage(response);
   },
-  list: async (token: string) => collectAllPages((page) => projectsApi.listPage(token, {
-    page,
-    limit: 100,
-  })),
+  list: async (token: string) =>
+    collectAllPages((page) =>
+      projectsApi.listPage(token, {
+        page,
+        limit: 100,
+      }),
+    ),
   get: (token: string, projectId: string) =>
     apiRequest<ProjectSummary>(`/projects/${projectId}`, { token }),
   create: (token: string, payload: CreateProjectPayload) =>
-    apiRequest<ProjectSummary>('/projects', {
-      method: 'POST',
+    apiRequest<ProjectSummary>("/projects", {
+      method: "POST",
       token,
       body: projectPayloadToFormData(payload),
     }),
   update: (token: string, projectId: string, payload: UpdateProjectPayload) =>
     apiRequest<ProjectSummary>(`/projects/${projectId}`, {
-      method: 'PATCH',
+      method: "PATCH",
       token,
       body: projectPayloadToFormData(payload),
     }),
   remove: (token: string, projectId: string) =>
     apiRequest<void>(`/projects/${projectId}`, {
-      method: 'DELETE',
+      method: "DELETE",
       token,
     }),
 };
 
 export const reportsApi = {
-  dashboardAnalytics: (token: string, period: DashboardPeriod = '12m') =>
-    apiRequest<DashboardAnalytics>(withQuery('/reports/dashboard-analytics', { period }), {
-      token,
-    }),
+  dashboardAnalytics: (token: string, period: DashboardPeriod = "12m") =>
+    apiRequest<DashboardAnalytics>(
+      withQuery("/reports/dashboard-analytics", { period }),
+      {
+        token,
+      },
+    ),
 };
 
 export const testSuitesApi = {
   listPage: async (
     token: string,
-    params: { projectId?: string; search?: string; page?: number; limit?: number } = {},
+    params: {
+      projectId?: string;
+      search?: string;
+      page?: number;
+      limit?: number;
+    } = {},
   ) => {
-    const response = await apiRequest<ManagedTestSuite[] | PaginatedResponse<ManagedTestSuite>>(
-      withQuery('/test-suites', { ...params, limit: params.limit ?? 100 }),
-      {
-        token,
-      },
-    );
+    const response = await apiRequest<
+      ManagedTestSuite[] | PaginatedResponse<ManagedTestSuite>
+    >(withQuery("/test-suites", { ...params, limit: params.limit ?? 100 }), {
+      token,
+    });
 
     return unwrapPage(response);
   },
   list: async (
     token: string,
     params: { projectId?: string; search?: string; limit?: number } = {},
-  ) => collectAllPages(async (page) => {
-    const response = await apiRequest<ManagedTestSuite[] | PaginatedResponse<ManagedTestSuite>>(
-      withQuery('/test-suites', { ...params, page, limit: params.limit ?? 100 }),
-      { token },
-    );
+  ) =>
+    collectAllPages(async (page) => {
+      const response = await apiRequest<
+        ManagedTestSuite[] | PaginatedResponse<ManagedTestSuite>
+      >(
+        withQuery("/test-suites", {
+          ...params,
+          page,
+          limit: params.limit ?? 100,
+        }),
+        { token },
+      );
 
-    return unwrapPage(response);
-  }),
+      return unwrapPage(response);
+    }),
   get: (token: string, testSuiteId: string) =>
     apiRequest<ManagedTestSuite>(`/test-suites/${testSuiteId}`, { token }),
   create: (token: string, payload: CreateTestSuitePayload) =>
-    apiRequest<ManagedTestSuite>('/test-suites', {
-      method: 'POST',
+    apiRequest<ManagedTestSuite>("/test-suites", {
+      method: "POST",
       token,
       body: payload,
     }),
-  update: (token: string, testSuiteId: string, payload: UpdateTestSuitePayload) =>
+  update: (
+    token: string,
+    testSuiteId: string,
+    payload: UpdateTestSuitePayload,
+  ) =>
     apiRequest<ManagedTestSuite>(`/test-suites/${testSuiteId}`, {
-      method: 'PATCH',
+      method: "PATCH",
       token,
       body: payload,
     }),
-  importCases: (token: string, testSuiteId: string, payload: ImportTestCasesPayload) =>
-    apiRequest<ImportTestCasesReport>(`/test-suites/${testSuiteId}/import-cases`, {
-      method: 'POST',
+  reorderCases: (token: string, testSuiteId: string, caseIds: string[]) =>
+    apiRequest<ManagedTestSuite>(`/test-suites/${testSuiteId}/cases/order`, {
+      method: "PUT",
       token,
-      body: payload,
+      body: { caseIds },
     }),
+  importCases: (
+    token: string,
+    testSuiteId: string,
+    payload: ImportTestCasesPayload,
+  ) =>
+    apiRequest<ImportTestCasesReport>(
+      `/test-suites/${testSuiteId}/import-cases`,
+      {
+        method: "POST",
+        token,
+        body: payload,
+      },
+    ),
   remove: (token: string, testSuiteId: string) =>
     apiRequest<void>(`/test-suites/${testSuiteId}`, {
-      method: 'DELETE',
+      method: "DELETE",
       token,
     }),
 };
@@ -382,10 +443,16 @@ export const testSuitesApi = {
 export const testPlansApi = {
   listPage: async (
     token: string,
-    params: { projectId?: string; search?: string; version?: string; page?: number; limit?: number } = {},
+    params: {
+      projectId?: string;
+      search?: string;
+      version?: string;
+      page?: number;
+      limit?: number;
+    } = {},
   ) => {
     const response = await apiRequest<TestPlan[] | PaginatedResponse<TestPlan>>(
-      withQuery('/test-plans', { ...params, limit: params.limit ?? 100 }),
+      withQuery("/test-plans", { ...params, limit: params.limit ?? 100 }),
       {
         token,
       },
@@ -395,25 +462,33 @@ export const testPlansApi = {
   },
   list: async (
     token: string,
-    params: { projectId?: string; search?: string; version?: string; limit?: number } = {},
-  ) => collectAllPages((page) => testPlansApi.listPage(token, { ...params, page })),
+    params: {
+      projectId?: string;
+      search?: string;
+      version?: string;
+      limit?: number;
+    } = {},
+  ) =>
+    collectAllPages((page) =>
+      testPlansApi.listPage(token, { ...params, page }),
+    ),
   get: (token: string, testPlanId: string) =>
     apiRequest<TestPlan>(`/test-plans/${testPlanId}`, { token }),
   create: (token: string, payload: CreateTestPlanPayload) =>
-    apiRequest<TestPlan>('/test-plans', {
-      method: 'POST',
+    apiRequest<TestPlan>("/test-plans", {
+      method: "POST",
       token,
       body: payload,
     }),
   update: (token: string, testPlanId: string, payload: UpdateTestPlanPayload) =>
     apiRequest<TestPlan>(`/test-plans/${testPlanId}`, {
-      method: 'PATCH',
+      method: "PATCH",
       token,
       body: payload,
     }),
   remove: (token: string, testPlanId: string) =>
     apiRequest<void>(`/test-plans/${testPlanId}`, {
-      method: 'DELETE',
+      method: "DELETE",
       token,
     }),
 };
@@ -432,12 +507,11 @@ export const testCasesApi = {
       limit?: number;
     } = {},
   ) => {
-    const response = await apiRequest<ManagedTestCase[] | PaginatedResponse<ManagedTestCase>>(
-      withQuery('/test-cases', { ...params, limit: params.limit ?? 100 }),
-      {
-        token,
-      },
-    );
+    const response = await apiRequest<
+      ManagedTestCase[] | PaginatedResponse<ManagedTestCase>
+    >(withQuery("/test-cases", { ...params, limit: params.limit ?? 100 }), {
+      token,
+    });
 
     return unwrapPage(response);
   },
@@ -452,49 +526,61 @@ export const testCasesApi = {
       severity?: string;
       limit?: number;
     } = {},
-  ) => collectAllPages(async (page) => {
-    const response = await apiRequest<ManagedTestCase[] | PaginatedResponse<ManagedTestCase>>(
-      withQuery('/test-cases', { ...params, page, limit: params.limit ?? 100 }),
-      { token },
-    );
+  ) =>
+    collectAllPages(async (page) => {
+      const response = await apiRequest<
+        ManagedTestCase[] | PaginatedResponse<ManagedTestCase>
+      >(
+        withQuery("/test-cases", {
+          ...params,
+          page,
+          limit: params.limit ?? 100,
+        }),
+        { token },
+      );
 
-    return unwrapPage(response);
-  }),
+      return unwrapPage(response);
+    }),
   get: (token: string, testCaseId: string) =>
     apiRequest<ManagedTestCase>(`/test-cases/${testCaseId}`, { token }),
   create: (token: string, payload: CreateTestCasePayload) =>
-    apiRequest<ManagedTestCase>('/test-cases', {
-      method: 'POST',
+    apiRequest<ManagedTestCase>("/test-cases", {
+      method: "POST",
       token,
       body: payload,
     }),
   update: (token: string, testCaseId: string, payload: UpdateTestCasePayload) =>
     apiRequest<ManagedTestCase>(`/test-cases/${testCaseId}`, {
-      method: 'PATCH',
+      method: "PATCH",
       token,
       body: payload,
     }),
-  replaceSteps: (token: string, testCaseId: string, payload: ReplaceTestStepsPayload) =>
+  replaceSteps: (
+    token: string,
+    testCaseId: string,
+    payload: ReplaceTestStepsPayload,
+  ) =>
     apiRequest<ManagedTestCase>(`/test-cases/${testCaseId}/steps`, {
-      method: 'PUT',
+      method: "PUT",
       token,
       body: payload,
     }),
   remove: (token: string, testCaseId: string) =>
     apiRequest<void>(`/test-cases/${testCaseId}`, {
-      method: 'DELETE',
+      method: "DELETE",
       token,
     }),
 };
 
 export const testRunsApi = {
   create: (token: string, payload: CreateTestRunPayload) =>
-    apiRequest<TestRun>('/test-runs', {
-      method: 'POST',
+    apiRequest<TestRun>("/test-runs", {
+      method: "POST",
       token,
       body: payload,
     }),
-  assignableUsers: (token: string) => apiRequest<AuthUser[]>('/test-runs/assignable-users', { token }),
+  assignableUsers: (token: string) =>
+    apiRequest<AuthUser[]>("/test-runs/assignable-users", { token }),
   listPage: async (
     token: string,
     params: {
@@ -507,7 +593,7 @@ export const testRunsApi = {
     } = {},
   ) => {
     const response = await apiRequest<TestRun[] | PaginatedResponse<TestRun>>(
-      withQuery('/test-runs', { ...params, limit: params.limit ?? 100 }),
+      withQuery("/test-runs", { ...params, limit: params.limit ?? 100 }),
       {
         token,
       },
@@ -517,19 +603,26 @@ export const testRunsApi = {
   },
   list: async (
     token: string,
-    params: { projectId?: string; testPlanId?: string; search?: string; status?: string; limit?: number } = {},
-  ) => collectAllPages((page) => testRunsApi.listPage(token, { ...params, page })),
+    params: {
+      projectId?: string;
+      testPlanId?: string;
+      search?: string;
+      status?: string;
+      limit?: number;
+    } = {},
+  ) =>
+    collectAllPages((page) => testRunsApi.listPage(token, { ...params, page })),
   get: (token: string, testRunId: string) =>
     apiRequest<TestRun>(`/test-runs/${testRunId}`, { token }),
   assign: (token: string, testRunId: string, assignedToId: string) =>
     apiRequest<TestRun>(`/test-runs/${testRunId}/assign`, {
-      method: 'POST',
+      method: "POST",
       token,
       body: { assignedToId },
     }),
   remove: (token: string, testRunId: string) =>
     apiRequest<void>(`/test-runs/${testRunId}`, {
-      method: 'DELETE',
+      method: "DELETE",
       token,
     }),
 };
@@ -537,46 +630,62 @@ export const testRunsApi = {
 export const testResultsApi = {
   listPage: async (
     token: string,
-    params: { testRunId?: string; testCaseId?: string; status?: string; page?: number; limit?: number } = {},
+    params: {
+      testRunId?: string;
+      testCaseId?: string;
+      status?: string;
+      page?: number;
+      limit?: number;
+    } = {},
   ) => {
-    const response = await apiRequest<TestResult[] | PaginatedResponse<TestResult>>(
-      withQuery('/test-results', { ...params, limit: params.limit ?? 100 }),
-      {
-        token,
-      },
-    );
+    const response = await apiRequest<
+      TestResult[] | PaginatedResponse<TestResult>
+    >(withQuery("/test-results", { ...params, limit: params.limit ?? 100 }), {
+      token,
+    });
 
     return unwrapPage(response);
   },
   update: (token: string, resultId: string, payload: UpdateTestResultPayload) =>
     apiRequest<TestResult>(`/test-results/${resultId}`, {
-      method: 'PATCH',
+      method: "PATCH",
       token,
       body: payload,
     }),
-  uploadAttachments: (token: string, resultId: string, files: File[], testStepId?: string) => {
+  uploadAttachments: (
+    token: string,
+    resultId: string,
+    files: File[],
+    testStepId?: string,
+  ) => {
     const formData = new FormData();
 
-    files.forEach((file) => formData.append('attachments', file));
+    files.forEach((file) => formData.append("attachments", file));
     if (testStepId) {
-      formData.set('testStepId', testStepId);
+      formData.set("testStepId", testStepId);
     }
 
     return apiRequest<TestResult>(`/test-results/${resultId}/attachments`, {
-      method: 'POST',
+      method: "POST",
       token,
       body: formData,
     });
   },
   removeAttachment: (token: string, resultId: string, attachmentId: string) =>
-    apiRequest<TestResult>(`/test-results/${resultId}/attachments/${attachmentId}`, {
-      method: 'DELETE',
-      token,
-    }),
+    apiRequest<TestResult>(
+      `/test-results/${resultId}/attachments/${attachmentId}`,
+      {
+        method: "DELETE",
+        token,
+      },
+    ),
   getAttachmentBlob: async (token: string, attachmentId: string) => {
-    const response = await fetch(buildUrl(`/test-results/attachments/${attachmentId}/content`), {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const response = await fetch(
+      buildUrl(`/test-results/attachments/${attachmentId}/content`),
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
 
     if (!response.ok) {
       throw new ApiError(await readErrorMessage(response), response.status);
@@ -586,31 +695,33 @@ export const testResultsApi = {
   },
   remove: (token: string, resultId: string) =>
     apiRequest<TestResult>(`/test-results/${resultId}`, {
-      method: 'DELETE',
+      method: "DELETE",
       token,
     }),
-
 };
 
 export const aiTestGeneratorApi = {
   extract: (token: string, file: File) => {
     const formData = new FormData();
-    formData.set('file', file);
+    formData.set("file", file);
 
-    return apiRequest<AiExtractedRelease>('/ai-test-generator/extract', {
-      method: 'POST',
+    return apiRequest<AiExtractedRelease>("/ai-test-generator/extract", {
+      method: "POST",
       token,
       body: formData,
     });
   },
-  analyze: (token: string, payload: { releaseNotes: string; releaseTitle?: string; fileName?: string }) =>
+  analyze: (
+    token: string,
+    payload: { releaseNotes: string; releaseTitle?: string; fileName?: string },
+  ) =>
     apiRequest<{
       releaseHash: string;
       provider: string;
       model: string;
       analysis: AiReleaseAnalysis;
-    }>('/ai-test-generator/analyze', {
-      method: 'POST',
+    }>("/ai-test-generator/analyze", {
+      method: "POST",
       token,
       body: payload,
     }),
@@ -624,21 +735,26 @@ export const aiTestGeneratorApi = {
       analysis?: AiReleaseAnalysis;
     },
   ) =>
-    apiRequest<AiGenerationRecord>('/ai-test-generator/generate', {
-      method: 'POST',
+    apiRequest<AiGenerationRecord>("/ai-test-generator/generate", {
+      method: "POST",
       token,
       body: payload,
     }),
   runAction: (
     token: string,
     payload: {
-      action: 'improve' | 'negative-cases' | 'regression' | 'test-data' | 'explain-change';
+      action:
+        | "improve"
+        | "negative-cases"
+        | "regression"
+        | "test-data"
+        | "explain-change";
       testCase: AiGeneratedTestCase;
       context?: string;
     },
   ) =>
-    apiRequest<unknown>('/ai-test-generator/actions', {
-      method: 'POST',
+    apiRequest<unknown>("/ai-test-generator/actions", {
+      method: "POST",
       token,
       body: payload,
     }),
@@ -651,29 +767,43 @@ export const aiTestGeneratorApi = {
       selectedCaseIds?: string[];
     },
   ) =>
-    apiRequest<{ count: number; created: ManagedTestCase[] }>('/ai-test-generator/save', {
-      method: 'POST',
-      token,
-      body: payload,
-    }),
+    apiRequest<{ count: number; created: ManagedTestCase[] }>(
+      "/ai-test-generator/save",
+      {
+        method: "POST",
+        token,
+        body: payload,
+      },
+    ),
   history: (token: string, params: { page?: number; limit?: number } = {}) =>
     apiRequest<PaginatedResponse<AiHistoryItem>>(
-      withQuery('/ai-test-generator/history', { page: params.page, limit: params.limit ?? 50 }),
+      withQuery("/ai-test-generator/history", {
+        page: params.page,
+        limit: params.limit ?? 50,
+      }),
       { token },
     ),
-  historyAll: (token: string, limit = 100) => collectAllPages((page) =>
-    aiTestGeneratorApi.history(token, { page, limit })),
+  historyAll: (token: string, limit = 100) =>
+    collectAllPages((page) =>
+      aiTestGeneratorApi.history(token, { page, limit }),
+    ),
   getHistory: (token: string, id: string) =>
-    apiRequest<AiGenerationRecord>(`/ai-test-generator/history/${id}`, { token }),
-  regenerate: (token: string, id: string) =>
-    apiRequest<AiGenerationRecord>(`/ai-test-generator/history/${id}/regenerate`, {
-      method: 'POST',
+    apiRequest<AiGenerationRecord>(`/ai-test-generator/history/${id}`, {
       token,
     }),
-  getSettings: (token: string) => apiRequest<AiSettings>('/ai-test-generator/settings', { token }),
+  regenerate: (token: string, id: string) =>
+    apiRequest<AiGenerationRecord>(
+      `/ai-test-generator/history/${id}/regenerate`,
+      {
+        method: "POST",
+        token,
+      },
+    ),
+  getSettings: (token: string) =>
+    apiRequest<AiSettings>("/ai-test-generator/settings", { token }),
   updateSettings: (token: string, payload: AiSettings) =>
-    apiRequest<AiSettings>('/ai-test-generator/settings', {
-      method: 'PUT',
+    apiRequest<AiSettings>("/ai-test-generator/settings", {
+      method: "PUT",
       token,
       body: payload,
     }),

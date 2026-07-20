@@ -7,6 +7,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
   Query,
 } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
@@ -14,6 +15,7 @@ import { Roles } from '../../auth/decorators/roles.decorator';
 import { CreateTestSuiteDto } from './dto/create-test-suite.dto';
 import { ImportTestCasesDto } from './dto/import-test-cases.dto';
 import { QueryTestSuitesDto } from './dto/query-test-suites.dto';
+import { ReorderTestSuiteCasesDto } from './dto/reorder-test-suite-cases.dto';
 import { UpdateTestSuiteDto } from './dto/update-test-suite.dto';
 import { TestSuitesService } from './test-suites.service';
 
@@ -41,6 +43,12 @@ export class TestSuitesController {
   @Patch(':id')
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateTestSuiteDto) {
     return this.testSuitesService.update(id, dto);
+  }
+
+  @Roles(UserRole.ADMIN, UserRole.QA)
+  @Put(':id/cases/order')
+  reorderCases(@Param('id', ParseUUIDPipe) id: string, @Body() dto: ReorderTestSuiteCasesDto) {
+    return this.testSuitesService.reorderCases(id, dto);
   }
 
   @Roles(UserRole.ADMIN, UserRole.QA)
