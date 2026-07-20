@@ -86,11 +86,10 @@ export type RunnerTestCase = {
   suite?: {
     id: string;
     name: string;
-    projectId?: string | null;
-    project?: {
+    projects?: Array<{
       id: string;
       name: string;
-    };
+    }>;
   };
   steps?: TestStep[];
 };
@@ -131,16 +130,15 @@ export type ProjectSummary = {
 
 export type ManagedTestSuite = {
   id: string;
-  projectId?: string | null;
   name: string;
   position: number;
   createdAt?: string;
   updatedAt?: string;
-  project?: {
+  projects?: Array<{
     id: string;
     key: string;
     name: string;
-  };
+  }>;
   _count?: {
     testCases: number;
   };
@@ -164,11 +162,10 @@ export type ManagedTestCase = {
   suite?: {
     id: string;
     name: string;
-    projectId?: string | null;
-    project?: {
+    projects?: Array<{
       id: string;
       name: string;
-    };
+    }>;
   };
   steps: TestStep[];
 };
@@ -235,7 +232,10 @@ export type TestRunSuite = {
   testSuite?: {
     id: string;
     name: string;
-    projectId?: string | null;
+    projects?: Array<{
+      id: string;
+      name: string;
+    }>;
   };
 };
 
@@ -588,10 +588,11 @@ export type AiHistoryItem = Omit<
 export type UpdateTestSuitePayload = Partial<{
   name: string;
   position: number;
+  projectIds: string[];
 }>;
 
 export type CreateTestSuitePayload = {
-  projectId?: string | null;
+  projectIds?: string[];
   name: string;
   position?: number;
 };

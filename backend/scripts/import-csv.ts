@@ -56,7 +56,7 @@ async function importCsv(csvFilePath: string, projectKey: string) {
     // Find or create suite
     let suite = await prisma.testSuite.findFirst({
       where: {
-        projectId: project.id,
+        projects: { some: { id: project.id } },
         name: suiteName,
       },
     });
@@ -64,9 +64,9 @@ async function importCsv(csvFilePath: string, projectKey: string) {
     if (!suite) {
       suite = await prisma.testSuite.create({
         data: {
-          projectId: project.id,
           name: suiteName,
           position: 0,
+          projects: { connect: { id: project.id } },
         },
       });
       console.log(`✨ Created new test suite: ${suiteName}`);

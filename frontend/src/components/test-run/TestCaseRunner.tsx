@@ -23,6 +23,7 @@ import {
   isVideoAttachment,
 } from '../../lib/attachments';
 import { getResultTestCase } from '../../lib/testResultOverrides';
+import { suiteProjectLabel } from '../../lib/labels';
 import type { AuthUser, ExecuteTestResultPayload, TestResult, TestResultAttachment } from '../../types/testRun';
 import { TestResultForm } from './TestResultForm';
 
@@ -122,10 +123,9 @@ export function TestCaseRunner({
   const steps = testCase.steps ?? [];
   const attachments = result.attachments ?? [];
   const projectName =
-    testCase.suite?.project?.name ??
     result.testRun?.project?.name ??
     result.testRun?.projectId ??
-    'Projeto';
+    suiteProjectLabel(testCase.suite ?? {});
   const suiteName = testCase.suite?.name ?? 'Suíte não atribuída';
   const isCriticalFailure =
     result.status === 'FAILED' && (testCase.severity === 'CRITICAL' || testCase.severity === 'HIGH');

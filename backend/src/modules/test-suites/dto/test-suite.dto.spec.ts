@@ -22,4 +22,26 @@ describe('test suite DTOs', () => {
     await expect(validate(dto)).resolves.toHaveLength(0);
     expect(dto.name).toBe('Receitas');
   });
+
+  it('accepts multiple unique project ids', async () => {
+    const dto = plainToInstance(CreateTestSuiteDto, {
+      name: 'Receitas compartilhadas',
+      projectIds: [
+        'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+        'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+      ],
+    });
+
+    await expect(validate(dto)).resolves.toHaveLength(0);
+  });
+
+  it('rejects duplicated project ids', async () => {
+    const projectId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+    const dto = plainToInstance(CreateTestSuiteDto, {
+      name: 'Receitas compartilhadas',
+      projectIds: [projectId, projectId],
+    });
+
+    await expect(validate(dto)).resolves.not.toHaveLength(0);
+  });
 });

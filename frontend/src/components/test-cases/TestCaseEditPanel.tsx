@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowDown, ArrowUp, ListChecks, Plus, Save, Trash2, X } from 'lucide-react';
 import { ActionMenu } from '../ActionMenu';
-import { testCaseStatusLabels } from '../../lib/labels';
+import { suiteProjectLabel, testCaseStatusLabels } from '../../lib/labels';
 import type {
   ManagedTestCase,
   ManagedTestSuite,
@@ -79,12 +79,7 @@ export function TestCaseEditPanel({
 
   const suite = suites.find((item) => item.id === suiteId);
   const suiteName = suite?.name ?? testCase.suite?.name ?? 'Suíte';
-  const projectName =
-    suite?.project?.name ??
-    testCase.suite?.project?.name ??
-    suite?.projectId ??
-    testCase.suite?.projectId ??
-    'Projeto';
+  const projectName = suiteProjectLabel(suite ?? testCase.suite ?? {});
 
   function updateStep(index: number, field: 'description' | 'expectedResult', value: string) {
     setSteps((current) =>
@@ -221,7 +216,7 @@ export function TestCaseEditPanel({
               >
                 {suites.map((item) => (
                   <option key={item.id} value={item.id}>
-                    {item.name}{item.project?.name ? ` — ${item.project.name}` : ' — Geral'}
+                    {item.name} — {suiteProjectLabel(item)}
                   </option>
                 ))}
               </select>

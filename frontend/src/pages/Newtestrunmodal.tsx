@@ -24,7 +24,11 @@ import type {
 } from '../types/testRun';
 import { useAuth } from '../auth/useAuth';
 import { testPlansApi, testRunsApi, testSuitesApi } from '../lib/api';
-import { suiteProjectLabel } from '../lib/labels';
+import {
+  suiteBelongsToProject,
+  suiteProjectIds,
+  suiteProjectLabel,
+} from '../lib/labels';
 
 type SuiteOption = ManagedTestSuite;
 type TabId = 'info' | 'suites';
@@ -135,6 +139,18 @@ function getSuiteProjectLabel(suite: SuiteOption) {
   return suiteProjectLabel(suite);
 }
 
+function getCommonSuiteProjectId(suites: SuiteOption[]) {
+  const linkedSuites = suites.filter((suite) => suiteProjectIds(suite).length > 0);
+
+  if (linkedSuites.length === 0) {
+    return undefined;
+  }
+
+  return suiteProjectIds(linkedSuites[0]).find((candidateId) =>
+    linkedSuites.every((suite) => suiteProjectIds(suite).includes(candidateId)),
+  );
+}
+
 export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], projectId }: NewTestRunModalProps) {
   const { token } = useAuth();
   const [form, setForm] = useState<TestRunForm>(initialForm);
@@ -211,7 +227,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
         (nextAssignments, [suiteId, assignedType]) => {
           const suite = suites.find((suiteOption) => suiteOption.id === suiteId);
 
-          if (suite && (!suite.projectId || suite.projectId === nextProjectId)) {
+          if (suite && suiteBelongsToProject(suite, nextProjectId)) {
             nextAssignments[suiteId] = assignedType;
           }
 
@@ -278,6 +294,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
     const nextErrors: TestRunFormErrors = {};
     const selectedPlan = testPlans.find((plan) => plan.id === form.planId);
     const selectedProjectId = projectId || selectedPlan?.projectId;
+    const selectedSuiteOptions = suites.filter((suite) => suiteAssignments[suite.id]);
 
     if (!form.name.trim()) {
       nextErrors.name = 'Nome obrigatório';
@@ -303,13 +320,27 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
       nextErrors.suites = 'Toda suíte deve estar vinculada a um tipo de teste selecionado';
     }
 
-    const hasSuiteOutsideProject = Boolean(selectedProjectId) && Object.keys(suiteAssignments).some((suiteId) => {
-      const suite = suites.find((suiteOption) => suiteOption.id === suiteId);
-      return Boolean(suite?.projectId && suite.projectId !== selectedProjectId);
-    });
+    const hasSuiteOutsideProject = selectedProjectId
+      ? Object.keys(suiteAssignments).some((suiteId) => {
+          const suite = suites.find((suiteOption) => suiteOption.id === suiteId);
+          return Boolean(suite && !suiteBelongsToProject(suite, selectedProjectId));
+        })
+      : false;
 
     if (hasSuiteOutsideProject) {
       nextErrors.suites = 'Todas as suítes devem pertencer ao projeto do plano selecionado';
+    }
+
+    const linkedSelectedSuites = selectedSuiteOptions.filter(
+      (suite) => suiteProjectIds(suite).length > 0,
+    );
+
+    if (
+      !selectedProjectId &&
+      linkedSelectedSuites.length > 1 &&
+      !getCommonSuiteProjectId(linkedSelectedSuites)
+    ) {
+      nextErrors.suites = 'As suítes selecionadas precisam compartilhar ao menos um equipamento';
     }
 
     return nextErrors;
@@ -336,7 +367,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
       const selectedSuiteOptions = suites.filter((suite) => suiteAssignments[suite.id]);
       const selectedPlan = testPlans.find((plan) => plan.id === form.planId);
 
-      const resolvedProjectId = projectId || selectedPlan?.projectId || selectedSuiteOptions[0]?.projectId;
+      const resolvedProjectId = projectId || selectedPlan?.projectId || getCommonSuiteProjectId(selectedSuiteOptions);
       const testTypes = selectedTestTypes.map((type) => ({
         type,
         suites: Object.entries(suiteAssignments)
@@ -352,7 +383,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
       }
 
       const suitesOutsideProject = selectedSuiteOptions.filter(
-        (suite) => suite.projectId && suite.projectId !== resolvedProjectId,
+        (suite) => resolvedProjectId && !suiteBelongsToProject(suite, resolvedProjectId),
       );
 
       if (suitesOutsideProject.length > 0) {
@@ -393,7 +424,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
   const selectedPlan = testPlans.find((plan) => plan.id === form.planId);
   const activeProjectId = projectId || selectedPlan?.projectId;
   const selectableSuites = activeProjectId
-    ? suites.filter((suite) => !suite.projectId || suite.projectId === activeProjectId)
+    ? suites.filter((suite) => suiteBelongsToProject(suite, activeProjectId))
     : suites;
   const selectedSuiteOptions = suites.filter((suite) => suiteAssignments[suite.id]);
   const unassignedSuites = selectableSuites.filter((suite) => !suiteAssignments[suite.id]);

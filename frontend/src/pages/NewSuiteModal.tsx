@@ -1,11 +1,11 @@
-import { useEffect, useState, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react';
+import { useEffect, useState, type InputHTMLAttributes, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertCircle, ChevronDown, Layers3, X } from 'lucide-react';
+import { AlertCircle, Layers3, X } from 'lucide-react';
 import type { CreateTestSuitePayload, ProjectSummary } from '../types/testRun';
 
 type SuiteForm = {
   name: string;
-  project: string;
+  projectIds: string[];
 };
 
 type SuiteFormErrors = Partial<Record<keyof SuiteForm, string>>;
@@ -26,10 +26,8 @@ type NewSuiteModalProps = {
 
 const initialForm: SuiteForm = {
   name: '',
-  project: '',
+  projectIds: [],
 };
-
-const GENERAL_PROJECT_OPTION_VALUE = '__general__';
 
 function Field({ label, required = false, children, hint }: FieldProps) {
   return (
@@ -50,20 +48,6 @@ function Input(props: InputHTMLAttributes<HTMLInputElement>) {
       className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
       {...props}
     />
-  );
-}
-
-function Select({ children, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
-  return (
-    <div className="relative">
-      <select
-        className="h-10 w-full appearance-none rounded-lg border border-slate-300 bg-white px-3 pr-9 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
-        {...props}
-      >
-        {children}
-      </select>
-      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-    </div>
   );
 }
 
@@ -106,11 +90,16 @@ export function NewSuiteModal({
       nextErrors.name = 'Nome obrigatório';
     }
 
-    if (!form.project) {
-      nextErrors.project = 'Selecione um projeto ou a opção Geral';
-    }
-
     return nextErrors;
+  }
+
+  function toggleProject(projectId: string) {
+    setField(
+      'projectIds',
+      form.projectIds.includes(projectId)
+        ? form.projectIds.filter((id) => id !== projectId)
+        : [...form.projectIds, projectId],
+    );
   }
 
   async function handleSubmit() {
@@ -126,7 +115,7 @@ export function NewSuiteModal({
 
     try {
       await onCreateFromApi?.({
-        projectId: form.project === GENERAL_PROJECT_OPTION_VALUE ? null : form.project,
+        projectIds: form.projectIds,
         name: form.name.trim(),
       });
 
@@ -176,23 +165,29 @@ export function NewSuiteModal({
             ) : null}
           </Field>
 
-          <Field label="Projeto" required>
-            <Select value={form.project} onChange={(event) => setField('project', event.target.value)}>
-              <option value="">
-                Selecione...
-              </option>
-              <option value={GENERAL_PROJECT_OPTION_VALUE}>Geral</option>
+          <Field
+            label="Equipamentos"
+            hint="Selecione um ou mais equipamentos. Sem seleção, a suíte será Geral."
+          >
+            <div className="grid gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 sm:grid-cols-2">
+              {projectOptions.length === 0 ? (
+                <p className="text-sm text-slate-500">Nenhum equipamento cadastrado.</p>
+              ) : null}
               {projectOptions.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.name}
-                </option>
+                <label
+                  className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:border-blue-300"
+                  key={project.id}
+                >
+                  <input
+                    checked={form.projectIds.includes(project.id)}
+                    className="h-4 w-4 rounded border-slate-300 text-blue-700 focus:ring-blue-500"
+                    onChange={() => toggleProject(project.id)}
+                    type="checkbox"
+                  />
+                  <span className="truncate">{project.name}</span>
+                </label>
               ))}
-            </Select>
-            {errors.project ? (
-              <p className="flex items-center gap-1 text-xs text-red-500">
-                <AlertCircle className="h-3 w-3" aria-hidden="true" /> {errors.project}
-              </p>
-            ) : null}
+            </div>
           </Field>
         </div>
 

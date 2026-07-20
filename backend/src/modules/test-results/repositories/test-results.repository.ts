@@ -52,12 +52,13 @@ const TEST_RESULT_INCLUDE = {
         select: {
           id: true,
           name: true,
-          projectId: true,
-          project: {
+          projects: {
+            where: { deletedAt: null },
             select: {
               id: true,
               name: true,
             },
+            orderBy: { name: 'asc' },
           },
         },
       },

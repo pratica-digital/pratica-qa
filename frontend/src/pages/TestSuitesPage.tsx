@@ -168,9 +168,8 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
     return suites.filter((suite) => {
       const searchable = [
         suite.name,
-        suite.project?.name,
-        suite.project?.key,
-        !suite.projectId ? 'Geral' : undefined,
+        ...(suite.projects ?? []).flatMap((project) => [project.name, project.key]),
+        !suite.projects?.length ? 'Geral' : undefined,
       ]
         .filter(Boolean)
         .join(' ')
@@ -535,6 +534,7 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
         <TestSuiteEditPanel
           key={`${editingSuite.id}-${editingSuiteCases.length}`}
           cases={editingSuiteCases}
+          projects={projects}
           onClose={() => setEditingSuite(null)}
           onImportCases={canManageTestAssets ? () => setImportingSuite(editingSuite) : undefined}
           onSave={handleSaveSuite}

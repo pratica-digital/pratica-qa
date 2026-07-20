@@ -905,7 +905,12 @@ export function DashboardPage({ onNavigate, onOpenRun }: DashboardPageProps) {
         setData((current) => ({
           ...current,
           projects: current.projects.filter((project) => project.id !== target.item.id),
-          suites: current.suites.filter((suite) => suite.projectId !== target.item.id),
+          suites: current.suites
+            .filter((suite) => !(suite.projects?.length === 1 && suite.projects[0].id === target.item.id))
+            .map((suite) => ({
+              ...suite,
+              projects: suite.projects?.filter((project) => project.id !== target.item.id),
+            })),
           plans: current.plans.filter((plan) => plan.projectId !== target.item.id),
           runs: current.runs.filter((run) => run.projectId !== target.item.id),
           latestProjectRuns: Object.fromEntries(

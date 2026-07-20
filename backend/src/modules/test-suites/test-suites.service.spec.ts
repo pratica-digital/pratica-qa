@@ -1,6 +1,28 @@
 import { TestSuitesService } from './test-suites.service';
 
 describe('TestSuitesService', () => {
+  it('creates a suite linked to multiple projects', async () => {
+    const suites = {
+      create: jest.fn().mockResolvedValue({ id: 'suite-id' }),
+    };
+    const projects = {
+      countByIds: jest.fn().mockResolvedValue(2),
+    };
+    const service = new TestSuitesService(suites as never, projects as never);
+    const dto = {
+      name: 'Fluxo compartilhado',
+      projectIds: [
+        'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+        'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+      ],
+    };
+
+    await service.create(dto);
+
+    expect(projects.countByIds).toHaveBeenCalledWith(dto.projectIds);
+    expect(suites.create).toHaveBeenCalledWith(dto, dto.projectIds);
+  });
+
   it('keeps pagination and filters aligned between suite list and count', async () => {
     const suites = {
       count: jest.fn().mockResolvedValue(264),

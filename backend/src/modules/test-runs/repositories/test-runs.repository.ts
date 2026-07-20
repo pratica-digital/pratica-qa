@@ -52,12 +52,13 @@ const TEST_RUN_INCLUDE = {
         select: {
           id: true,
           name: true,
-          projectId: true,
-          project: {
+          projects: {
+            where: { deletedAt: null },
             select: {
               id: true,
               name: true,
             },
+            orderBy: { name: 'asc' },
           },
         },
       },
@@ -87,12 +88,13 @@ const TEST_RUN_INCLUDE = {
             select: {
               id: true,
               name: true,
-              projectId: true,
-              project: {
+              projects: {
+                where: { deletedAt: null },
                 select: {
                   id: true,
                   name: true,
                 },
+                orderBy: { name: 'asc' },
               },
             },
           },
@@ -394,12 +396,13 @@ export class TestRunsRepository {
               select: {
                 id: true,
                 name: true,
-                projectId: true,
-                project: {
+                projects: {
+                  where: { deletedAt: null },
                   select: {
                     id: true,
                     name: true,
                   },
+                  orderBy: { name: 'asc' },
                 },
               },
             },
