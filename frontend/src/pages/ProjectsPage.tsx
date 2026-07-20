@@ -855,7 +855,7 @@ export function ProjectsPage({ createActionEventId = 0 }: ProjectsPageProps) {
                             {project.name}
                           </h3>
                           <p className="truncate text-xs text-slate-500">
-                            {project.description || project.id}
+                            {project.description || 'Sem descrição'}
                           </p>
                         </div>
                         <div className="flex shrink-0 items-center gap-1">
