@@ -1,4 +1,9 @@
+import { brandLogoBase64 } from './brand-logo';
+import { qualityImageBase64 } from './quality-image';
+import type { MailAttachment } from '../mail.service';
+
 export type MailTemplate = {
+  attachments: MailAttachment[];
   html: string;
   subject: string;
   text: string;
@@ -25,6 +30,8 @@ type TemplateShellParams = {
 };
 
 const brandName = 'QA Platform';
+const brandLogoContentId = 'qa-platform-brand-logo';
+const qualityImageContentId = 'qa-platform-quality-image';
 const brandBlue = '#1c4484';
 const brandGreen = '#adff2f';
 
@@ -50,8 +57,17 @@ export function renderEmailShell(params: TemplateShellParams): MailTemplate {
                 <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                   <tr>
                     <td>
-                      <div style="font-size:20px;font-weight:700;color:#ffffff;letter-spacing:.2px;">${brandName}</div>
-                      <div style="margin-top:4px;font-size:12px;color:#c9d7ef;text-transform:uppercase;letter-spacing:1.4px;">QA Workspace</div>
+                      <img src="cid:${brandLogoContentId}" width="160" alt="${brandName}" style="display:block;width:160px;max-width:100%;height:auto;border:0;outline:none;text-decoration:none;">
+                      <table role="presentation" cellspacing="0" cellpadding="0" style="margin-top:10px;">
+                        <tr>
+                          <td style="width:24px;vertical-align:middle;">
+                            <img src="cid:${qualityImageContentId}" width="12" height="12" alt="" style="display:block;width:24px;height:24px;border:0;outline:none;text-decoration:none;">
+                          </td>
+                          <td style="padding-left:8px;vertical-align:middle;font-size:16px;color:#c9d7ef;text-transform:uppercase;letter-spacing:1.4px;white-space:nowrap;">
+                            QA Workspace
+                          </td>
+                        </tr>
+                      </table>
                     </td>
                     <td align="right">
                       <span style="display:inline-block;width:14px;height:14px;border-radius:999px;background:${brandGreen};"></span>
@@ -112,6 +128,22 @@ export function renderEmailShell(params: TemplateShellParams): MailTemplate {
   ].join('\n');
 
   return {
+    attachments: [
+      {
+        content: Buffer.from(brandLogoBase64, 'base64'),
+        contentId: brandLogoContentId,
+        contentType: 'image/png',
+        filename: 'pratica-logo.png',
+        isInline: true,
+      },
+      {
+        content: Buffer.from(qualityImageBase64, 'base64'),
+        contentId: qualityImageContentId,
+        contentType: 'image/png',
+        filename: 'quality-image.png',
+        isInline: true,
+      },
+    ],
     html,
     subject: params.subject,
     text,

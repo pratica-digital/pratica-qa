@@ -445,7 +445,6 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
                   <tr>
                     <th className="px-4 py-3">Suíte</th>
                     <th className="px-4 py-3">Projeto</th>
-                    
                     <th className="px-4 py-3">Casos</th>
                     <th className="px-4 py-3">Atualizado</th>
                     <th className="px-4 py-3 text-right"></th>

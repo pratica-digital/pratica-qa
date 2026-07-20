@@ -4,10 +4,12 @@ import { ConfigService } from '@nestjs/config';
 type MailAddress = string | { address: string; name?: string };
 type MailAddressInput = MailAddress | MailAddress[];
 
-type MailAttachment = {
+export type MailAttachment = {
   content?: Buffer | string;
+  contentId?: string;
   contentType?: string;
   filename?: string | false;
+  isInline?: boolean;
 };
 
 export type MailOptions = {
@@ -63,7 +65,9 @@ type GraphSendMailMessage = {
   attachments?: Array<{
     '@odata.type': '#microsoft.graph.fileAttachment';
     contentBytes: string;
+    contentId?: string;
     contentType?: string;
+    isInline?: boolean;
     name: string;
   }>;
   bccRecipients?: GraphEmailAddress[];
@@ -230,7 +234,9 @@ export class MailService {
         contentBytes: Buffer.isBuffer(attachment.content)
           ? attachment.content.toString('base64')
           : Buffer.from(attachment.content).toString('base64'),
+        contentId: attachment.contentId,
         contentType: attachment.contentType,
+        isInline: attachment.isInline,
         name: typeof attachment.filename === 'string' && attachment.filename ? attachment.filename : 'attachment',
       };
     });

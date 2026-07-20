@@ -29,6 +29,15 @@ describe('MailService', () => {
 
     const service = new MailService(createConfigService());
     const result = await service.sendMail({
+      attachments: [
+        {
+          content: Buffer.from('logo'),
+          contentId: 'brand-logo',
+          contentType: 'image/png',
+          filename: 'logo.png',
+          isInline: true,
+        },
+      ],
       html: '<strong>hello</strong>',
       subject: 'Password reset',
       to: 'User One <one@example.com>, two@example.com',
@@ -67,6 +76,15 @@ describe('MailService', () => {
           contentType: 'HTML',
         },
         subject: 'Password reset',
+        attachments: [
+          expect.objectContaining({
+            contentBytes: Buffer.from('logo').toString('base64'),
+            contentId: 'brand-logo',
+            contentType: 'image/png',
+            isInline: true,
+            name: 'logo.png',
+          }),
+        ],
         toRecipients: [
           {
             emailAddress: {
