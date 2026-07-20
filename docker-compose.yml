@@ -20,6 +20,8 @@ services:
   backend:
     build: ./backend
     container_name: qa_backend
+    volumes:
+      - ./backend/uploads:/app/uploads
     ports:
       - "${BACKEND_PORT:-3000}:${PORT:-3000}"
     depends_on:
