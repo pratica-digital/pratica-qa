@@ -37,13 +37,45 @@ export const projectStatusLabels: Record<ProjectStatus, string> = {
 
 export const GENERAL_SUITE_PROJECT_LABEL = 'Geral';
 
-export function suiteProjectLabel(suite: {
+type SuiteProjectSource = {
+  projects?: Array<{
+    id?: string;
+    key?: string | null;
+    name?: string | null;
+  }>;
   project?: {
+    id?: string;
     key?: string | null;
     name?: string | null;
   } | null;
   projectId?: string | null;
-}) {
+};
+
+export function suiteProjectIds(suite: SuiteProjectSource) {
+  if (suite.projects?.length) {
+    return suite.projects.map((project) => project.id).filter((id): id is string => Boolean(id));
+  }
+
+  return suite.project?.id ? [suite.project.id] : suite.projectId ? [suite.projectId] : [];
+}
+
+export function suiteBelongsToProject(suite: SuiteProjectSource, projectId: string) {
+  const projectIds = suiteProjectIds(suite);
+  return projectIds.length === 0 || projectIds.includes(projectId);
+}
+
+export function suitePrimaryProjectId(suite: SuiteProjectSource) {
+  return suiteProjectIds(suite)[0];
+}
+
+export function suiteProjectLabel(suite: SuiteProjectSource) {
+  if (suite.projects?.length) {
+    return suite.projects
+      .map((project) => project.name ?? project.key ?? project.id)
+      .filter(Boolean)
+      .join(', ');
+  }
+
   return suite.project?.name ?? suite.project?.key ?? suite.projectId ?? GENERAL_SUITE_PROJECT_LABEL;
 }
 

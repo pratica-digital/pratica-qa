@@ -76,6 +76,15 @@ export class ProjectsRepository {
     });
   }
 
+  countByIds(ids: string[]) {
+    return this.prisma.project.count({
+      where: {
+        id: { in: ids },
+        deletedAt: null,
+      },
+    });
+  }
+
   update(id: string, dto: UpdateProjectDto) {
     const data: Prisma.ProjectUpdateInput = {};
 
@@ -117,6 +126,23 @@ export class ProjectsRepository {
     const deletedAt = new Date();
 
     return this.prisma.$transaction(async (tx) => {
+      const exclusiveSuites = await tx.testSuite.findMany({
+        where: {
+          deletedAt: null,
+          projects: { some: { id } },
+          AND: {
+            projects: {
+              none: {
+                id: { not: id },
+                deletedAt: null,
+              },
+            },
+          },
+        },
+        select: { id: true },
+      });
+      const exclusiveSuiteIds = exclusiveSuites.map((suite) => suite.id);
+
       await tx.testRun.updateMany({
         where: { projectId: id, deletedAt: null },
         data: { deletedAt },
@@ -126,17 +152,21 @@ export class ProjectsRepository {
         data: { deletedAt },
       });
       await tx.testCase.updateMany({
-        where: { suite: { projectId: id }, deletedAt: null },
+        where: { suiteId: { in: exclusiveSuiteIds }, deletedAt: null },
         data: { deletedAt, status: 'ARCHIVED' },
       });
       await tx.testSuite.updateMany({
-        where: { projectId: id, deletedAt: null },
+        where: { id: { in: exclusiveSuiteIds }, deletedAt: null },
         data: { deletedAt },
       });
 
       return tx.project.update({
         where: { id },
-        data: { deletedAt, status: 'ARCHIVED' },
+        data: {
+          deletedAt,
+          status: 'ARCHIVED',
+          suites: { set: [] },
+        },
       });
     });
   }

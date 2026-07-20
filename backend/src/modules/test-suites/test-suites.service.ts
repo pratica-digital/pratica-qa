@@ -16,15 +16,10 @@ export class TestSuitesService {
   ) {}
 
   async create(dto: CreateTestSuiteDto) {
-    if (dto.projectId) {
-      const project = await this.projectsRepository.findById(dto.projectId);
+    const projectIds = this.resolveProjectIds(dto);
+    await this.ensureProjectsExist(projectIds);
 
-      if (!project) {
-        throw new NotFoundException('Project not found');
-      }
-    }
-
-    return this.testSuitesRepository.create(dto);
+    return this.testSuitesRepository.create(dto, projectIds);
   }
 
   async findAll(query: QueryTestSuitesDto) {
@@ -61,7 +56,13 @@ export class TestSuitesService {
 
   async update(id: string, dto: UpdateTestSuiteDto) {
     await this.findOne(id);
-    return this.testSuitesRepository.update(id, dto);
+    const projectIds = this.hasProjectSelection(dto) ? this.resolveProjectIds(dto) : undefined;
+
+    if (projectIds) {
+      await this.ensureProjectsExist(projectIds);
+    }
+
+    return this.testSuitesRepository.update(id, dto, projectIds);
   }
 
   async importCases(id: string, dto: ImportTestCasesDto) {
@@ -95,5 +96,25 @@ export class TestSuitesService {
   async remove(id: string) {
     await this.findOne(id);
     return this.testSuitesRepository.delete(id);
+  }
+
+  private hasProjectSelection(dto: CreateTestSuiteDto | UpdateTestSuiteDto) {
+    return dto.projectIds !== undefined || dto.projectId !== undefined;
+  }
+
+  private resolveProjectIds(dto: CreateTestSuiteDto | UpdateTestSuiteDto) {
+    return [...new Set(dto.projectIds ?? (dto.projectId ? [dto.projectId] : []))];
+  }
+
+  private async ensureProjectsExist(projectIds: string[]) {
+    if (projectIds.length === 0) {
+      return;
+    }
+
+    const projectCount = await this.projectsRepository.countByIds(projectIds);
+
+    if (projectCount !== projectIds.length) {
+      throw new NotFoundException('One or more projects were not found');
+    }
   }
 }

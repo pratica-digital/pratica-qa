@@ -30,7 +30,10 @@ describe('TestCasesRepository', () => {
       suiteId: 'suite-id',
       suite: {
         deletedAt: null,
-        OR: [{ projectId: 'project-id' }, { projectId: null }],
+        OR: [
+          { projects: { some: { id: 'project-id', deletedAt: null } } },
+          { projects: { none: {} } },
+        ],
       },
     });
     expect(prisma.testCase.findMany).toHaveBeenCalledWith(expect.objectContaining({

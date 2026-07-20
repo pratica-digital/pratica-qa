@@ -26,20 +26,24 @@ function normalizeSectionKey(section: string) {
 export class TestSuitesRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  create(dto: CreateTestSuiteDto) {
+  create(dto: CreateTestSuiteDto, projectIds: string[]) {
     return this.prisma.testSuite.create({
       data: {
-        projectId: dto.projectId ?? null,
         name: dto.name,
         position: dto.position ?? 0,
+        projects: projectIds.length > 0
+          ? { connect: projectIds.map((id) => ({ id })) }
+          : undefined,
       },
       include: {
-        project: {
+        projects: {
+          where: { deletedAt: null },
           select: {
             id: true,
             key: true,
             name: true,
           },
+          orderBy: { name: 'asc' },
         },
         _count: {
           select: {
@@ -59,12 +63,14 @@ export class TestSuitesRepository {
       take,
       orderBy: [{ position: 'asc' }, { updatedAt: 'desc' }, { id: 'asc' }],
       include: {
-        project: {
+        projects: {
+          where: { deletedAt: null },
           select: {
             id: true,
             key: true,
             name: true,
           },
+          orderBy: { name: 'asc' },
         },
         _count: {
           select: {
@@ -85,12 +91,14 @@ export class TestSuitesRepository {
     return this.prisma.testSuite.findFirst({
       where: { id, deletedAt: null },
       include: {
-        project: {
+        projects: {
+          where: { deletedAt: null },
           select: {
             id: true,
             key: true,
             name: true,
           },
+          orderBy: { name: 'asc' },
         },
         _count: {
           select: {
@@ -105,7 +113,10 @@ export class TestSuitesRepository {
     return this.prisma.testSuite.count({
       where: {
         id: { in: ids },
-        OR: [{ projectId }, { projectId: null }],
+        OR: [
+          { projects: { some: { id: projectId, deletedAt: null } } },
+          { projects: { none: {} } },
+        ],
         deletedAt: null,
       },
     });
@@ -120,10 +131,30 @@ export class TestSuitesRepository {
     });
   }
 
-  update(id: string, dto: UpdateTestSuiteDto) {
+  update(id: string, dto: UpdateTestSuiteDto, projectIds?: string[]) {
     return this.prisma.testSuite.update({
       where: { id },
-      data: dto,
+      data: {
+        name: dto.name,
+        position: dto.position,
+        projects: projectIds ? { set: projectIds.map((projectId) => ({ id: projectId })) } : undefined,
+      },
+      include: {
+        projects: {
+          where: { deletedAt: null },
+          select: {
+            id: true,
+            key: true,
+            name: true,
+          },
+          orderBy: { name: 'asc' },
+        },
+        _count: {
+          select: {
+            testCases: { where: { deletedAt: null } },
+          },
+        },
+      },
     });
   }
 
@@ -225,7 +256,14 @@ export class TestSuitesRepository {
     return {
       deletedAt: null,
       AND: [
-        params.projectId ? { OR: [{ projectId: params.projectId }, { projectId: null }] } : {},
+        params.projectId
+          ? {
+              OR: [
+                { projects: { some: { id: params.projectId, deletedAt: null } } },
+                { projects: { none: {} } },
+              ],
+            }
+          : {},
         params.search ? { name: { contains: params.search, mode: 'insensitive' } } : {},
       ],
     };

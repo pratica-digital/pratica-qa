@@ -24,7 +24,10 @@ describe('ProjectsRepository', () => {
       testCase: { updateMany: jest.fn().mockResolvedValue({ count: 2 }) },
       testPlan: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
       testRun: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
-      testSuite: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+      testSuite: {
+        findMany: jest.fn().mockResolvedValue([{ id: 'exclusive-suite-id' }]),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
     };
     const prisma = {
       $transaction: jest.fn((callback: (client: typeof tx) => unknown) => callback(tx)),
@@ -35,7 +38,11 @@ describe('ProjectsRepository', () => {
 
     expect(tx.project.update).toHaveBeenCalledWith({
       where: { id: 'project-id' },
-      data: expect.objectContaining({ deletedAt: expect.any(Date), status: 'ARCHIVED' }),
+      data: expect.objectContaining({
+        deletedAt: expect.any(Date),
+        status: 'ARCHIVED',
+        suites: { set: [] },
+      }),
     });
     expect(tx.testCase.updateMany).toHaveBeenCalled();
     expect(tx.testPlan.updateMany).toHaveBeenCalled();

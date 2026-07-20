@@ -13,12 +13,13 @@ const TEST_CASE_INCLUDE = {
     select: {
       id: true,
       name: true,
-      projectId: true,
-      project: {
+      projects: {
+        where: { deletedAt: null },
         select: {
           id: true,
           name: true,
         },
+        orderBy: { name: 'asc' },
       },
     },
   },
@@ -207,7 +208,12 @@ export class TestCasesRepository {
       suite: {
         deletedAt: null,
         ...(params.projectId
-          ? { OR: [{ projectId: params.projectId }, { projectId: null }] }
+          ? {
+              OR: [
+                { projects: { some: { id: params.projectId, deletedAt: null } } },
+                { projects: { none: {} } },
+              ],
+            }
           : {}),
       },
       status: params.status,

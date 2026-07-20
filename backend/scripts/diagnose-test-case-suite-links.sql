@@ -39,31 +39,37 @@ ORDER BY metric;
 SELECT
   ts.id AS suite_id,
   ts.name AS suite_name,
-  ts."projectId" AS project_id,
-  p.name AS project_name,
+  ARRAY_REMOVE(ARRAY_AGG(DISTINCT p.id), NULL) AS project_ids,
+  ARRAY_REMOVE(ARRAY_AGG(DISTINCT p.name), NULL) AS project_names,
   ts."deletedAt" AS suite_deleted_at,
-  COUNT(tc.id)::int AS total_cases,
-  COUNT(tc.id) FILTER (
+  COUNT(DISTINCT tc.id)::int AS total_cases,
+  COUNT(DISTINCT tc.id) FILTER (
     WHERE tc.status = 'ACTIVE' AND tc."deletedAt" IS NULL
   )::int AS active_cases
 FROM test_suites ts
 LEFT JOIN test_cases tc ON tc."suiteId" = ts.id
-LEFT JOIN projects p ON p.id = ts."projectId"
-GROUP BY ts.id, ts.name, ts."projectId", p.name, ts."deletedAt"
+LEFT JOIN "_ProjectTestSuites" pts ON pts."B" = ts.id
+LEFT JOIN projects p ON p.id = pts."A"
+GROUP BY ts.id, ts.name, ts."deletedAt"
 ORDER BY total_cases DESC, ts.name;
 
 -- IDs de duplicatas candidatas. Este relatório não remove nenhuma delas.
 SELECT
   tc."suiteId" AS suite_id,
   ts.name AS suite_name,
-  ts."projectId" AS project_id,
+  ARRAY(
+    SELECT pts."A"
+    FROM "_ProjectTestSuites" pts
+    WHERE pts."B" = ts.id
+    ORDER BY pts."A"
+  ) AS project_ids,
   LOWER(BTRIM(tc.title)) AS normalized_title,
   COUNT(*)::int AS copies,
   ARRAY_AGG(tc.id ORDER BY tc."createdAt") AS case_ids
 FROM test_cases tc
 JOIN test_suites ts ON ts.id = tc."suiteId"
 WHERE tc."deletedAt" IS NULL
-GROUP BY tc."suiteId", ts.name, ts."projectId", LOWER(BTRIM(tc.title))
+GROUP BY tc."suiteId", ts.id, ts.name, LOWER(BTRIM(tc.title))
 HAVING COUNT(*) > 1
 ORDER BY copies DESC, suite_name;
 
@@ -71,14 +77,15 @@ ORDER BY copies DESC, suite_name;
 SELECT
   ts.id AS suite_id,
   ts.name AS current_suite_name,
-  ts."projectId" AS project_id,
-  p.name AS project_name,
-  ARRAY_AGG(tc.id ORDER BY tc."createdAt") FILTER (WHERE tc.id IS NOT NULL) AS case_ids
+  ARRAY_REMOVE(ARRAY_AGG(DISTINCT p.id), NULL) AS project_ids,
+  ARRAY_REMOVE(ARRAY_AGG(DISTINCT p.name), NULL) AS project_names,
+  ARRAY_AGG(DISTINCT tc.id) FILTER (WHERE tc.id IS NOT NULL) AS case_ids
 FROM test_suites ts
-LEFT JOIN projects p ON p.id = ts."projectId"
+LEFT JOIN "_ProjectTestSuites" pts ON pts."B" = ts.id
+LEFT JOIN projects p ON p.id = pts."A"
 LEFT JOIN test_cases tc ON tc."suiteId" = ts.id
 WHERE BTRIM(LOWER(ts.name)) = 'untitled'
-GROUP BY ts.id, ts.name, ts."projectId", p.name;
+GROUP BY ts.id, ts.name;
 
 -- Integridade referencial e política de exclusão efetivamente instaladas.
 SELECT conname, pg_get_constraintdef(oid) AS definition

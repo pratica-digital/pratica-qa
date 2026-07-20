@@ -5,12 +5,14 @@ import { suiteProjectLabel } from '../../lib/labels';
 import type {
   ManagedTestCase,
   ManagedTestSuite,
+  ProjectSummary,
   UpdateTestSuitePayload,
 } from '../../types/testRun';
 
 type TestSuiteEditPanelProps = {
   suite: ManagedTestSuite;
   cases: ManagedTestCase[];
+  projects: ProjectSummary[];
   readOnly: boolean;
   onClose: () => void;
   onImportCases?: () => void;
@@ -24,6 +26,7 @@ type TestSuiteEditPanelProps = {
 export function TestSuiteEditPanel({
   suite,
   cases,
+  projects,
   readOnly,
   onClose,
   onImportCases,
@@ -31,6 +34,7 @@ export function TestSuiteEditPanel({
 }: TestSuiteEditPanelProps) {
   const [name, setName] = useState(suite.name);
   const [position, setPosition] = useState(String(suite.position ?? 0));
+  const [projectIds, setProjectIds] = useState(() => suite.projects?.map((project) => project.id) ?? []);
   const [orderedCases, setOrderedCases] = useState(cases);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -59,6 +63,14 @@ export function TestSuiteEditPanel({
     });
   }
 
+  function toggleProject(projectId: string) {
+    setProjectIds((current) =>
+      current.includes(projectId)
+        ? current.filter((id) => id !== projectId)
+        : [...current, projectId],
+    );
+  }
+
   async function handleSave() {
     const parsedPosition = Number(position);
 
@@ -81,6 +93,7 @@ export function TestSuiteEditPanel({
         {
           name: name.trim(),
           position: parsedPosition,
+          projectIds,
         },
         orderedCases.map((testCase) => testCase.id),
       );
@@ -142,6 +155,33 @@ export function TestSuiteEditPanel({
               />
             </label>
           </div>
+
+          <section className="mt-5">
+            <h3 className="text-sm font-semibold text-slate-950">Equipamentos relacionados</h3>
+            <p className="mt-1 text-xs text-slate-500">
+              Selecione um ou mais equipamentos. Sem seleção, a suíte será Geral.
+            </p>
+            <div className="mt-3 grid gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 sm:grid-cols-2">
+              {projects.length === 0 ? (
+                <p className="text-sm text-slate-500">Nenhum equipamento cadastrado.</p>
+              ) : null}
+              {projects.map((project) => (
+                <label
+                  className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:border-blue-300"
+                  key={project.id}
+                >
+                  <input
+                    checked={projectIds.includes(project.id)}
+                    className="h-4 w-4 rounded border-slate-300 text-blue-700 focus:ring-blue-500"
+                    disabled={readOnly || saving}
+                    onChange={() => toggleProject(project.id)}
+                    type="checkbox"
+                  />
+                  <span className="truncate">{project.name}</span>
+                </label>
+              ))}
+            </div>
+          </section>
 
           <section className="mt-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
