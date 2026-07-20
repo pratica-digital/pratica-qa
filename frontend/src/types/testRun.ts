@@ -202,6 +202,7 @@ export type TestResult = {
     projectId?: string | null;
     assignedToId?: string | null;
     completedAt?: string | null;
+    updatedAt?: string;
     deletedAt?: string | null;
     project?: {
       id: string;

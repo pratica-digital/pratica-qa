@@ -187,3 +187,4 @@ $RECYCLE.BIN/
 .prettier-cache
 .jest-cache/
 .rpt2_cache/
+.agents

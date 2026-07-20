@@ -3,6 +3,7 @@ import {
   CheckCircle2,
   Circle,
   ClipboardCheck,
+  FileText,
   PlayCircle,
   RefreshCw,
   SkipForward,
@@ -19,6 +20,7 @@ import { TestCaseRunner } from '../components/test-run/TestCaseRunner';
 import { ApiError, testResultsApi, testRunsApi } from '../lib/api';
 import { testResultStatusLabel } from '../lib/labels';
 import { getResultTestCase } from '../lib/testResultOverrides';
+import { summarizeTestResults } from '../lib/testRunSummary';
 import type {
   ExecuteTestResultPayload,
   TestResult,
@@ -30,12 +32,9 @@ import type {
 type TestRunExecutionPageProps = {
   testRun: TestRun;
   onBack: () => void;
+  onOpenReport?: (testRunId: string) => void;
   onRunUpdated: (testRun: TestRun) => void;
 };
-
-function countResults(results: TestResult[] | undefined, status: TestResult['status']) {
-  return results?.filter((result) => result.status === status).length ?? 0;
-}
 
 type RunCaseEditDraft = {
   title: string;
@@ -116,6 +115,7 @@ function mergeUpdatedResult(current: TestRun, updatedResult: TestResult) {
     ...current,
     status: updatedResult.testRun?.status ?? current.status,
     completedAt: updatedResult.testRun?.completedAt ?? current.completedAt,
+    updatedAt: updatedResult.testRun?.updatedAt ?? current.updatedAt,
     results,
   } satisfies TestRun;
 }
@@ -244,6 +244,7 @@ function TestCaseListPanel({
 export function TestRunExecutionPage({
   testRun,
   onBack,
+  onOpenReport,
   onRunUpdated,
 }: TestRunExecutionPageProps) {
   const { token, user } = useAuth();
@@ -263,6 +264,7 @@ export function TestRunExecutionPage({
   const [removingResult, setRemovingResult] = useState(false);
 
   const results = useMemo(() => run.results ?? [], [run.results]);
+  const summary = useMemo(() => summarizeTestResults(results), [results]);
   const navigationResults = useMemo(() => orderResultsForNavigation(run, results), [results, run]);
   const navigationPositionById = useMemo(
     () => new Map(navigationResults.map((result, index) => [result.id, index])),
@@ -661,28 +663,41 @@ export function TestRunExecutionPage({
           </div>
         </div>
 
-        
+        {onOpenReport ? (
+          <button
+            className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-blue-700 px-4 text-sm font-medium text-white hover:bg-blue-800"
+            onClick={() => onOpenReport(run.id)}
+            type="button"
+          >
+            <FileText className="h-4 w-4" aria-hidden="true" />
+            Ver relatório atualizado
+          </button>
+        ) : null}
       </div>
 
       <div className="grid gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm md:grid-cols-[1fr_auto] md:items-center">
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
           <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
             <p className="text-xs font-medium uppercase text-slate-500">Progresso</p>
             <p className="mt-1 text-sm font-semibold text-slate-950">
-              {currentIndex >= 0 ? currentIndex + 1 : 0}/{navigationResults.length}
+              {summary.executed}/{summary.total} ({summary.progressPercentage}%)
             </p>
           </div>
           <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
             <p className="text-xs font-medium uppercase text-emerald-700">Aprovados</p>
-            <p className="mt-1 text-sm font-semibold text-emerald-900">{countResults(results, 'PASSED')}</p>
+            <p className="mt-1 text-sm font-semibold text-emerald-900">{summary.passed}</p>
           </div>
           <div className="rounded-lg border border-red-200 bg-red-50 p-3">
             <p className="text-xs font-medium uppercase text-red-700">Falhas</p>
-            <p className="mt-1 text-sm font-semibold text-red-900">{countResults(results, 'FAILED')}</p>
+            <p className="mt-1 text-sm font-semibold text-red-900">{summary.failed}</p>
           </div>
           <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
             <p className="text-xs font-medium uppercase text-amber-700">Ignorados</p>
-            <p className="mt-1 text-sm font-semibold text-amber-900">{countResults(results, 'SKIPPED')}</p>
+            <p className="mt-1 text-sm font-semibold text-amber-900">{summary.skipped}</p>
+          </div>
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+            <p className="text-xs font-medium uppercase text-blue-700">Aprovação</p>
+            <p className="mt-1 text-sm font-semibold text-blue-900">{summary.approvalPercentage}%</p>
           </div>
           <div className="rounded-lg border border-slate-200 bg-white p-3">
             <p className="flex items-center gap-2 text-xs font-medium uppercase text-slate-500">

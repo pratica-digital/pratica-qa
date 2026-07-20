@@ -365,6 +365,7 @@ export class TestRunsRepository {
             name: true,
             status: true,
             completedAt: true,
+            updatedAt: true,
             assignedToId: true,
             project: {
               select: {

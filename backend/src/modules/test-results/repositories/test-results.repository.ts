@@ -20,6 +20,7 @@ const TEST_RESULT_INCLUDE = {
       name: true,
       status: true,
       completedAt: true,
+      updatedAt: true,
       testPlanId: true,
       projectId: true,
       assignedToId: true,
