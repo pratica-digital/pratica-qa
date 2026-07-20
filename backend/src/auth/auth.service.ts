@@ -237,6 +237,7 @@ export class AuthService {
     });
 
     return this.mailService.sendMail({
+      attachments: template.attachments,
       from: this.mailService.senderAddress,
       html: template.html,
       subject: template.subject,

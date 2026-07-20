@@ -65,6 +65,8 @@ export function Sidebar({ activePage, onNavigate }: SidebarProps) {
                 className="h-6 w-auto max-w-[8rem] object-contain"
               />
             </span>
+
+            
           </button>
 
           <button

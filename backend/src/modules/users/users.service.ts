@@ -91,6 +91,7 @@ export class UsersService {
 
     try {
       await this.mailService.sendMail({
+        attachments: firstAccessTemplate.attachments,
         from: this.mailService.senderAddress,
         html: firstAccessTemplate.html,
         subject: firstAccessTemplate.subject,
@@ -309,6 +310,7 @@ export class UsersService {
 
     try {
       await this.mailService.sendMail({
+        attachments: resetTemplate.attachments,
         from: this.mailService.senderAddress,
         html: resetTemplate.html,
         subject: resetTemplate.subject,
