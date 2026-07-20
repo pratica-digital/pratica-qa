@@ -31,9 +31,7 @@ export class TestSuitesRepository {
       data: {
         name: dto.name,
         position: dto.position ?? 0,
-        projects: projectIds.length > 0
-          ? { connect: projectIds.map((id) => ({ id })) }
-          : undefined,
+        projects: projectIds.length > 0 ? { connect: projectIds.map((id) => ({ id })) } : undefined,
       },
       include: {
         projects: {
@@ -131,13 +129,43 @@ export class TestSuitesRepository {
     });
   }
 
+  findPositionsByIds(ids: string[]) {
+    return this.prisma.testSuite.findMany({
+      where: { id: { in: ids }, deletedAt: null },
+      select: { id: true, position: true },
+    });
+  }
+
+  findActiveCaseIds(suiteId: string) {
+    return this.prisma.testCase
+      .findMany({
+        where: { suiteId, deletedAt: null },
+        orderBy: [{ position: 'asc' }, { id: 'asc' }],
+        select: { id: true },
+      })
+      .then((cases) => cases.map((testCase) => testCase.id));
+  }
+
+  reorderCases(suiteId: string, caseIds: string[]) {
+    return this.prisma.$transaction(
+      caseIds.map((id, index) =>
+        this.prisma.testCase.updateMany({
+          where: { id, suiteId },
+          data: { position: index + 1 },
+        }),
+      ),
+    );
+  }
+
   update(id: string, dto: UpdateTestSuiteDto, projectIds?: string[]) {
     return this.prisma.testSuite.update({
       where: { id },
       data: {
         name: dto.name,
         position: dto.position,
-        projects: projectIds ? { set: projectIds.map((projectId) => ({ id: projectId })) } : undefined,
+        projects: projectIds
+          ? { set: projectIds.map((projectId) => ({ id: projectId })) }
+          : undefined,
       },
       include: {
         projects: {
@@ -160,6 +188,11 @@ export class TestSuitesRepository {
 
   importTestCases(suiteId: string, rows: NormalizedImportedTestCase[]) {
     return this.prisma.$transaction(async (tx) => {
+      const lastCase = await tx.testCase.aggregate({
+        where: { suiteId },
+        _max: { position: true },
+      });
+      const firstPosition = (lastCase._max.position ?? 0) + 1;
       const existingSections = await tx.testCase.findMany({
         where: {
           suiteId,
@@ -187,7 +220,7 @@ export class TestSuitesRepository {
       const createdSections = incomingSections.filter(
         (section) => !existingSectionKeys.has(normalizeSectionKey(section)),
       );
-      const caseRows = rows.map((row) => ({
+      const caseRows = rows.map((row, index) => ({
         id: randomUUID(),
         suiteId,
         title: row.title,
@@ -195,6 +228,7 @@ export class TestSuitesRepository {
         preconditions: '',
         expectedResult: row.expectedResult,
         section: row.section,
+        position: firstPosition + index,
         status: TestCaseStatus.ACTIVE,
         priority: TestPriority.MEDIUM,
         severity: TestSeverity.MEDIUM,
@@ -249,10 +283,7 @@ export class TestSuitesRepository {
     });
   }
 
-  private buildWhere(params: {
-    projectId?: string;
-    search?: string;
-  }): Prisma.TestSuiteWhereInput {
+  private buildWhere(params: { projectId?: string; search?: string }): Prisma.TestSuiteWhereInput {
     return {
       deletedAt: null,
       AND: [

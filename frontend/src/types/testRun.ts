@@ -1,6 +1,6 @@
-export type UserRole = 'ADMIN' | 'QA' | 'VIEWER';
+export type UserRole = "ADMIN" | "QA" | "VIEWER";
 
-export type UserStatus = 'ACTIVE' | 'INACTIVE';
+export type UserStatus = "ACTIVE" | "INACTIVE";
 
 export type AuthUser = {
   id: string;
@@ -33,38 +33,44 @@ export type UserEmailNotificationResponse = {
   emailError?: string;
 };
 
-export type TestRunStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED';
+export type TestRunStatus = "PENDING" | "IN_PROGRESS" | "COMPLETED";
 
-export type TestRunTestType = 'SMOKE' | 'FUNCIONAL' | 'REGRESSAO' | 'ROBUSTEZ';
+export type TestRunTestType = "SMOKE" | "FUNCIONAL" | "REGRESSAO" | "ROBUSTEZ";
 
-export type TestResultStatus = 'PENDING' | 'PASSED' | 'FAILED' | 'SKIPPED';
+export type TestResultStatus = "PENDING" | "PASSED" | "FAILED" | "SKIPPED";
 
-export type DashboardPeriod = '30d' | '90d' | '6m' | '12m';
+export type DashboardPeriod = "30d" | "90d" | "6m" | "12m";
 
-export type TestPriority = 'LOW' | 'MEDIUM' | 'HIGH';
+export type TestPriority = "LOW" | "MEDIUM" | "HIGH";
 
-export type TestSeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+export type TestSeverity = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 
-export type TestCaseStatus = 'ACTIVE' | 'ARCHIVED';
+export type TestCaseStatus = "ACTIVE" | "ARCHIVED";
 
-export type TestSuiteStatus = 'ACTIVE' | 'ARCHIVED';
+export type TestSuiteStatus = "ACTIVE" | "ARCHIVED";
 
-export type ProjectStatus = 'ACTIVE' | 'ARCHIVED';
+export type ProjectStatus = "ACTIVE" | "ARCHIVED";
 
-export type ProjectCategory = 'BAKERY_OVENS' | 'COMBI_OVENS' | 'SPEED_OVENS';
+export type ProjectCategory = "BAKERY_OVENS" | "COMBI_OVENS" | "SPEED_OVENS";
 
-export type ProjectCategoryLabel = 'Fornos de Panificação' | 'Fornos Combinados' | 'Speed Ovens';
+export type ProjectCategoryLabel =
+  | "Fornos de Panificação"
+  | "Fornos Combinados"
+  | "Speed Ovens";
 
-export const PROJECT_CATEGORY_MAP: Record<ProjectCategory, ProjectCategoryLabel> = {
-  BAKERY_OVENS: 'Fornos de Panificação',
-  COMBI_OVENS: 'Fornos Combinados',
-  SPEED_OVENS: 'Speed Ovens',
+export const PROJECT_CATEGORY_MAP: Record<
+  ProjectCategory,
+  ProjectCategoryLabel
+> = {
+  BAKERY_OVENS: "Fornos de Panificação",
+  COMBI_OVENS: "Fornos Combinados",
+  SPEED_OVENS: "Speed Ovens",
 };
 
 export const PROJECT_CATEGORY_ORDER: ProjectCategory[] = [
-  'BAKERY_OVENS',
-  'COMBI_OVENS',
-  'SPEED_OVENS',
+  "BAKERY_OVENS",
+  "COMBI_OVENS",
+  "SPEED_OVENS",
 ];
 
 export type TestStep = {
@@ -78,9 +84,10 @@ export type RunnerTestCase = {
   id: string;
   title: string;
   suiteId?: string;
+  position?: number;
   description?: string;
   expectedResult?: string;
-  priority?: 'LOW' | 'MEDIUM' | 'HIGH';
+  priority?: "LOW" | "MEDIUM" | "HIGH";
   severity?: TestSeverity;
   status?: string;
   suite?: {
@@ -148,6 +155,7 @@ export type ManagedTestCase = {
   id: string;
   suiteId: string;
   title: string;
+  position: number;
   description: string;
   preconditions?: string;
   expectedResult: string;
@@ -175,6 +183,7 @@ export type TestResult = {
   testRunId?: string;
   testCaseId: string;
   status: TestResultStatus;
+  position?: number;
   comment?: string;
   titleOverride?: string | null;
   descriptionOverride?: string | null;
@@ -316,7 +325,7 @@ export type PaginatedResponse<T> = {
 export type DashboardMetricDelta = {
   value: number;
   percent: number;
-  direction: 'up' | 'down' | 'flat';
+  direction: "up" | "down" | "flat";
 };
 
 export type DashboardAnalytics = {
@@ -338,7 +347,14 @@ export type DashboardAnalytics = {
     pending: number;
   };
   metricDeltas: Record<
-    'projects' | 'suites' | 'cases' | 'plans' | 'runs' | 'passed' | 'failed' | 'pending',
+    | "projects"
+    | "suites"
+    | "cases"
+    | "plans"
+    | "runs"
+    | "passed"
+    | "failed"
+    | "pending",
     DashboardMetricDelta
   >;
   monthlyQuality: Array<{
@@ -386,7 +402,7 @@ export type UpdateTestResultPayload = Partial<{
   title: string;
   description: string;
   expectedResult: string;
-  steps: ReplaceTestStepsPayload['steps'];
+  steps: ReplaceTestStepsPayload["steps"];
 }>;
 
 export type CreateTestResultPayload = {
@@ -425,7 +441,7 @@ export type CreateTestCasePayload = {
   status?: TestCaseStatus;
   priority?: TestPriority;
   severity?: TestSeverity;
-  steps?: ReplaceTestStepsPayload['steps'];
+  steps?: ReplaceTestStepsPayload["steps"];
 };
 
 export type ImportTestCasePayload = {
@@ -457,7 +473,7 @@ export type ImportTestCasesReport = {
   }>;
 };
 
-export type AiProviderName = 'openrouter';
+export type AiProviderName = "openrouter";
 
 export type AiSettings = {
   id?: string;
@@ -500,7 +516,7 @@ export type AiReleaseChange = {
   impacto: string;
   origem: string;
   trecho_release: string;
-  prioridade: 'baixa' | 'media' | 'alta' | 'critica';
+  prioridade: "baixa" | "media" | "alta" | "critica";
   riscos: string[];
   funcionalidades_afetadas: string[];
   dependencias: string[];
@@ -580,7 +596,7 @@ export type AiGenerationRecord = {
 
 export type AiHistoryItem = Omit<
   AiGenerationRecord,
-  'releaseText' | 'analysis' | 'testCases' | 'regressionSuite' | 'coverage'
+  "releaseText" | "analysis" | "testCases" | "regressionSuite" | "coverage"
 > & {
   testCaseCount: number;
 };

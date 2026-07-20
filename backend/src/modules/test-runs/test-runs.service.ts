@@ -51,7 +51,7 @@ export class TestRunsService {
       resolvedProjectId ??= testPlan.projectId;
     }
 
-    const suiteAssignments = this.buildSuiteAssignments(dto);
+    let suiteAssignments = this.buildSuiteAssignments(dto);
     const suiteIds = suiteAssignments.map((assignment) => assignment.suiteId);
 
     if (suiteIds.length > 0) {
@@ -66,6 +66,21 @@ export class TestRunsService {
             : 'One or more test suites were not found',
         );
       }
+
+      const suitePositions = await this.testSuitesRepository.findPositionsByIds(suiteIds);
+      const positionById = new Map(suitePositions.map((suite) => [suite.id, suite.position]));
+      suiteAssignments = suiteAssignments
+        .map((assignment) => ({ assignment }))
+        .sort((left, right) => {
+          const positionDifference =
+            (positionById.get(left.assignment.suiteId) ?? Number.MAX_SAFE_INTEGER) -
+            (positionById.get(right.assignment.suiteId) ?? Number.MAX_SAFE_INTEGER);
+
+          return (
+            positionDifference || left.assignment.suiteId.localeCompare(right.assignment.suiteId)
+          );
+        })
+        .map(({ assignment }) => assignment);
     }
 
     await this.ensureAssignableUser(dto.assignedToId);

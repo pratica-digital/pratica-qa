@@ -1,15 +1,15 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FileSpreadsheet, Filter, Plus, RefreshCw, Search } from 'lucide-react';
-import { canManageTests } from '../auth/permissions';
-import { useAuth } from '../auth/useAuth';
-import { ActionMenu } from '../components/ActionMenu';
-import { DeleteConfirmationModal } from '../components/DeleteConfirmationModal';
-import { TestCaseEditPanel } from '../components/test-cases/TestCaseEditPanel';
-import { TestCaseImportModal } from '../components/test-suites/TestCaseImportModal';
-import { TestSuiteDetailPanel } from '../components/test-suites/TestSuiteDetailPanel';
-import { TestSuiteEditPanel } from '../components/test-suites/TestSuiteEditPanel';
-import { ApiError, projectsApi, testCasesApi, testSuitesApi } from '../lib/api';
-import { suiteProjectLabel } from '../lib/labels';
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { FileSpreadsheet, Filter, Plus, RefreshCw, Search } from "lucide-react";
+import { canManageTests } from "../auth/permissions";
+import { useAuth } from "../auth/useAuth";
+import { ActionMenu } from "../components/ActionMenu";
+import { DeleteConfirmationModal } from "../components/DeleteConfirmationModal";
+import { TestCaseEditPanel } from "../components/test-cases/TestCaseEditPanel";
+import { TestCaseImportModal } from "../components/test-suites/TestCaseImportModal";
+import { TestSuiteDetailPanel } from "../components/test-suites/TestSuiteDetailPanel";
+import { TestSuiteEditPanel } from "../components/test-suites/TestSuiteEditPanel";
+import { ApiError, projectsApi, testCasesApi, testSuitesApi } from "../lib/api";
+import { suiteProjectLabel } from "../lib/labels";
 import type {
   CreateTestSuitePayload,
   ImportTestCasesPayload,
@@ -20,96 +20,64 @@ import type {
   ReplaceTestStepsPayload,
   UpdateTestCasePayload,
   UpdateTestSuitePayload,
-} from '../types/testRun';
-import { NewSuiteModal } from './NewSuiteModal';
+} from "../types/testRun";
+import { NewSuiteModal } from "./NewSuiteModal";
 
 type TestSuitesPageProps = {
   createActionEventId?: number;
 };
 
-const CASE_ORDER_STORAGE_KEY = 'qa-platform-suite-case-order';
-
-type CaseOrderBySuite = Record<string, string[]>;
-
-function readCaseOrder() {
-  try {
-    const stored = window.localStorage.getItem(CASE_ORDER_STORAGE_KEY);
-    return stored ? (JSON.parse(stored) as CaseOrderBySuite) : {};
-  } catch {
-    return {};
-  }
-}
-
-function writeCaseOrder(caseOrder: CaseOrderBySuite) {
-  window.localStorage.setItem(CASE_ORDER_STORAGE_KEY, JSON.stringify(caseOrder));
-}
-
-function getSuiteCases(
-  suite: ManagedTestSuite,
-  cases: ManagedTestCase[],
-  caseOrder: CaseOrderBySuite,
-) {
+function getSuiteCases(suite: ManagedTestSuite, cases: ManagedTestCase[]) {
   const suiteCases = cases.filter((testCase) => testCase.suiteId === suite.id);
-  const orderedIds = caseOrder[suite.id] ?? [];
 
   return [...suiteCases].sort((left, right) => {
-    const leftIndex = orderedIds.indexOf(left.id);
-    const rightIndex = orderedIds.indexOf(right.id);
-
-    if (leftIndex !== -1 || rightIndex !== -1) {
-      if (leftIndex === -1) {
-        return 1;
-      }
-
-      if (rightIndex === -1) {
-        return -1;
-      }
-
-      return leftIndex - rightIndex;
-    }
-
-    const sectionCompare = (left.section ?? '').localeCompare(right.section ?? '');
-
-    if (sectionCompare !== 0) {
-      return sectionCompare;
-    }
-
-    return left.title.localeCompare(right.title);
+    return left.position - right.position || left.id.localeCompare(right.id);
   });
 }
 
 function getUpdatedAt(suite: ManagedTestSuite) {
   if (!suite.updatedAt) {
-    return 'Sem atualizações';
+    return "Sem atualizações";
   }
 
-  return new Intl.DateTimeFormat('pt-BR', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "medium",
+    timeStyle: "short",
   }).format(new Date(suite.updatedAt));
 }
 
-export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps) {
+export function TestSuitesPage({
+  createActionEventId = 0,
+}: TestSuitesPageProps) {
   const { token, user } = useAuth();
-  const isReadOnly = user?.role === 'VIEWER';
+  const isReadOnly = user?.role === "VIEWER";
   const canManageTestAssets = canManageTests(user);
 
   const [suites, setSuites] = useState<ManagedTestSuite[]>([]);
   const [cases, setCases] = useState<ManagedTestCase[]>([]);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
-  const [caseOrder, setCaseOrder] = useState<CaseOrderBySuite>(() => readCaseOrder());
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
-  const [selectedSuite, setSelectedSuite] = useState<ManagedTestSuite | null>(null);
-  const [selectedCase, setSelectedCase] = useState<ManagedTestCase | null>(null);
-  const [editingSuite, setEditingSuite] = useState<ManagedTestSuite | null>(null);
-  const [importingSuite, setImportingSuite] = useState<ManagedTestSuite | null>(null);
-  const [suitePendingDelete, setSuitePendingDelete] = useState<ManagedTestSuite | null>(null);
-  const [casePendingDelete, setCasePendingDelete] = useState<ManagedTestCase | null>(null);
+  const [selectedSuite, setSelectedSuite] = useState<ManagedTestSuite | null>(
+    null,
+  );
+  const [selectedCase, setSelectedCase] = useState<ManagedTestCase | null>(
+    null,
+  );
+  const [editingSuite, setEditingSuite] = useState<ManagedTestSuite | null>(
+    null,
+  );
+  const [importingSuite, setImportingSuite] = useState<ManagedTestSuite | null>(
+    null,
+  );
+  const [suitePendingDelete, setSuitePendingDelete] =
+    useState<ManagedTestSuite | null>(null);
+  const [casePendingDelete, setCasePendingDelete] =
+    useState<ManagedTestCase | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const fetchData = useCallback(async () => {
     if (!token) {
@@ -117,7 +85,7 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
     }
 
     setIsLoading(true);
-    setError('');
+    setError("");
 
     try {
       const [nextSuites, nextCases, nextProjects] = await Promise.all([
@@ -131,9 +99,13 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
       setProjects(nextProjects);
     } catch (fetchError) {
       if (fetchError instanceof ApiError && fetchError.status === 401) {
-        setError('Sua sessão expirou. Saia e entre novamente.');
+        setError("Sua sessão expirou. Saia e entre novamente.");
       } else {
-        setError(fetchError instanceof Error ? fetchError.message : 'Não foi possível carregar as suítes de teste.');
+        setError(
+          fetchError instanceof Error
+            ? fetchError.message
+            : "Não foi possível carregar as suítes de teste.",
+        );
       }
     } finally {
       setIsLoading(false);
@@ -168,11 +140,14 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
     return suites.filter((suite) => {
       const searchable = [
         suite.name,
-        ...(suite.projects ?? []).flatMap((project) => [project.name, project.key]),
-        !suite.projects?.length ? 'Geral' : undefined,
+        ...(suite.projects ?? []).flatMap((project) => [
+          project.name,
+          project.key,
+        ]),
+        !suite.projects?.length ? "Geral" : undefined,
       ]
         .filter(Boolean)
-        .join(' ')
+        .join(" ")
         .toLowerCase();
 
       return searchable.includes(normalizedSearch);
@@ -183,7 +158,8 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
     [visibleSuites],
   );
   const visibleCaseCount = useMemo(
-    () => cases.filter((testCase) => visibleSuiteIds.has(testCase.suiteId)).length,
+    () =>
+      cases.filter((testCase) => visibleSuiteIds.has(testCase.suiteId)).length,
     [cases, visibleSuiteIds],
   );
 
@@ -194,7 +170,7 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
 
     const createdSuite = await testSuitesApi.create(token, payload);
     setSuites((current) => [createdSuite, ...current]);
-    setSuccess('Suíte de teste criada.');
+    setSuccess("Suíte de teste criada.");
   }
 
   async function handleSaveSuite(
@@ -203,22 +179,27 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
     orderedCaseIds: string[],
   ) {
     if (!token) {
-      throw new Error('Autenticação obrigatória.');
+      throw new Error("Autenticação obrigatória.");
     }
 
     const updatedSuite = await testSuitesApi.update(token, suite.id, payload);
-    const nextOrder = {
-      ...caseOrder,
-      [suite.id]: orderedCaseIds,
-    };
+    await testSuitesApi.reorderCases(token, suite.id, orderedCaseIds);
 
     setSuites((current) =>
-      current.map((item) => (item.id === suite.id ? { ...item, ...updatedSuite } : item)),
+      current.map((item) =>
+        item.id === suite.id ? { ...item, ...updatedSuite } : item,
+      ),
     );
-    setCaseOrder(nextOrder);
-    writeCaseOrder(nextOrder);
+    setCases((current) =>
+      current.map((testCase) => {
+        const position = orderedCaseIds.indexOf(testCase.id);
+        return position === -1
+          ? testCase
+          : { ...testCase, position: position + 1 };
+      }),
+    );
     setEditingSuite({ ...suite, ...updatedSuite });
-    setSuccess('Suíte de teste atualizada.');
+    setSuccess("Suíte de teste atualizada.");
   }
 
   async function handleOpenSuite(suite: ManagedTestSuite) {
@@ -231,7 +212,11 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
       const freshSuite = await testSuitesApi.get(token, suite.id);
       setSelectedSuite(freshSuite);
     } catch (openError) {
-      setError(openError instanceof Error ? openError.message : 'Não foi possível carregar a suíte de teste.');
+      setError(
+        openError instanceof Error
+          ? openError.message
+          : "Não foi possível carregar a suíte de teste.",
+      );
     }
   }
 
@@ -241,11 +226,15 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
     steps: ReplaceTestStepsPayload,
   ) {
     if (!token) {
-      throw new Error('Autenticação obrigatória.');
+      throw new Error("Autenticação obrigatória.");
     }
 
     await testCasesApi.update(token, testCase.id, payload);
-    const updatedCase = await testCasesApi.replaceSteps(token, testCase.id, steps);
+    const updatedCase = await testCasesApi.replaceSteps(
+      token,
+      testCase.id,
+      steps,
+    );
 
     const [nextSuites, nextCases] = await Promise.all([
       testSuitesApi.list(token),
@@ -255,20 +244,28 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
     setSuites(nextSuites);
     setCases(nextCases);
     setSelectedCase(updatedCase);
-    setSuccess('Test case updated.');
+    setSuccess("Test case updated.");
   }
 
-  async function handleImportCases(payload: ImportTestCasesPayload): Promise<ImportTestCasesReport> {
+  async function handleImportCases(
+    payload: ImportTestCasesPayload,
+  ): Promise<ImportTestCasesReport> {
     if (!token || !importingSuite) {
-      throw new Error('Autenticação obrigatória.');
+      throw new Error("Autenticação obrigatória.");
     }
 
-    const report = await testSuitesApi.importCases(token, importingSuite.id, payload);
+    const report = await testSuitesApi.importCases(
+      token,
+      importingSuite.id,
+      payload,
+    );
     const [nextSuites, nextCases] = await Promise.all([
       testSuitesApi.list(token),
       testCasesApi.list(token),
     ]);
-    const refreshedSuite = nextSuites.find((suite) => suite.id === importingSuite.id);
+    const refreshedSuite = nextSuites.find(
+      (suite) => suite.id === importingSuite.id,
+    );
 
     setSuites(nextSuites);
     setCases(nextCases);
@@ -286,22 +283,22 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
   }
 
   function requestSuiteDelete(suite: ManagedTestSuite) {
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
     setSuitePendingDelete(suite);
   }
 
   function requestCaseDelete(testCase: ManagedTestCase) {
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
     setCasePendingDelete(testCase);
   }
 
   const editingSuiteCases = editingSuite
-    ? getSuiteCases(editingSuite, cases, caseOrder)
+    ? getSuiteCases(editingSuite, cases)
     : [];
   const selectedSuiteCases = selectedSuite
-    ? getSuiteCases(selectedSuite, cases, caseOrder)
+    ? getSuiteCases(selectedSuite, cases)
     : [];
 
   async function handleDeleteSuite() {
@@ -310,18 +307,19 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
     }
 
     setIsDeleting(true);
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
 
     try {
       await testSuitesApi.remove(token, suitePendingDelete.id);
-      setSuites((current) => current.filter((suite) => suite.id !== suitePendingDelete.id));
-      setCases((current) => current.filter((testCase) => testCase.suiteId !== suitePendingDelete.id));
-
-      const nextOrder = { ...caseOrder };
-      delete nextOrder[suitePendingDelete.id];
-      setCaseOrder(nextOrder);
-      writeCaseOrder(nextOrder);
+      setSuites((current) =>
+        current.filter((suite) => suite.id !== suitePendingDelete.id),
+      );
+      setCases((current) =>
+        current.filter(
+          (testCase) => testCase.suiteId !== suitePendingDelete.id,
+        ),
+      );
 
       if (selectedSuite?.id === suitePendingDelete.id) {
         setSelectedSuite(null);
@@ -332,10 +330,14 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
       }
 
       setSuitePendingDelete(null);
-      setSuccess('Suíte de teste excluída.');
+      setSuccess("Suíte de teste excluída.");
     } catch (deleteError) {
       setSuitePendingDelete(null);
-      setError(deleteError instanceof Error ? deleteError.message : 'Não foi possível excluir a suíte de teste.');
+      setError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "Não foi possível excluir a suíte de teste.",
+      );
     } finally {
       setIsDeleting(false);
     }
@@ -347,32 +349,28 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
     }
 
     setIsDeleting(true);
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
 
     try {
       await testCasesApi.remove(token, casePendingDelete.id);
-      setCases((current) => current.filter((testCase) => testCase.id !== casePendingDelete.id));
-
-      const nextOrder = Object.fromEntries(
-        Object.entries(caseOrder).map(([suiteId, caseIds]) => [
-          suiteId,
-          caseIds.filter((caseId) => caseId !== casePendingDelete.id),
-        ]),
+      setCases((current) =>
+        current.filter((testCase) => testCase.id !== casePendingDelete.id),
       );
-
-      setCaseOrder(nextOrder);
-      writeCaseOrder(nextOrder);
 
       if (selectedCase?.id === casePendingDelete.id) {
         setSelectedCase(null);
       }
 
       setCasePendingDelete(null);
-      setSuccess('Test case deleted.');
+      setSuccess("Test case deleted.");
     } catch (deleteError) {
       setCasePendingDelete(null);
-      setError(deleteError instanceof Error ? deleteError.message : 'Não foi possível excluir o caso de teste.');
+      setError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "Não foi possível excluir o caso de teste.",
+      );
     } finally {
       setIsDeleting(false);
     }
@@ -382,11 +380,13 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          
           <h1 className="mt-1 text-2xl font-semibold tracking-normal text-slate-950">
             Suítes de Teste
           </h1>
-          <p className="text-sm font-medium text-slate-500">Conjunto de testes que validam uma funcionalidade específica do sistema</p>
+          <p className="text-sm font-medium text-slate-500">
+            Conjunto de testes que validam uma funcionalidade específica do
+            sistema
+          </p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <button
@@ -400,7 +400,9 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
           <button
             className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-blue-700 px-3 text-sm font-medium text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
             disabled={!canManageTestAssets}
-            title={isReadOnly ? 'Modo visualizador é somente leitura' : 'Criar suíte'}
+            title={
+              isReadOnly ? "Modo visualizador é somente leitura" : "Criar suíte"
+            }
             type="button"
             onClick={() => setModalOpen(true)}
           >
@@ -423,7 +425,8 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
         </label>
         <span className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-600">
           <Filter className="h-4 w-4" aria-hidden="true" />
-          {visibleSuites.length} suíte{visibleSuites.length === 1 ? '' : 's'} · {visibleCaseCount} caso{visibleCaseCount === 1 ? '' : 's'}
+          {visibleSuites.length} suíte{visibleSuites.length === 1 ? "" : "s"} ·{" "}
+          {visibleCaseCount} caso{visibleCaseCount === 1 ? "" : "s"}
         </span>
       </div>
 
@@ -445,10 +448,11 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
         </div>
       ) : visibleSuites.length > 0 ? (
         <>
-
           <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
             <div className="border-b border-slate-200 px-4 py-3">
-              <h2 className="text-sm font-semibold text-slate-950">Matriz de suítes</h2>
+              <h2 className="text-sm font-semibold text-slate-950">
+                Matriz de suítes
+              </h2>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[820px] text-left text-sm">
@@ -469,15 +473,16 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
                       onClick={() => void handleOpenSuite(suite)}
                     >
                       <td className="px-4 py-3">
-                        <p className="font-medium text-slate-950">{suite.name}</p>
-                        
+                        <p className="font-medium text-slate-950">
+                          {suite.name}
+                        </p>
                       </td>
                       <td className="px-4 py-3 text-slate-600">
                         {suiteProjectLabel(suite)}
                       </td>
-                      
+
                       <td className="px-4 py-3 text-slate-600">
-                        {getSuiteCases(suite, cases, caseOrder).length}
+                        {getSuiteCases(suite, cases).length}
                       </td>
                       <td className="px-4 py-3 text-slate-600">
                         {getUpdatedAt(suite)}
@@ -488,21 +493,26 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
                           disabled={!canManageTestAssets}
                           items={[
                             {
-                              icon: <FileSpreadsheet className="h-4 w-4" aria-hidden="true" />,
-                              label: 'Importar Casos de Teste',
+                              icon: (
+                                <FileSpreadsheet
+                                  className="h-4 w-4"
+                                  aria-hidden="true"
+                                />
+                              ),
+                              label: "Importar Casos de Teste",
                               onSelect: () => setImportingSuite(suite),
-                              title: 'Importar Casos de Teste',
+                              title: "Importar Casos de Teste",
                             },
                             {
-                              label: 'Editar',
+                              label: "Editar",
                               onSelect: () => setEditingSuite(suite),
-                              title: 'Editar suíte de teste',
+                              title: "Editar suíte de teste",
                             },
                             {
-                              label: 'Excluir',
+                              label: "Excluir",
                               onSelect: () => requestSuiteDelete(suite),
-                              title: 'Excluir suíte de teste',
-                              tone: 'danger',
+                              title: "Excluir suíte de teste",
+                              tone: "danger",
                             },
                           ]}
                         />
@@ -516,7 +526,9 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
         </>
       ) : (
         <div className="rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
-          <h2 className="text-sm font-semibold text-slate-950">Nenhuma suíte de teste encontrada</h2>
+          <h2 className="text-sm font-semibold text-slate-950">
+            Nenhuma suíte de teste encontrada
+          </h2>
           <p className="mt-1 text-sm text-slate-500">
             Adjust the search or create the first suite.
           </p>
@@ -536,7 +548,11 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
           cases={editingSuiteCases}
           projects={projects}
           onClose={() => setEditingSuite(null)}
-          onImportCases={canManageTestAssets ? () => setImportingSuite(editingSuite) : undefined}
+          onImportCases={
+            canManageTestAssets
+              ? () => setImportingSuite(editingSuite)
+              : undefined
+          }
           onSave={handleSaveSuite}
           readOnly={!canManageTestAssets}
           suite={editingSuite}
@@ -547,19 +563,27 @@ export function TestSuitesPage({ createActionEventId = 0 }: TestSuitesPageProps)
         <TestSuiteDetailPanel
           cases={selectedSuiteCases}
           onClose={() => setSelectedSuite(null)}
-          onDelete={canManageTestAssets ? () => requestSuiteDelete(selectedSuite) : undefined}
+          onDelete={
+            canManageTestAssets
+              ? () => requestSuiteDelete(selectedSuite)
+              : undefined
+          }
           onEdit={() => {
             setEditingSuite(selectedSuite);
             setSelectedSuite(null);
           }}
-          onImportCases={canManageTestAssets ? () => setImportingSuite(selectedSuite) : undefined}
+          onImportCases={
+            canManageTestAssets
+              ? () => setImportingSuite(selectedSuite)
+              : undefined
+          }
           onOpenCase={setSelectedCase}
           suite={selectedSuite}
         />
       ) : null}
 
       <TestCaseImportModal
-        key={importingSuite?.id ?? 'closed-import-modal'}
+        key={importingSuite?.id ?? "closed-import-modal"}
         onClose={() => setImportingSuite(null)}
         onImport={handleImportCases}
         open={Boolean(importingSuite)}

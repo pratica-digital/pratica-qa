@@ -1,6 +1,7 @@
-import { ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { ChangeEvent, useCallback, useEffect, useMemo, useState } from "react";
 import {
   CheckCircle2,
+  ChevronLeft,
   ChevronRight,
   ListChecks,
   Paperclip,
@@ -8,13 +9,13 @@ import {
   X,
   XCircle,
   type LucideIcon,
-} from 'lucide-react';
-import { getAttachmentName } from '../../lib/attachments';
+} from "lucide-react";
+import { getAttachmentName } from "../../lib/attachments";
 import type {
   ExecuteTestResultPayload,
   TestResultAttachment,
   TestResultStatus,
-} from '../../types/testRun';
+} from "../../types/testRun";
 
 type TestResultFormProps = {
   comment?: string;
@@ -24,10 +25,18 @@ type TestResultFormProps = {
   disabled: boolean;
   isActive: boolean;
   isSubmitting: boolean;
+  isFirstResult?: boolean;
   isLastResult?: boolean;
   navigationPosition?: number;
   navigationTotal?: number;
-  onNext?: (payload: ExecuteTestResultPayload, hasDraftChanges: boolean) => Promise<void>;
+  onNext?: (
+    payload: ExecuteTestResultPayload,
+    hasDraftChanges: boolean,
+  ) => Promise<void>;
+  onPrevious?: (
+    payload: ExecuteTestResultPayload,
+    hasDraftChanges: boolean,
+  ) => Promise<void>;
   onDraftCommentChange?: (value: string) => void;
   onOpenList?: () => void;
   onRemoveAttachment: (attachment: TestResultAttachment) => Promise<void>;
@@ -44,30 +53,31 @@ const actionConfig: Array<{
   icon: LucideIcon;
 }> = [
   {
-    status: 'PASSED',
-    label: 'Aprovar',
-    title: 'Marcar como aprovado',
+    status: "PASSED",
+    label: "Aprovar",
+    title: "Marcar como aprovado",
     className:
-      'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100',
-    activeClassName: 'border-emerald-600 bg-emerald-100 text-emerald-900 ring-1 ring-emerald-500',
+      "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100",
+    activeClassName:
+      "border-emerald-600 bg-emerald-100 text-emerald-900 ring-1 ring-emerald-500",
     icon: CheckCircle2,
   },
   {
-    status: 'FAILED',
-    label: 'Falhar',
-    title: 'Marcar como falhou',
-    className:
-      'border-red-200 bg-red-50 text-red-700 hover:bg-red-100',
-    activeClassName: 'border-red-600 bg-red-100 text-red-900 ring-1 ring-red-500',
+    status: "FAILED",
+    label: "Falhar",
+    title: "Marcar como falhou",
+    className: "border-red-200 bg-red-50 text-red-700 hover:bg-red-100",
+    activeClassName:
+      "border-red-600 bg-red-100 text-red-900 ring-1 ring-red-500",
     icon: XCircle,
   },
   {
-    status: 'SKIPPED',
-    label: 'Pular',
-    title: 'Marcar como ignorado',
-    className:
-      'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100',
-    activeClassName: 'border-amber-500 bg-amber-100 text-amber-900 ring-1 ring-amber-500',
+    status: "SKIPPED",
+    label: "Pular",
+    title: "Marcar como ignorado",
+    className: "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100",
+    activeClassName:
+      "border-amber-500 bg-amber-100 text-amber-900 ring-1 ring-amber-500",
     icon: SkipForward,
   },
 ];
@@ -86,27 +96,29 @@ function formatFileSize(bytes: number) {
 
 function formatUploadDate(value?: string | null) {
   if (!value) {
-    return 'Data pendente';
+    return "Data pendente";
   }
 
-  return new Intl.DateTimeFormat('pt-BR', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "medium",
+    timeStyle: "short",
   }).format(new Date(value));
 }
 
 export function TestResultForm({
-  comment = '',
+  comment = "",
   attachments = [],
   currentStatus,
   draftComment: controlledDraftComment,
   disabled,
   isActive,
   isSubmitting,
+  isFirstResult = false,
   isLastResult = false,
   navigationPosition,
   navigationTotal,
   onNext,
+  onPrevious,
   onDraftCommentChange,
   onOpenList,
   onRemoveAttachment,
@@ -118,27 +130,35 @@ export function TestResultForm({
   const [isUploading, setIsUploading] = useState(false);
   const isBusy = isSubmitting || isUploading;
   const displayedDraftComment = controlledDraftComment ?? draftComment;
-  const updateDraftComment = useCallback((value: string) => {
-    if (onDraftCommentChange) {
-      onDraftCommentChange(value);
-      return;
-    }
+  const updateDraftComment = useCallback(
+    (value: string) => {
+      if (onDraftCommentChange) {
+        onDraftCommentChange(value);
+        return;
+      }
 
-    setDraftComment(value);
-  }, [onDraftCommentChange]);
+      setDraftComment(value);
+    },
+    [onDraftCommentChange],
+  );
   const normalizedDraftComment = displayedDraftComment.trim();
   const normalizedSavedComment = comment.trim();
   const hasDraftChanges = normalizedDraftComment !== normalizedSavedComment;
-  const hasNavigation = Boolean(isActive && onNext && onOpenList && navigationPosition && navigationTotal);
+  const hasNavigation = Boolean(
+    isActive && onNext && onOpenList && navigationPosition && navigationTotal,
+  );
 
   const uploadingAttachmentLabels = useMemo(
-    () => uploadingFiles.map((file) => `${file.name} (${formatFileSize(file.size)})`),
+    () =>
+      uploadingFiles.map(
+        (file) => `${file.name} (${formatFileSize(file.size)})`,
+      ),
     [uploadingFiles],
   );
 
   const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files ?? []);
-    event.target.value = '';
+    event.target.value = "";
 
     if (files.length === 0) {
       return;
@@ -155,12 +175,15 @@ export function TestResultForm({
     }
   };
 
-  const submitStatus = useCallback(async (status: TestResultStatus) => {
-    await onSubmit({
-      status,
-      comment: normalizedDraftComment,
-    });
-  }, [normalizedDraftComment, onSubmit]);
+  const submitStatus = useCallback(
+    async (status: TestResultStatus) => {
+      await onSubmit({
+        status,
+        comment: normalizedDraftComment,
+      });
+    },
+    [normalizedDraftComment, onSubmit],
+  );
 
   const goToNext = useCallback(async () => {
     if (!onNext || isLastResult) {
@@ -174,7 +197,33 @@ export function TestResultForm({
       },
       hasDraftChanges,
     );
-  }, [currentStatus, hasDraftChanges, isLastResult, normalizedDraftComment, onNext]);
+  }, [
+    currentStatus,
+    hasDraftChanges,
+    isLastResult,
+    normalizedDraftComment,
+    onNext,
+  ]);
+
+  const goToPrevious = useCallback(async () => {
+    if (!onPrevious || isFirstResult) {
+      return;
+    }
+
+    await onPrevious(
+      {
+        status: currentStatus,
+        comment: normalizedDraftComment,
+      },
+      hasDraftChanges,
+    );
+  }, [
+    currentStatus,
+    hasDraftChanges,
+    isFirstResult,
+    normalizedDraftComment,
+    onPrevious,
+  ]);
 
   useEffect(() => {
     if (!isActive || disabled || isBusy) {
@@ -195,12 +244,12 @@ export function TestResultForm({
 
       const key = event.key.toLowerCase();
       const status =
-        key === 'p'
-          ? 'PASSED'
-          : key === 'f'
-            ? 'FAILED'
-            : key === 's'
-              ? 'SKIPPED'
+        key === "p"
+          ? "PASSED"
+          : key === "f"
+            ? "FAILED"
+            : key === "s"
+              ? "SKIPPED"
               : undefined;
 
       if (!status) {
@@ -211,9 +260,9 @@ export function TestResultForm({
       void submitStatus(status);
     }
 
-    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
 
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [disabled, isActive, isBusy, submitStatus]);
 
   return (
@@ -233,8 +282,8 @@ export function TestResultForm({
         <Paperclip className="h-4 w-4" aria-hidden="true" />
         <span className="truncate">
           {isUploading
-            ? `Enviando ${uploadingFiles.length} arquivo${uploadingFiles.length > 1 ? 's' : ''}`
-            : 'Anexar mídia'}
+            ? `Enviando ${uploadingFiles.length} arquivo${uploadingFiles.length > 1 ? "s" : ""}`
+            : "Anexar mídia"}
         </span>
         <input
           className="sr-only"
@@ -247,7 +296,9 @@ export function TestResultForm({
 
       {attachments.length > 0 ? (
         <div className="space-y-1.5">
-          <p className="text-xs font-medium uppercase text-slate-500">Evidências atuais</p>
+          <p className="text-xs font-medium uppercase text-slate-500">
+            Evidências atuais
+          </p>
           <div className="grid gap-1.5">
             {attachments.map((attachment) => (
               <span
@@ -260,7 +311,9 @@ export function TestResultForm({
                   </span>
                   <span className="block truncate text-[11px] text-slate-400">
                     {formatUploadDate(attachment.createdAt)}
-                    {attachment.uploadedBy?.name ? ` por ${attachment.uploadedBy.name}` : ''}
+                    {attachment.uploadedBy?.name
+                      ? ` por ${attachment.uploadedBy.name}`
+                      : ""}
                   </span>
                 </span>
                 <button
@@ -323,12 +376,21 @@ export function TestResultForm({
           </span>
           <div className="flex items-center gap-2">
             <button
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={isBusy || isFirstResult}
+              onClick={() => void goToPrevious()}
+              type="button"
+            >
+              <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+              Anterior
+            </button>
+            <button
               className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-600 bg-slate-600 px-3 text-sm font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
               disabled={isBusy || isLastResult}
               onClick={() => void goToNext()}
               type="button"
             >
-              {isLastResult ? 'Último caso' : 'Próximo'}
+              {isLastResult ? "Último caso" : "Próximo"}
               <ChevronRight className="h-4 w-4" aria-hidden="true" />
             </button>
             <button

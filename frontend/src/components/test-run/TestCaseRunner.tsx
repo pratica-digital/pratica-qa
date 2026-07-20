@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from "react";
 import {
   Clock3,
   Download,
@@ -13,20 +13,25 @@ import {
   Trash2,
   UserCheck,
   X,
-} from 'lucide-react';
-import { ActionMenu } from '../ActionMenu';
-import { MarkdownContent } from '../MarkdownContent';
-import { TestResultStatusBadge } from '../badges';
-import { useAuthenticatedAttachmentUrl } from '../../hooks/useAuthenticatedAttachmentUrl';
+} from "lucide-react";
+import { ActionMenu } from "../ActionMenu";
+import { MarkdownContent } from "../MarkdownContent";
+import { TestResultStatusBadge } from "../badges";
+import { useAuthenticatedAttachmentUrl } from "../../hooks/useAuthenticatedAttachmentUrl";
 import {
   getAttachmentName,
   isImageAttachment,
   isVideoAttachment,
-} from '../../lib/attachments';
-import { getResultTestCase } from '../../lib/testResultOverrides';
-import { suiteProjectLabel } from '../../lib/labels';
-import type { AuthUser, ExecuteTestResultPayload, TestResult, TestResultAttachment } from '../../types/testRun';
-import { TestResultForm } from './TestResultForm';
+} from "../../lib/attachments";
+import { getResultTestCase } from "../../lib/testResultOverrides";
+import { suiteProjectLabel } from "../../lib/labels";
+import type {
+  AuthUser,
+  ExecuteTestResultPayload,
+  TestResult,
+  TestResultAttachment,
+} from "../../types/testRun";
+import { TestResultForm } from "./TestResultForm";
 
 type TestCaseRunnerProps = {
   result: TestResult;
@@ -34,6 +39,7 @@ type TestCaseRunnerProps = {
   draftComment?: string;
   position: number;
   total: number;
+  isFirst: boolean;
   isLast: boolean;
   disabled: boolean;
   disabledReason?: string;
@@ -46,33 +52,44 @@ type TestCaseRunnerProps = {
     payload: ExecuteTestResultPayload,
     hasDraftChanges: boolean,
   ) => Promise<void>;
+  onPrevious: (
+    result: TestResult,
+    payload: ExecuteTestResultPayload,
+    hasDraftChanges: boolean,
+  ) => Promise<void>;
   onDraftCommentChange: (resultId: string, value: string) => void;
   onOpenList: () => void;
   onRemoveRunCase: (result: TestResult) => void;
-  onRemoveAttachment: (result: TestResult, attachment: TestResultAttachment) => Promise<void>;
-  onSubmit: (result: TestResult, payload: ExecuteTestResultPayload) => Promise<void>;
+  onRemoveAttachment: (
+    result: TestResult,
+    attachment: TestResultAttachment,
+  ) => Promise<void>;
+  onSubmit: (
+    result: TestResult,
+    payload: ExecuteTestResultPayload,
+  ) => Promise<void>;
   onUploadAttachments: (result: TestResult, files: File[]) => Promise<void>;
 };
 
 function formatDate(value?: string | null) {
   if (!value) {
-    return 'Não executado';
+    return "Não executado";
   }
 
-  return new Intl.DateTimeFormat('pt-BR', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "medium",
+    timeStyle: "short",
   }).format(new Date(value));
 }
 
 function formatUploadDate(value?: string | null) {
   if (!value) {
-    return 'Data pendente';
+    return "Data pendente";
   }
 
-  return new Intl.DateTimeFormat('pt-BR', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "medium",
+    timeStyle: "short",
   }).format(new Date(value));
 }
 
@@ -104,6 +121,7 @@ export function TestCaseRunner({
   draftComment,
   position,
   total,
+  isFirst,
   isLast,
   disabled,
   disabledReason,
@@ -112,6 +130,7 @@ export function TestCaseRunner({
   onActivate,
   onEditRunCase,
   onNext,
+  onPrevious,
   onDraftCommentChange,
   onOpenList,
   onRemoveRunCase,
@@ -119,7 +138,8 @@ export function TestCaseRunner({
   onSubmit,
   onUploadAttachments,
 }: TestCaseRunnerProps) {
-  const [previewAttachment, setPreviewAttachment] = useState<TestResultAttachment | null>(null);
+  const [previewAttachment, setPreviewAttachment] =
+    useState<TestResultAttachment | null>(null);
   const testCase = getResultTestCase(result);
   const steps = testCase.steps ?? [];
   const attachments = result.attachments ?? [];
@@ -127,16 +147,15 @@ export function TestCaseRunner({
     result.testRun?.project?.name ??
     result.testRun?.projectId ??
     suiteProjectLabel(testCase.suite ?? {});
-  const suiteName = testCase.suite?.name ?? 'Suíte não atribuída';
+  const suiteName = testCase.suite?.name ?? "Suíte não atribuída";
   const isCriticalFailure =
-    result.status === 'FAILED' && (testCase.severity === 'CRITICAL' || testCase.severity === 'HIGH');
+    result.status === "FAILED" &&
+    (testCase.severity === "CRITICAL" || testCase.severity === "HIGH");
 
   return (
     <article
       className={`rounded-lg border bg-white shadow-sm outline-none transition ${
-        isActive
-          ? 'border-slate-950 ring-2 ring-slate-200'
-          : 'border-slate-200'
+        isActive ? "border-slate-950 ring-2 ring-slate-200" : "border-slate-200"
       }`}
       onClick={(event) => {
         if (isInteractiveTarget(event.target)) {
@@ -175,14 +194,14 @@ export function TestCaseRunner({
                 items={[
                   {
                     icon: <Pencil className="h-4 w-4" aria-hidden="true" />,
-                    label: 'Editar neste run',
+                    label: "Editar neste run",
                     onSelect: () => onEditRunCase(result),
                   },
                   {
                     icon: <Trash2 className="h-4 w-4" aria-hidden="true" />,
-                    label: 'Remover deste run',
+                    label: "Remover deste run",
                     onSelect: () => onRemoveRunCase(result),
-                    tone: 'danger',
+                    tone: "danger",
                   },
                 ]}
               />
@@ -193,17 +212,24 @@ export function TestCaseRunner({
             <MarkdownContent
               className="mt-2 text-sm text-slate-600"
               content={testCase.description}
-              fallback={<p className="mt-2 text-sm text-slate-600">Nenhuma descrição registrada para este caso.</p>}
+              fallback={
+                <p className="mt-2 text-sm text-slate-600">
+                  Nenhuma descrição registrada para este caso.
+                </p>
+              }
             />
           </div>
 
           <div className="grid gap-2 text-sm text-slate-600 sm:grid-cols-2 lg:min-w-72 lg:grid-cols-1">
             <div className="flex items-center gap-2">
-              <UserCheck className="h-4 w-4 text-slate-400" aria-hidden="true" />
+              <UserCheck
+                className="h-4 w-4 text-slate-400"
+                aria-hidden="true"
+              />
               <span>
-                {result.status === 'PENDING'
-                  ? runAssignee?.name ?? 'Sem executor ainda'
-                  : result.executedBy?.name ?? 'Sem executor ainda'}
+                {result.status === "PENDING"
+                  ? (runAssignee?.name ?? "Sem executor ainda")
+                  : (result.executedBy?.name ?? "Sem executor ainda")}
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -225,7 +251,9 @@ export function TestCaseRunner({
       <div className="p-4">
         <div className="space-y-4">
           <section>
-            <h3 className="text-xs font-medium uppercase text-slate-500">Passos</h3>
+            <h3 className="text-xs font-medium uppercase text-slate-500">
+              Passos
+            </h3>
             {steps.length > 0 ? (
               <ol className="mt-3 space-y-3">
                 {steps.map((step) => (
@@ -234,11 +262,17 @@ export function TestCaseRunner({
                       {step.order}
                     </span>
                     <div className="min-w-0">
-                      <MarkdownContent className="text-sm text-slate-800" content={step.description} />
+                      <MarkdownContent
+                        className="text-sm text-slate-800"
+                        content={step.description}
+                      />
                       {step.expectedResult ? (
                         <div className="mt-1 flex gap-1 text-xs text-slate-500">
                           <span className="shrink-0">Esperado:</span>
-                          <MarkdownContent className="min-w-0" content={step.expectedResult} />
+                          <MarkdownContent
+                            className="min-w-0"
+                            content={step.expectedResult}
+                          />
                         </div>
                       ) : null}
                     </div>
@@ -259,7 +293,11 @@ export function TestCaseRunner({
             <MarkdownContent
               className="mt-2 text-sm text-slate-700"
               content={testCase.expectedResult}
-              fallback={<p className="mt-2 text-sm text-slate-700">Use os resultados esperados dos passos para verificação.</p>}
+              fallback={
+                <p className="mt-2 text-sm text-slate-700">
+                  Use os resultados esperados dos passos para verificação.
+                </p>
+              }
             />
           </section>
 
@@ -276,17 +314,29 @@ export function TestCaseRunner({
               draftComment={draftComment}
               disabled={disabled}
               isActive={isActive}
+              isFirstResult={isFirst}
               isLastResult={isLast}
               isSubmitting={isSubmitting}
-              key={`${result.id}-${result.comment ?? ''}`}
+              key={`${result.id}-${result.comment ?? ""}`}
               navigationPosition={position}
               navigationTotal={total}
-              onNext={(payload, hasDraftChanges) => onNext(result, payload, hasDraftChanges)}
-              onDraftCommentChange={(value) => onDraftCommentChange(result.id, value)}
+              onNext={(payload, hasDraftChanges) =>
+                onNext(result, payload, hasDraftChanges)
+              }
+              onPrevious={(payload, hasDraftChanges) =>
+                onPrevious(result, payload, hasDraftChanges)
+              }
+              onDraftCommentChange={(value) =>
+                onDraftCommentChange(result.id, value)
+              }
               onOpenList={onOpenList}
-              onRemoveAttachment={(attachment) => onRemoveAttachment(result, attachment)}
+              onRemoveAttachment={(attachment) =>
+                onRemoveAttachment(result, attachment)
+              }
               onSubmit={(payload) => onSubmit(result, payload)}
-              onUploadAttachments={(files) => onUploadAttachments(result, files)}
+              onUploadAttachments={(files) =>
+                onUploadAttachments(result, files)
+              }
             />
           </section>
 
@@ -309,86 +359,104 @@ export function TestCaseRunner({
               </h3>
               <div className="mt-2 grid gap-2 sm:grid-cols-2">
                 {attachments.map((attachment) => (
-                  <AuthenticatedAttachmentAsset attachment={attachment} key={attachment.id}>
-                    {(assetUrl) => <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-                    {isImageAttachment(attachment) ? (
-                      <button
-                        className="block aspect-video w-full bg-slate-100"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          setPreviewAttachment(attachment);
-                        }}
-                        type="button"
-                      >
-                        <img
-                          alt={getAttachmentName(attachment)}
-                          className="h-full w-full object-cover"
-                          src={assetUrl}
-                        />
-                      </button>
-                    ) : isVideoAttachment(attachment) ? (
-                      <div className="bg-slate-950" onClick={(event) => event.stopPropagation()}>
-                        <video
-                          className="aspect-video w-full bg-slate-950"
-                          controls
-                          preload="metadata"
-                          src={assetUrl}
-                        >
-                          <a
-                            className="text-white underline"
-                            href={assetUrl}
+                  <AuthenticatedAttachmentAsset
+                    attachment={attachment}
+                    key={attachment.id}
+                  >
+                    {(assetUrl) => (
+                      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+                        {isImageAttachment(attachment) ? (
+                          <button
+                            className="block aspect-video w-full bg-slate-100"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setPreviewAttachment(attachment);
+                            }}
+                            type="button"
                           >
-                            {getAttachmentName(attachment)}
-                          </a>
-                        </video>
-                      </div>
-                    ) : (
-                      <div className="flex aspect-video items-center justify-center bg-slate-100 text-slate-400">
-                        <FileText className="h-6 w-6" aria-hidden="true" />
+                            <img
+                              alt={getAttachmentName(attachment)}
+                              className="h-full w-full object-cover"
+                              src={assetUrl}
+                            />
+                          </button>
+                        ) : isVideoAttachment(attachment) ? (
+                          <div
+                            className="bg-slate-950"
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            <video
+                              className="aspect-video w-full bg-slate-950"
+                              controls
+                              preload="metadata"
+                              src={assetUrl}
+                            >
+                              <a
+                                className="text-white underline"
+                                href={assetUrl}
+                              >
+                                {getAttachmentName(attachment)}
+                              </a>
+                            </video>
+                          </div>
+                        ) : (
+                          <div className="flex aspect-video items-center justify-center bg-slate-100 text-slate-400">
+                            <FileText className="h-6 w-6" aria-hidden="true" />
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between gap-2 px-3 py-2">
+                          <span className="min-w-0">
+                            <span className="block truncate text-xs font-medium text-slate-600">
+                              {getAttachmentName(attachment)}
+                            </span>
+                            <span className="block truncate text-[11px] text-slate-400">
+                              {formatUploadDate(attachment.createdAt)}
+                              {attachment.uploadedBy?.name
+                                ? ` por ${attachment.uploadedBy.name}`
+                                : ""}
+                            </span>
+                          </span>
+                          <span className="flex shrink-0 items-center gap-1">
+                            {isVideoAttachment(attachment) ? (
+                              <FileVideo
+                                className="h-3.5 w-3.5 text-slate-400"
+                                aria-hidden="true"
+                              />
+                            ) : null}
+                            <a
+                              className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                              href={assetUrl}
+                              onClick={(event) => event.stopPropagation()}
+                              rel="noreferrer"
+                              target="_blank"
+                              title="Abrir evidência"
+                            >
+                              <ExternalLink
+                                className="h-3.5 w-3.5"
+                                aria-hidden="true"
+                              />
+                            </a>
+                            <a
+                              className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                              download={getAttachmentName(attachment)}
+                              href={assetUrl}
+                              onClick={(event) => event.stopPropagation()}
+                              title="Baixar evidência"
+                            >
+                              <Download
+                                className="h-3.5 w-3.5"
+                                aria-hidden="true"
+                              />
+                            </a>
+                          </span>
+                        </div>
                       </div>
                     )}
-                    <div className="flex items-center justify-between gap-2 px-3 py-2">
-                      <span className="min-w-0">
-                        <span className="block truncate text-xs font-medium text-slate-600">
-                          {getAttachmentName(attachment)}
-                        </span>
-                        <span className="block truncate text-[11px] text-slate-400">
-                          {formatUploadDate(attachment.createdAt)}
-                          {attachment.uploadedBy?.name ? ` por ${attachment.uploadedBy.name}` : ''}
-                        </span>
-                      </span>
-                      <span className="flex shrink-0 items-center gap-1">
-                        {isVideoAttachment(attachment) ? (
-                          <FileVideo className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
-                        ) : null}
-                        <a
-                          className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-                          href={assetUrl}
-                          onClick={(event) => event.stopPropagation()}
-                          rel="noreferrer"
-                          target="_blank"
-                          title="Abrir evidência"
-                        >
-                          <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-                        </a>
-                        <a
-                          className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-                          download={getAttachmentName(attachment)}
-                          href={assetUrl}
-                          onClick={(event) => event.stopPropagation()}
-                          title="Baixar evidência"
-                        >
-                          <Download className="h-3.5 w-3.5" aria-hidden="true" />
-                        </a>
-                      </span>
-                    </div>
-                    </div>}
                   </AuthenticatedAttachmentAsset>
                 ))}
               </div>
             </section>
           ) : null}
-
         </div>
       </div>
 
@@ -404,7 +472,9 @@ export function TestCaseRunner({
             <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-3 py-2">
               <span className="inline-flex min-w-0 items-center gap-2 text-sm font-medium text-slate-700">
                 <Image className="h-4 w-4 shrink-0" aria-hidden="true" />
-                <span className="truncate">{getAttachmentName(previewAttachment)}</span>
+                <span className="truncate">
+                  {getAttachmentName(previewAttachment)}
+                </span>
               </span>
               <button
                 className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
@@ -416,11 +486,15 @@ export function TestCaseRunner({
               </button>
             </div>
             <AuthenticatedAttachmentAsset attachment={previewAttachment}>
-              {(assetUrl) => assetUrl ? <img
-                alt={getAttachmentName(previewAttachment)}
-                className="max-h-[80vh] max-w-full object-contain"
-                src={assetUrl}
-              /> : null}
+              {(assetUrl) =>
+                assetUrl ? (
+                  <img
+                    alt={getAttachmentName(previewAttachment)}
+                    className="max-h-[80vh] max-w-full object-contain"
+                    src={assetUrl}
+                  />
+                ) : null
+              }
             </AuthenticatedAttachmentAsset>
           </div>
         </div>

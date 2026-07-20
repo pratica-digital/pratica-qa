@@ -36,26 +36,35 @@ describe('TestCasesRepository', () => {
         ],
       },
     });
-    expect(prisma.testCase.findMany).toHaveBeenCalledWith(expect.objectContaining({
-      skip: 100,
-      take: 100,
-    }));
+    expect(prisma.testCase.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        skip: 100,
+        take: 100,
+      }),
+    );
   });
 
   it('persists a move to another suite', async () => {
-    const prisma = {
+    const tx = {
       testCase: {
+        aggregate: jest.fn().mockResolvedValue({ _max: { position: 7 } }),
+        findUniqueOrThrow: jest.fn().mockResolvedValue({ id: 'case-id', suiteId: 'suite-1' }),
         update: jest.fn().mockResolvedValue({ id: 'case-id', suiteId: 'suite-2' }),
       },
+    };
+    const prisma = {
+      $transaction: jest.fn((callback: (client: typeof tx) => unknown) => callback(tx)),
     };
     const repository = new TestCasesRepository(prisma as never);
 
     await repository.update('case-id', { suiteId: 'suite-2' });
 
-    expect(prisma.testCase.update).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ suiteId: 'suite-2' }),
-      where: { id: 'case-id' },
-    }));
+    expect(tx.testCase.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ position: 8, suiteId: 'suite-2' }),
+        where: { id: 'case-id' },
+      }),
+    );
   });
 
   it('soft deletes and archives a test case', async () => {

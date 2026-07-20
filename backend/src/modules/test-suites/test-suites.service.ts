@@ -1,9 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { getPagination } from '../../common/dto/pagination-query.dto';
 import { ProjectsRepository } from '../projects/repositories/projects.repository';
 import { CreateTestSuiteDto } from './dto/create-test-suite.dto';
 import { ImportTestCasesDto } from './dto/import-test-cases.dto';
 import { QueryTestSuitesDto } from './dto/query-test-suites.dto';
+import { ReorderTestSuiteCasesDto } from './dto/reorder-test-suite-cases.dto';
 import { UpdateTestSuiteDto } from './dto/update-test-suite.dto';
 import { TestSuitesRepository } from './repositories/test-suites.repository';
 import { validateTestCaseImport } from './test-case-import.validation';
@@ -63,6 +64,24 @@ export class TestSuitesService {
     }
 
     return this.testSuitesRepository.update(id, dto, projectIds);
+  }
+
+  async reorderCases(id: string, dto: ReorderTestSuiteCasesDto) {
+    await this.findOne(id);
+    const existingCaseIds = await this.testSuitesRepository.findActiveCaseIds(id);
+    const orderedCaseIds = new Set(dto.caseIds);
+
+    if (
+      existingCaseIds.length !== dto.caseIds.length ||
+      existingCaseIds.some((caseId) => !orderedCaseIds.has(caseId))
+    ) {
+      throw new BadRequestException(
+        'Case order must contain every active test case in the suite exactly once',
+      );
+    }
+
+    await this.testSuitesRepository.reorderCases(id, dto.caseIds);
+    return this.findOne(id);
   }
 
   async importCases(id: string, dto: ImportTestCasesDto) {

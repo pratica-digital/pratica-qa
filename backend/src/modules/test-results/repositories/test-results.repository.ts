@@ -38,6 +38,7 @@ const TEST_RESULT_INCLUDE = {
       id: true,
       title: true,
       suiteId: true,
+      position: true,
       description: true,
       expectedResult: true,
       priority: true,
@@ -127,30 +128,38 @@ export class TestResultsRepository {
 
     const executedAt = status === TestResultStatus.PENDING ? null : new Date();
 
-    return this.prisma.testResult.upsert({
-      where: {
-        testRunId_testCaseId: {
+    return this.prisma.$transaction(async (tx) => {
+      const lastResult = await tx.testResult.aggregate({
+        where: { testRunId: dto.testRunId },
+        _max: { position: true },
+      });
+
+      return tx.testResult.upsert({
+        where: {
+          testRunId_testCaseId: {
+            testRunId: dto.testRunId,
+            testCaseId: dto.testCaseId,
+          },
+        },
+        create: {
           testRunId: dto.testRunId,
           testCaseId: dto.testCaseId,
+          position: (lastResult._max.position ?? 0) + 1,
+          executedById: dto.executedById,
+          lastModifiedById: dto.executedById,
+          status,
+          comment: dto.comment ?? '',
+          executedAt,
         },
-      },
-      create: {
-        testRunId: dto.testRunId,
-        testCaseId: dto.testCaseId,
-        executedById: dto.executedById,
-        lastModifiedById: dto.executedById,
-        status,
-        comment: dto.comment ?? '',
-        executedAt,
-      },
-      update: {
-        executedById: dto.executedById,
-        lastModifiedById: dto.executedById,
-        status,
-        comment: dto.comment ?? '',
-        executedAt,
-      },
-      include: TEST_RESULT_INCLUDE,
+        update: {
+          executedById: dto.executedById,
+          lastModifiedById: dto.executedById,
+          status,
+          comment: dto.comment ?? '',
+          executedAt,
+        },
+        include: TEST_RESULT_INCLUDE,
+      });
     });
   }
 
@@ -159,7 +168,9 @@ export class TestResultsRepository {
       where: this.buildWhere(params),
       skip: params.skip,
       take: params.take,
-      orderBy: [{ executedAt: 'desc' }, { createdAt: 'asc' }, { id: 'asc' }],
+      orderBy: params.testRunId
+        ? [{ position: 'asc' }, { id: 'asc' }]
+        : [{ executedAt: 'desc' }, { createdAt: 'asc' }, { id: 'asc' }],
       include: TEST_RESULT_INCLUDE,
     });
   }
@@ -214,18 +225,14 @@ export class TestResultsRepository {
       const isMovingToNotRun = dto.status === TestResultStatus.PENDING;
       const isMovingToExecuted =
         dto.status !== undefined && dto.status !== TestResultStatus.PENDING;
-      const executedById = isMovingToNotRun
-        ? null
-        : current.executedById ?? dto.executedById;
+      const executedById = isMovingToNotRun ? null : (current.executedById ?? dto.executedById);
       const executedAt = isMovingToNotRun
         ? null
         : isMovingToExecuted && !current.executedAt
           ? new Date()
           : undefined;
 
-      const changed =
-        current.status !== nextStatus ||
-        current.comment !== nextComment;
+      const changed = current.status !== nextStatus || current.comment !== nextComment;
 
       const updated = await tx.testResult.update({
         where: { id },
@@ -365,9 +372,7 @@ export class TestResultsRepository {
         where: { id },
         data: {
           lastModifiedById: actorUserId,
-          legacyAttachments: current.legacyAttachments.filter(
-            (item) => item !== attachment.url,
-          ),
+          legacyAttachments: current.legacyAttachments.filter((item) => item !== attachment.url),
         },
       });
 

@@ -1,6 +1,8 @@
 import {
   ArrowLeft,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
   Circle,
   ClipboardCheck,
   FileText,
@@ -11,24 +13,33 @@ import {
   X,
   XCircle,
   type LucideIcon,
-} from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { canManageTests } from '../auth/permissions';
-import { useAuth } from '../auth/useAuth';
-import { DeleteConfirmationModal } from '../components/DeleteConfirmationModal';
-import { MarkdownContent } from '../components/MarkdownContent';
-import { TestCaseRunner } from '../components/test-run/TestCaseRunner';
-import { ApiError, testResultsApi, testRunsApi } from '../lib/api';
-import { testResultStatusLabel } from '../lib/labels';
-import { getResultTestCase } from '../lib/testResultOverrides';
-import { summarizeTestResults } from '../lib/testRunSummary';
+} from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { canManageTests } from "../auth/permissions";
+import { useAuth } from "../auth/useAuth";
+import { DeleteConfirmationModal } from "../components/DeleteConfirmationModal";
+import { MarkdownContent } from "../components/MarkdownContent";
+import { TestCaseRunner } from "../components/test-run/TestCaseRunner";
+import { ApiError, testResultsApi, testRunsApi } from "../lib/api";
+import { testResultStatusLabel } from "../lib/labels";
+import { getResultTestCase } from "../lib/testResultOverrides";
+import { summarizeTestResults } from "../lib/testRunSummary";
+import {
+  getAdjacentResult,
+  getExecutionSuiteId,
+  getGlobalResultPosition,
+  groupExecutionResults,
+  resolveActiveResultId,
+  sortExecutionResults,
+  type TestRunSuiteGroup,
+} from "../lib/testRunNavigation";
 import type {
   ExecuteTestResultPayload,
   TestResult,
   TestResultAttachment,
   TestResultStatus,
   TestRun,
-} from '../types/testRun';
+} from "../types/testRun";
 
 type TestRunExecutionPageProps = {
   testRun: TestRun;
@@ -57,24 +68,24 @@ const navigationStatusConfig: Record<
 > = {
   PASSED: {
     icon: CheckCircle2,
-    className: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+    className: "border-emerald-200 bg-emerald-50 text-emerald-800",
   },
   FAILED: {
     icon: XCircle,
-    className: 'border-red-200 bg-red-50 text-red-800',
+    className: "border-red-200 bg-red-50 text-red-800",
   },
   SKIPPED: {
     icon: SkipForward,
-    className: 'border-amber-200 bg-amber-50 text-amber-800',
+    className: "border-amber-200 bg-amber-50 text-amber-800",
   },
   PENDING: {
     icon: Circle,
-    className: 'border-slate-200 bg-slate-50 text-slate-600',
+    className: "border-slate-200 bg-slate-50 text-slate-600",
   },
 };
 
 function getResultSuiteName(result: TestResult) {
-  return result.testCase.suite?.name ?? 'Suíte não atribuída';
+  return result.testCase.suite?.name ?? "Sem suíte";
 }
 
 function getStatusLabel(status: TestResultStatus) {
@@ -86,12 +97,12 @@ function createRunCaseEditDraft(result: TestResult): RunCaseEditDraft {
 
   return {
     title: testCase.title,
-    description: testCase.description ?? '',
-    expectedResult: testCase.expectedResult ?? '',
+    description: testCase.description ?? "",
+    expectedResult: testCase.expectedResult ?? "",
     steps: (testCase.steps ?? []).map((step) => ({
       id: step.id,
       description: step.description,
-      expectedResult: step.expectedResult ?? '',
+      expectedResult: step.expectedResult ?? "",
     })),
   };
 }
@@ -121,34 +132,23 @@ function mergeUpdatedResult(current: TestRun, updatedResult: TestResult) {
   } satisfies TestRun;
 }
 
-function getSuiteId(result: TestResult) {
-  return result.testCase.suiteId ?? 'without-suite';
+function executionPositionStorageKey(runId: string) {
+  return `qa-platform-test-run-${runId}-active-result`;
 }
 
-function orderResultsForNavigation(run: TestRun, results: TestResult[]) {
-  const originalOrder = new Map(results.map((result, index) => [result.id, index]));
-  const suiteOrder = new Map(
-    [...(run.suites ?? [])]
-      .sort((left, right) => left.position - right.position)
-      .map((suite, index) => [suite.testSuiteId, index]),
-  );
-
-  return [...results].sort((left, right) => {
-    const leftSuiteOrder = suiteOrder.get(getSuiteId(left)) ?? Number.MAX_SAFE_INTEGER;
-    const rightSuiteOrder = suiteOrder.get(getSuiteId(right)) ?? Number.MAX_SAFE_INTEGER;
-
-    if (leftSuiteOrder !== rightSuiteOrder) {
-      return leftSuiteOrder - rightSuiteOrder;
-    }
-
-    return (originalOrder.get(left.id) ?? 0) - (originalOrder.get(right.id) ?? 0);
-  });
+function readStoredActiveResultId(runId: string) {
+  try {
+    return window.localStorage.getItem(executionPositionStorageKey(runId));
+  } catch {
+    return null;
+  }
 }
 
 type TestCaseListPanelProps = {
   activeResultId: string | null;
   onClose: () => void;
   onSelect: (resultId: string) => void;
+  groups: TestRunSuiteGroup[];
   results: TestResult[];
 };
 
@@ -156,8 +156,36 @@ function TestCaseListPanel({
   activeResultId,
   onClose,
   onSelect,
+  groups,
   results,
 }: TestCaseListPanelProps) {
+  const activeResult = results.find((result) => result.id === activeResultId);
+  const activeSuiteId = activeResult ? getExecutionSuiteId(activeResult) : null;
+  const [expandedSuiteIds, setExpandedSuiteIds] = useState<Set<string>>(
+    () =>
+      new Set(
+        activeSuiteId ? [activeSuiteId] : groups[0] ? [groups[0].id] : [],
+      ),
+  );
+  const globalPositionById = new Map(
+    results.map((result) => [
+      result.id,
+      getGlobalResultPosition(results, result.id),
+    ]),
+  );
+
+  function toggleSuite(suiteId: string) {
+    setExpandedSuiteIds((current) => {
+      const next = new Set(current);
+      if (next.has(suiteId) && suiteId !== activeSuiteId) {
+        next.delete(suiteId);
+      } else {
+        next.add(suiteId);
+      }
+      return next;
+    });
+  }
+
   return (
     <div
       className="fixed inset-0 z-[9999] flex justify-end bg-slate-950/20 p-0 backdrop-blur-[1px] sm:p-3"
@@ -171,8 +199,12 @@ function TestCaseListPanel({
       >
         <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
           <div className="min-w-0">
-            <h2 className="text-sm font-semibold text-slate-950">Casos do Test Run</h2>
-            <p className="text-xs text-slate-500">{results.length} caso{results.length === 1 ? '' : 's'}</p>
+            <h2 className="text-sm font-semibold text-slate-950">
+              Casos do Test Run
+            </h2>
+            <p className="text-xs text-slate-500">
+              {results.length} caso{results.length === 1 ? "" : "s"}
+            </p>
           </div>
           <button
             className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
@@ -185,54 +217,112 @@ function TestCaseListPanel({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto p-3">
-          <div className="space-y-2">
-            {results.map((result, index) => {
-              const testCase = getResultTestCase(result);
-              const isActive = result.id === activeResultId;
-              const statusConfig = navigationStatusConfig[result.status];
-              const StatusIcon = statusConfig.icon;
+          <div className="space-y-3">
+            {groups.map((group) => {
+              const isExpanded =
+                group.id === activeSuiteId || expandedSuiteIds.has(group.id);
 
               return (
-                <button
-                  className={`flex w-full gap-3 rounded-lg border p-3 text-left transition ${
-                    isActive
-                      ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-500'
-                      : 'border-slate-200 bg-white hover:border-blue-200 hover:bg-blue-50'
-                  }`}
-                  key={result.id}
-                  onClick={() => onSelect(result.id)}
-                  type="button"
+                <section
+                  className="overflow-hidden rounded-lg border border-slate-200"
+                  key={group.id}
                 >
-                  <span
-                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-semibold ${
-                      isActive ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-600'
-                    }`}
+                  <button
+                    aria-expanded={isExpanded}
+                    className="flex w-full items-start justify-between gap-3 bg-slate-50 px-3 py-3 text-left hover:bg-slate-100"
+                    onClick={() => toggleSuite(group.id)}
+                    type="button"
                   >
-                    {index + 1}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-semibold text-slate-950">
-                      {testCase.title}
-                    </span>
-                    <span className="mt-1 block truncate text-xs text-slate-500">
-                      {index + 1}/{results.length} - {getResultSuiteName(result)}
-                    </span>
-                    <span className="mt-2 flex flex-wrap items-center gap-1.5">
-                      {isActive ? (
-                        <span className="inline-flex h-6 items-center gap-1 rounded-md border border-blue-200 bg-blue-100 px-2 text-xs font-medium text-blue-800">
-                          <PlayCircle className="h-3.5 w-3.5" aria-hidden="true" />
-                          Atual
-                        </span>
-                      ) : null}
-                      <span
-                        className={`inline-flex h-6 items-center gap-1 rounded-md border px-2 text-xs font-medium ${statusConfig.className}`}
-                      >
-                        <StatusIcon className="h-3.5 w-3.5" aria-hidden="true" />
-                        {getStatusLabel(result.status)}
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-semibold text-slate-950">
+                        {group.name}
+                      </span>
+                      <span className="mt-1 block text-xs text-slate-500">
+                        {group.summary.total} testes · {group.summary.executed}{" "}
+                        executados · {group.summary.passed} aprovados ·{" "}
+                        {group.summary.failed} reprovados ·{" "}
+                        {group.summary.notRun} não executados
                       </span>
                     </span>
-                  </span>
-                </button>
+                    {isExpanded ? (
+                      <ChevronDown className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
+                    ) : (
+                      <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
+                    )}
+                  </button>
+
+                  {isExpanded ? (
+                    <div className="space-y-2 border-t border-slate-200 p-2">
+                      {group.results.length === 0 ? (
+                        <p className="px-2 py-3 text-sm text-slate-500">
+                          Nenhum caso nesta suíte.
+                        </p>
+                      ) : null}
+                      {group.results.map((result, suiteIndex) => {
+                        const testCase = getResultTestCase(result);
+                        const isActive = result.id === activeResultId;
+                        const statusConfig =
+                          navigationStatusConfig[result.status];
+                        const StatusIcon = statusConfig.icon;
+                        const globalPosition = globalPositionById.get(
+                          result.id,
+                        );
+
+                        return (
+                          <button
+                            className={`flex w-full gap-3 rounded-lg border p-3 text-left transition ${
+                              isActive
+                                ? "border-blue-500 bg-blue-50 ring-1 ring-blue-500"
+                                : "border-slate-200 bg-white hover:border-blue-200 hover:bg-blue-50"
+                            }`}
+                            key={result.id}
+                            onClick={() => onSelect(result.id)}
+                            type="button"
+                          >
+                            <span
+                              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-semibold ${
+                                isActive
+                                  ? "bg-blue-700 text-white"
+                                  : "bg-slate-100 text-slate-600"
+                              }`}
+                            >
+                              {globalPosition}
+                            </span>
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-sm font-semibold text-slate-950">
+                                {testCase.title}
+                              </span>
+                              <span className="mt-1 block truncate text-xs text-slate-500">
+                                {globalPosition}/{results.length} ·{" "}
+                                {suiteIndex + 1}/{group.results.length} na suíte
+                              </span>
+                              <span className="mt-2 flex flex-wrap items-center gap-1.5">
+                                {isActive ? (
+                                  <span className="inline-flex h-6 items-center gap-1 rounded-md border border-blue-200 bg-blue-100 px-2 text-xs font-medium text-blue-800">
+                                    <PlayCircle
+                                      className="h-3.5 w-3.5"
+                                      aria-hidden="true"
+                                    />
+                                    Atual
+                                  </span>
+                                ) : null}
+                                <span
+                                  className={`inline-flex h-6 items-center gap-1 rounded-md border px-2 text-xs font-medium ${statusConfig.className}`}
+                                >
+                                  <StatusIcon
+                                    className="h-3.5 w-3.5"
+                                    aria-hidden="true"
+                                  />
+                                  {getStatusLabel(result.status)}
+                                </span>
+                              </span>
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                </section>
               );
             })}
           </div>
@@ -250,23 +340,40 @@ export function TestRunExecutionPage({
 }: TestRunExecutionPageProps) {
   const { token, user } = useAuth();
   const [run, setRun] = useState(testRun);
-  const [submittingResultId, setSubmittingResultId] = useState<string | null>(null);
-  const [activeResultId, setActiveResultId] = useState(() => testRun.results?.[0]?.id ?? null);
+  const [submittingResultId, setSubmittingResultId] = useState<string | null>(
+    null,
+  );
+  const [activeResultId, setActiveResultId] = useState(() => {
+    const orderedResults = sortExecutionResults(testRun);
+    return resolveActiveResultId(
+      orderedResults,
+      readStoredActiveResultId(testRun.id),
+    );
+  });
   const contentTopRef = useRef<HTMLDivElement>(null);
   const [caseListOpen, setCaseListOpen] = useState(false);
-  const [draftComments, setDraftComments] = useState<Record<string, string>>({});
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [draftComments, setDraftComments] = useState<Record<string, string>>(
+    {},
+  );
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [editingResult, setEditingResult] = useState<TestResult | null>(null);
   const [editDraft, setEditDraft] = useState<RunCaseEditDraft | null>(null);
-  const [editError, setEditError] = useState('');
+  const [editError, setEditError] = useState("");
   const [savingRunCaseEdit, setSavingRunCaseEdit] = useState(false);
   const [removeTarget, setRemoveTarget] = useState<TestResult | null>(null);
   const [removingResult, setRemovingResult] = useState(false);
 
   const results = useMemo(() => run.results ?? [], [run.results]);
   const summary = useMemo(() => summarizeTestResults(results), [results]);
-  const navigationResults = useMemo(() => orderResultsForNavigation(run, results), [results, run]);
+  const navigationResults = useMemo(
+    () => sortExecutionResults(run, results),
+    [results, run],
+  );
+  const suiteGroups = useMemo(
+    () => groupExecutionResults(run, navigationResults),
+    [navigationResults, run],
+  );
   const navigationPositionById = useMemo(
     () => new Map(navigationResults.map((result, index) => [result.id, index])),
     [navigationResults],
@@ -282,7 +389,8 @@ export function TestRunExecutionPage({
 
     return navigationPositionById.get(activeResultId) ?? 0;
   }, [activeResultId, navigationPositionById, navigationResults.length]);
-  const currentResult = currentIndex >= 0 ? navigationResults[currentIndex] : null;
+  const currentResult =
+    currentIndex >= 0 ? navigationResults[currentIndex] : null;
   const effectiveActiveResultId = currentResult?.id ?? null;
   const canExecute = Boolean(user && token && canManageTests(user));
 
@@ -299,7 +407,7 @@ export function TestRunExecutionPage({
   );
 
   useEffect(() => {
-    const authToken = token ?? '';
+    const authToken = token ?? "";
 
     if (!authToken) {
       return undefined;
@@ -317,10 +425,19 @@ export function TestRunExecutionPage({
 
         setRun(freshRun);
         onRunUpdated(freshRun);
-        setActiveResultId((current) => current ?? freshRun.results?.[0]?.id ?? null);
+        setActiveResultId((current) =>
+          resolveActiveResultId(
+            sortExecutionResults(freshRun),
+            current ?? readStoredActiveResultId(freshRun.id),
+          ),
+        );
       } catch (fetchError) {
         if (!cancelled) {
-      setError(fetchError instanceof Error ? fetchError.message : 'Não foi possível recarregar a execução.');
+          setError(
+            fetchError instanceof Error
+              ? fetchError.message
+              : "Não foi possível recarregar a execução.",
+          );
         }
       }
     }
@@ -332,20 +449,35 @@ export function TestRunExecutionPage({
     };
   }, [onRunUpdated, testRun.id, token]);
 
-  const disabledReason = useMemo(() => {
-    if (!user) {
-      return 'É necessário entrar para executar esta rodada.';
+  useEffect(() => {
+    if (!effectiveActiveResultId) {
+      return;
     }
 
-    if (user.role === 'VIEWER') {
-      return 'Modo visualizador é somente leitura.';
+    try {
+      window.localStorage.setItem(
+        executionPositionStorageKey(run.id),
+        effectiveActiveResultId,
+      );
+    } catch {
+      // Navigation still works when browser storage is unavailable.
+    }
+  }, [effectiveActiveResultId, run.id]);
+
+  const disabledReason = useMemo(() => {
+    if (!user) {
+      return "É necessário entrar para executar esta rodada.";
+    }
+
+    if (user.role === "VIEWER") {
+      return "Modo visualizador é somente leitura.";
     }
 
     if (canManageTests(user)) {
       return undefined;
     }
 
-    return 'A execução está disponível para usuários QA e administradores.';
+    return "A execução está disponível para usuários QA e administradores.";
   }, [user]);
 
   const selectResult = useCallback(
@@ -366,8 +498,8 @@ export function TestRunExecutionPage({
 
     const timeoutId = window.setTimeout(() => {
       contentTopRef.current?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
+        behavior: "smooth",
+        block: "start",
       });
     }, 50);
 
@@ -380,97 +512,144 @@ export function TestRunExecutionPage({
     }
 
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
+      if (event.key === "Escape") {
         setCaseListOpen(false);
       }
     }
 
-    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
 
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [caseListOpen]);
 
-  const persistResult = useCallback(async (
+  const persistResult = useCallback(
+    async (
+      result: TestResult,
+      payload: ExecuteTestResultPayload,
+      options: { announceSuccess?: boolean } = {},
+    ) => {
+      if (!token) {
+        return false;
+      }
+
+      const announceSuccess = options.announceSuccess ?? true;
+
+      setError("");
+      if (announceSuccess) {
+        setSuccess("");
+      }
+      setSubmittingResultId(result.id);
+
+      try {
+        const updatedResult = await testResultsApi.update(token, result.id, {
+          status: payload.status,
+          comment: payload.comment,
+        });
+        applyUpdatedResult(updatedResult);
+        setDraftComments((current) => ({
+          ...current,
+          [result.id]: payload.comment ?? "",
+        }));
+        if (announceSuccess) {
+          setSuccess(
+            `${getResultTestCase(result).title} marcado como ${getStatusLabel(payload.status)}.`,
+          );
+        }
+
+        return true;
+      } catch (submitError) {
+        if (submitError instanceof ApiError && submitError.status === 403) {
+          setError("Você não tem permissão para atualizar este resultado.");
+        } else {
+          setError(
+            submitError instanceof Error
+              ? submitError.message
+              : "Não foi possível atualizar o resultado.",
+          );
+        }
+
+        return false;
+      } finally {
+        setSubmittingResultId(null);
+      }
+    },
+    [applyUpdatedResult, token],
+  );
+
+  const handleDraftCommentChange = useCallback(
+    (resultId: string, value: string) => {
+      setDraftComments((current) => ({ ...current, [resultId]: value }));
+    },
+    [],
+  );
+
+  const navigateToAdjacentResult = useCallback(
+    (resultId: string, direction: -1 | 1) => {
+      const adjacentResult = getAdjacentResult(
+        navigationResults,
+        resultId,
+        direction,
+      );
+
+      if (adjacentResult) {
+        selectResult(adjacentResult.id);
+      }
+    },
+    [navigationResults, selectResult],
+  );
+
+  const handleSubmit = async (
     result: TestResult,
     payload: ExecuteTestResultPayload,
-    options: { announceSuccess?: boolean } = {},
   ) => {
-    if (!token) {
-      return false;
-    }
-
-    const announceSuccess = options.announceSuccess ?? true;
-
-    setError('');
-    if (announceSuccess) {
-      setSuccess('');
-    }
-    setSubmittingResultId(result.id);
-
-    try {
-      const updatedResult = await testResultsApi.update(token, result.id, {
-        status: payload.status,
-        comment: payload.comment,
-      });
-      applyUpdatedResult(updatedResult);
-      setDraftComments((current) => ({
-        ...current,
-        [result.id]: payload.comment ?? '',
-      }));
-      if (announceSuccess) {
-        setSuccess(`${getResultTestCase(result).title} marcado como ${getStatusLabel(payload.status)}.`);
-      }
-
-      return true;
-    } catch (submitError) {
-      if (submitError instanceof ApiError && submitError.status === 403) {
-        setError('Você não tem permissão para atualizar este resultado.');
-      } else {
-        setError(submitError instanceof Error ? submitError.message : 'Não foi possível atualizar o resultado.');
-      }
-
-      return false;
-    } finally {
-      setSubmittingResultId(null);
-    }
-  }, [applyUpdatedResult, token]);
-
-  const handleDraftCommentChange = useCallback((resultId: string, value: string) => {
-    setDraftComments((current) => ({ ...current, [resultId]: value }));
-  }, []);
-
-  const navigateToNextResult = useCallback((resultId: string) => {
-    const currentIndex = navigationPositionById.get(resultId) ?? -1;
-    const nextResult = currentIndex >= 0 ? navigationResults[currentIndex + 1] : undefined;
-
-    if (nextResult) {
-      selectResult(nextResult.id);
-    }
-  }, [navigationPositionById, navigationResults, selectResult]);
-
-  const handleSubmit = async (result: TestResult, payload: ExecuteTestResultPayload) => {
     const saved = await persistResult(result, payload);
 
     if (saved) {
-      navigateToNextResult(result.id);
+      navigateToAdjacentResult(result.id, 1);
     }
   };
 
-  const handleNavigateNext = useCallback(async (
-    result: TestResult,
-    payload: ExecuteTestResultPayload,
-    hasDraftChanges: boolean,
-  ) => {
-    if (hasDraftChanges) {
-      const saved = await persistResult(result, payload, { announceSuccess: false });
+  const handleNavigateNext = useCallback(
+    async (
+      result: TestResult,
+      payload: ExecuteTestResultPayload,
+      hasDraftChanges: boolean,
+    ) => {
+      if (hasDraftChanges) {
+        const saved = await persistResult(result, payload, {
+          announceSuccess: false,
+        });
 
-      if (!saved) {
-        return;
+        if (!saved) {
+          return;
+        }
       }
-    }
 
-    navigateToNextResult(result.id);
-  }, [navigateToNextResult, persistResult]);
+      navigateToAdjacentResult(result.id, 1);
+    },
+    [navigateToAdjacentResult, persistResult],
+  );
+
+  const handleNavigatePrevious = useCallback(
+    async (
+      result: TestResult,
+      payload: ExecuteTestResultPayload,
+      hasDraftChanges: boolean,
+    ) => {
+      if (hasDraftChanges) {
+        const saved = await persistResult(result, payload, {
+          announceSuccess: false,
+        });
+
+        if (!saved) {
+          return;
+        }
+      }
+
+      navigateToAdjacentResult(result.id, -1);
+    },
+    [navigateToAdjacentResult, persistResult],
+  );
 
   const handleSelectFromList = useCallback(
     (resultId: string) => {
@@ -485,22 +664,30 @@ export function TestRunExecutionPage({
       return;
     }
 
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
     setSubmittingResultId(result.id);
 
     try {
-      const updatedResult = await testResultsApi.uploadAttachments(token, result.id, files);
+      const updatedResult = await testResultsApi.uploadAttachments(
+        token,
+        result.id,
+        files,
+      );
 
       applyUpdatedResult(updatedResult);
       setSuccess(
-        `${files.length} arquivo${files.length > 1 ? 's' : ''} de evidência enviado${files.length > 1 ? 's' : ''} para ${getResultTestCase(result).title}.`,
+        `${files.length} arquivo${files.length > 1 ? "s" : ""} de evidência enviado${files.length > 1 ? "s" : ""} para ${getResultTestCase(result).title}.`,
       );
     } catch (uploadError) {
       if (uploadError instanceof ApiError && uploadError.status === 403) {
-        setError('Você não tem permissão para enviar evidências.');
+        setError("Você não tem permissão para enviar evidências.");
       } else {
-        setError(uploadError instanceof Error ? uploadError.message : 'Não foi possível enviar a evidência.');
+        setError(
+          uploadError instanceof Error
+            ? uploadError.message
+            : "Não foi possível enviar a evidência.",
+        );
       }
     } finally {
       setSubmittingResultId(null);
@@ -515,20 +702,28 @@ export function TestRunExecutionPage({
       return;
     }
 
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
     setSubmittingResultId(result.id);
 
     try {
-      const updatedResult = await testResultsApi.removeAttachment(token, result.id, attachment.id);
+      const updatedResult = await testResultsApi.removeAttachment(
+        token,
+        result.id,
+        attachment.id,
+      );
 
       applyUpdatedResult(updatedResult);
-      setSuccess('Evidência removida.');
+      setSuccess("Evidência removida.");
     } catch (removeError) {
       if (removeError instanceof ApiError && removeError.status === 403) {
-        setError('Você não tem permissão para remover evidências.');
+        setError("Você não tem permissão para remover evidências.");
       } else {
-        setError(removeError instanceof Error ? removeError.message : 'Não foi possível remover a evidência.');
+        setError(
+          removeError instanceof Error
+            ? removeError.message
+            : "Não foi possível remover a evidência.",
+        );
       }
     } finally {
       setSubmittingResultId(null);
@@ -536,9 +731,9 @@ export function TestRunExecutionPage({
   };
 
   function openRunCaseEdit(result: TestResult) {
-    setError('');
-    setSuccess('');
-    setEditError('');
+    setError("");
+    setSuccess("");
+    setEditError("");
     setEditingResult(result);
     setEditDraft(createRunCaseEditDraft(result));
   }
@@ -550,7 +745,7 @@ export function TestRunExecutionPage({
 
     setEditingResult(null);
     setEditDraft(null);
-    setEditError('');
+    setEditError("");
   }
 
   const handleSaveRunCaseEdit = async () => {
@@ -567,27 +762,31 @@ export function TestRunExecutionPage({
     }));
 
     if (!title) {
-      setEditError('Informe um título para o caso.');
+      setEditError("Informe um título para o caso.");
       return;
     }
 
     if (steps.some((step) => !step.description)) {
-      setEditError('Todos os passos precisam de descrição.');
+      setEditError("Todos os passos precisam de descrição.");
       return;
     }
 
-    setEditError('');
-    setError('');
-    setSuccess('');
+    setEditError("");
+    setError("");
+    setSuccess("");
     setSavingRunCaseEdit(true);
 
     try {
-      const updatedResult = await testResultsApi.update(token, editingResult.id, {
-        title,
-        description: editDraft.description.trim(),
-        expectedResult: editDraft.expectedResult.trim(),
-        steps,
-      });
+      const updatedResult = await testResultsApi.update(
+        token,
+        editingResult.id,
+        {
+          title,
+          description: editDraft.description.trim(),
+          expectedResult: editDraft.expectedResult.trim(),
+          steps,
+        },
+      );
 
       applyUpdatedResult(updatedResult);
       setSuccess(`${title} atualizado somente nesta execução.`);
@@ -595,9 +794,15 @@ export function TestRunExecutionPage({
       setEditDraft(null);
     } catch (saveError) {
       if (saveError instanceof ApiError && saveError.status === 403) {
-        setEditError('Você não tem permissão para editar este caso nesta execução.');
+        setEditError(
+          "Você não tem permissão para editar este caso nesta execução.",
+        );
       } else {
-        setEditError(saveError instanceof Error ? saveError.message : 'Não foi possível salvar a edição.');
+        setEditError(
+          saveError instanceof Error
+            ? saveError.message
+            : "Não foi possível salvar a edição.",
+        );
       }
     } finally {
       setSavingRunCaseEdit(false);
@@ -611,26 +816,36 @@ export function TestRunExecutionPage({
 
     const removedTitle = getResultTestCase(removeTarget).title;
 
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
     setRemovingResult(true);
 
     try {
       await testResultsApi.remove(token, removeTarget.id);
       const freshRun = await testRunsApi.get(token, run.id);
+      const freshNavigationResults = sortExecutionResults(freshRun);
+      const removedPosition = navigationPositionById.get(removeTarget.id) ?? 0;
 
       setRun(freshRun);
       onRunUpdated(freshRun);
       setActiveResultId((current) =>
-        current === removeTarget.id ? freshRun.results?.[0]?.id ?? null : current,
+        current === removeTarget.id
+          ? (freshNavigationResults[removedPosition]?.id ??
+            freshNavigationResults[removedPosition - 1]?.id ??
+            null)
+          : resolveActiveResultId(freshNavigationResults, current),
       );
       setRemoveTarget(null);
       setSuccess(`${removedTitle} removido somente desta execução.`);
     } catch (removeError) {
       if (removeError instanceof ApiError && removeError.status === 403) {
-        setError('Você não tem permissão para remover este caso da execução.');
+        setError("Você não tem permissão para remover este caso da execução.");
       } else {
-        setError(removeError instanceof Error ? removeError.message : 'Não foi possível remover o caso da execução.');
+        setError(
+          removeError instanceof Error
+            ? removeError.message
+            : "Não foi possível remover o caso da execução.",
+        );
       }
     } finally {
       setRemovingResult(false);
@@ -651,13 +866,16 @@ export function TestRunExecutionPage({
           </button>
           <div className="mt-4">
             <p className="text-sm font-medium text-slate-500">
-              {run.project?.name ?? 'Execução'}
+              {run.project?.name ?? "Execução"}
             </p>
             <h1 className="mt-1 text-2xl font-semibold tracking-normal text-slate-950">
               {run.name}
             </h1>
             {run.description ? (
-              <MarkdownContent className="mt-2 max-w-3xl text-sm text-slate-600" content={run.description} />
+              <MarkdownContent
+                className="mt-2 max-w-3xl text-sm text-slate-600"
+                content={run.description}
+              />
             ) : null}
           </div>
         </div>
@@ -677,26 +895,42 @@ export function TestRunExecutionPage({
       <div className="grid gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm md:grid-cols-[1fr_auto] md:items-center">
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
           <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-            <p className="text-xs font-medium uppercase text-slate-500">Progresso</p>
+            <p className="text-xs font-medium uppercase text-slate-500">
+              Progresso
+            </p>
             <p className="mt-1 text-sm font-semibold text-slate-950">
               {summary.executed}/{summary.total} ({summary.progressPercentage}%)
             </p>
           </div>
           <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
-            <p className="text-xs font-medium uppercase text-emerald-700">Aprovados</p>
-            <p className="mt-1 text-sm font-semibold text-emerald-900">{summary.passed}</p>
+            <p className="text-xs font-medium uppercase text-emerald-700">
+              Aprovados
+            </p>
+            <p className="mt-1 text-sm font-semibold text-emerald-900">
+              {summary.passed}
+            </p>
           </div>
           <div className="rounded-lg border border-red-200 bg-red-50 p-3">
             <p className="text-xs font-medium uppercase text-red-700">Falhas</p>
-            <p className="mt-1 text-sm font-semibold text-red-900">{summary.failed}</p>
+            <p className="mt-1 text-sm font-semibold text-red-900">
+              {summary.failed}
+            </p>
           </div>
           <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
-            <p className="text-xs font-medium uppercase text-amber-700">Ignorados</p>
-            <p className="mt-1 text-sm font-semibold text-amber-900">{summary.skipped}</p>
+            <p className="text-xs font-medium uppercase text-amber-700">
+              Ignorados
+            </p>
+            <p className="mt-1 text-sm font-semibold text-amber-900">
+              {summary.skipped}
+            </p>
           </div>
           <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
-            <p className="text-xs font-medium uppercase text-blue-700">Aprovação</p>
-            <p className="mt-1 text-sm font-semibold text-blue-900">{summary.approvalPercentage}%</p>
+            <p className="text-xs font-medium uppercase text-blue-700">
+              Aprovação
+            </p>
+            <p className="mt-1 text-sm font-semibold text-blue-900">
+              {summary.approvalPercentage}%
+            </p>
           </div>
           <div className="rounded-lg border border-slate-200 bg-white p-3">
             <p className="flex items-center gap-2 text-xs font-medium uppercase text-slate-500">
@@ -704,7 +938,7 @@ export function TestRunExecutionPage({
               Responsável
             </p>
             <p className="mt-1 truncate text-sm font-semibold text-slate-950">
-              {run.assignedTo?.name ?? 'Não atribuído'}
+              {run.assignedTo?.name ?? "Não atribuído"}
             </p>
           </div>
         </div>
@@ -738,8 +972,11 @@ export function TestRunExecutionPage({
           <TestCaseRunner
             disabled={!canExecute}
             disabledReason={disabledReason}
-            draftComment={draftComments[currentResult.id] ?? currentResult.comment ?? ''}
+            draftComment={
+              draftComments[currentResult.id] ?? currentResult.comment ?? ""
+            }
             isActive
+            isFirst={currentIndex === 0}
             isLast={currentIndex === navigationResults.length - 1}
             isSubmitting={submittingResultId === currentResult.id}
             key={currentResult.id}
@@ -747,6 +984,7 @@ export function TestRunExecutionPage({
             onDraftCommentChange={handleDraftCommentChange}
             onEditRunCase={openRunCaseEdit}
             onNext={handleNavigateNext}
+            onPrevious={handleNavigatePrevious}
             onOpenList={() => setCaseListOpen(true)}
             onRemoveAttachment={handleRemoveAttachment}
             onRemoveRunCase={setRemoveTarget}
@@ -760,7 +998,10 @@ export function TestRunExecutionPage({
         </section>
       ) : (
         <div className="rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
-          <ClipboardCheck className="mx-auto h-8 w-8 text-slate-400" aria-hidden="true" />
+          <ClipboardCheck
+            className="mx-auto h-8 w-8 text-slate-400"
+            aria-hidden="true"
+          />
           <h2 className="mt-3 text-sm font-semibold text-slate-950">
             Nenhum resultado ainda
           </h2>
@@ -783,6 +1024,7 @@ export function TestRunExecutionPage({
           activeResultId={effectiveActiveResultId}
           onClose={() => setCaseListOpen(false)}
           onSelect={handleSelectFromList}
+          groups={suiteGroups}
           results={navigationResults}
         />
       ) : null}
@@ -790,7 +1032,9 @@ export function TestRunExecutionPage({
       {editingResult && editDraft ? (
         <div
           className="fixed inset-0 z-[10000] flex items-end justify-center bg-slate-600/40 px-4 py-6 backdrop-blur-sm sm:items-center"
-          onClick={(event) => event.target === event.currentTarget && closeRunCaseEdit()}
+          onClick={(event) =>
+            event.target === event.currentTarget && closeRunCaseEdit()
+          }
           role="presentation"
         >
           <form
@@ -822,7 +1066,9 @@ export function TestRunExecutionPage({
                   className="mt-2 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm normal-case text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                   onChange={(event) =>
                     setEditDraft((current) =>
-                      current ? { ...current, title: event.target.value } : current,
+                      current
+                        ? { ...current, title: event.target.value }
+                        : current,
                     )
                   }
                   value={editDraft.title}
@@ -835,7 +1081,9 @@ export function TestRunExecutionPage({
                   className="mt-2 min-h-24 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm normal-case text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                   onChange={(event) =>
                     setEditDraft((current) =>
-                      current ? { ...current, description: event.target.value } : current,
+                      current
+                        ? { ...current, description: event.target.value }
+                        : current,
                     )
                   }
                   value={editDraft.description}
@@ -848,7 +1096,9 @@ export function TestRunExecutionPage({
                   className="mt-2 min-h-20 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm normal-case text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
                   onChange={(event) =>
                     setEditDraft((current) =>
-                      current ? { ...current, expectedResult: event.target.value } : current,
+                      current
+                        ? { ...current, expectedResult: event.target.value }
+                        : current,
                     )
                   }
                   value={editDraft.expectedResult}
@@ -857,7 +1107,9 @@ export function TestRunExecutionPage({
 
               <section className="space-y-2">
                 <div className="flex items-center justify-between gap-3">
-                  <h3 className="text-xs font-medium uppercase text-slate-500">Passos</h3>
+                  <h3 className="text-xs font-medium uppercase text-slate-500">
+                    Passos
+                  </h3>
                   <button
                     className="inline-flex h-8 items-center justify-center rounded-lg border border-blue-700 bg-blue-700 px-3 text-xs font-medium text-white transition hover:bg-blue-800"
                     onClick={() =>
@@ -867,7 +1119,7 @@ export function TestRunExecutionPage({
                               ...current,
                               steps: [
                                 ...current.steps,
-                                { description: '', expectedResult: '' },
+                                { description: "", expectedResult: "" },
                               ],
                             }
                           : current,
@@ -883,7 +1135,7 @@ export function TestRunExecutionPage({
                   {editDraft.steps.map((step, index) => (
                     <div
                       className="rounded-lg border border-slate-200 bg-slate-50 p-3"
-                      key={`${step.id ?? 'new'}-${index}`}
+                      key={`${step.id ?? "new"}-${index}`}
                     >
                       <div className="flex items-center justify-between gap-3">
                         <span className="text-xs font-semibold uppercase text-slate-500">
@@ -897,7 +1149,9 @@ export function TestRunExecutionPage({
                               current
                                 ? {
                                     ...current,
-                                    steps: current.steps.filter((_, stepIndex) => stepIndex !== index),
+                                    steps: current.steps.filter(
+                                      (_, stepIndex) => stepIndex !== index,
+                                    ),
                                   }
                                 : current,
                             )
@@ -916,7 +1170,10 @@ export function TestRunExecutionPage({
                                   ...current,
                                   steps: current.steps.map((item, stepIndex) =>
                                     stepIndex === index
-                                      ? { ...item, description: event.target.value }
+                                      ? {
+                                          ...item,
+                                          description: event.target.value,
+                                        }
                                       : item,
                                   ),
                                 }
@@ -935,7 +1192,10 @@ export function TestRunExecutionPage({
                                   ...current,
                                   steps: current.steps.map((item, stepIndex) =>
                                     stepIndex === index
-                                      ? { ...item, expectedResult: event.target.value }
+                                      ? {
+                                          ...item,
+                                          expectedResult: event.target.value,
+                                        }
                                       : item,
                                   ),
                                 }
@@ -965,7 +1225,7 @@ export function TestRunExecutionPage({
                 disabled={savingRunCaseEdit}
                 type="submit"
               >
-                {savingRunCaseEdit ? 'Salvando' : 'Salvar nesta execução'}
+                {savingRunCaseEdit ? "Salvando" : "Salvar nesta execução"}
               </button>
             </div>
           </form>
