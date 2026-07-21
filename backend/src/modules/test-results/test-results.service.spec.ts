@@ -1,4 +1,6 @@
 import { TestResultStatus, TestRunStatus, UserRole, UserStatus } from '@prisma/client';
+import { mkdir, unlink, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { TestResultsService } from './test-results.service';
 
 describe('TestResultsService', () => {
@@ -45,6 +47,7 @@ describe('TestResultsService', () => {
       testRunsRepository as never,
       {} as never,
       shortcutFailureStoryService as never,
+      {} as never,
     );
     const user = {
       id: 'qa-id',
@@ -66,4 +69,75 @@ describe('TestResultsService', () => {
     });
     expect(testRunsRepository.refreshExecutionStatus).toHaveBeenCalledWith('run-id');
   });
+
+  describe('getAttachmentPdfImage', () => {
+    function setup(url = '/uploads/test-result-attachments/evidence.png') {
+      const attachment = {
+        id: 'attachment-id',
+        fileName: 'stored.png',
+        originalName: 'evidência pré-aquecimento.png',
+        mimeType: 'image/png',
+        testCaseId: 'case-id',
+        url,
+      };
+      const testResultsRepository = {
+        findAttachmentById: jest.fn().mockResolvedValue(attachment),
+      };
+      const pdfEvidenceImageService = {
+        prepare: jest.fn().mockResolvedValue({
+          buffer: Buffer.from('jpeg'),
+          height: 600,
+          mimeType: 'image/jpeg',
+          width: 800,
+        }),
+      };
+      const service = new TestResultsService(
+        testResultsRepository as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        pdfEvidenceImageService as never,
+      );
+
+      return { attachment, pdfEvidenceImageService, service };
+    }
+
+    it('resolves the local source and prepares the real attachment content', async () => {
+      const fileName = `pdf-service-test-${Date.now()}.png`;
+      const uploadDirectory = join(process.cwd(), 'uploads', 'test-result-attachments');
+      const filePath = join(uploadDirectory, fileName);
+      await mkdir(uploadDirectory, { recursive: true });
+      await writeFile(filePath, Buffer.from('fixture'));
+
+      try {
+        const { attachment, pdfEvidenceImageService, service } = setup(
+          `/uploads/test-result-attachments/${fileName}`,
+        );
+
+        await expect(service.getAttachmentPdfImage('attachment-id')).resolves.toMatchObject({
+          attachment,
+          image: { height: 600, mimeType: 'image/jpeg', width: 800 },
+        });
+        expect(pdfEvidenceImageService.prepare).toHaveBeenCalledWith(
+          expect.stringContaining(fileName),
+          'image/png',
+        );
+      } finally {
+        await unlink(filePath);
+      }
+    });
+
+    it('blocks path traversal and external attachment URLs', async () => {
+      const { pdfEvidenceImageService, service } = setup('/uploads/../../secret.png');
+      const warning = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+
+      await expect(service.getAttachmentPdfImage('attachment-id')).rejects.toMatchObject({
+        status: 404,
+      });
+      expect(pdfEvidenceImageService.prepare).not.toHaveBeenCalled();
+      expect(warning).toHaveBeenCalledWith(expect.stringContaining('testCaseId=case-id'));
+      warning.mockRestore();
+    });
+  });
 });
+import { Logger } from '@nestjs/common';
