@@ -1,10 +1,11 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { TestRunTestType, UserRole, UserStatus } from '@prisma/client';
+import { TestRunStatus, TestRunTestType, UserRole, UserStatus } from '@prisma/client';
 import { AuthenticatedUser } from '../../auth/types/authenticated-user';
 import { getPagination } from '../../common/dto/pagination-query.dto';
 import { ShortcutFailureStoryService } from '../../shortcut/shortcut-failure-story.service';
@@ -12,6 +13,7 @@ import { TestPlansRepository } from '../test-plans/repositories/test-plans.repos
 import { TestSuitesRepository } from '../test-suites/repositories/test-suites.repository';
 import { UsersRepository } from '../users/repositories/users.repository';
 import { AssignTestRunDto } from './dto/assign-test-run.dto';
+import { AddTestRunTestsDto } from './dto/add-test-run-tests.dto';
 import { CreateTestRunDto } from './dto/create-test-run.dto';
 import { ExecuteTestRunDto } from './dto/execute-test-run.dto';
 import { QueryTestRunsDto } from './dto/query-test-runs.dto';
@@ -146,6 +148,67 @@ export class TestRunsService {
     await this.findOne(id);
     await this.ensureAssignableUser(dto.assignedToId);
     return this.testRunsRepository.assign(id, dto.assignedToId);
+  }
+
+  async addTests(id: string, dto: AddTestRunTestsDto, user: AuthenticatedUser) {
+    const testRun = await this.findOne(id);
+
+    if (testRun.status === TestRunStatus.COMPLETED) {
+      throw new ConflictException('Tests cannot be added to a completed test run');
+    }
+
+    const testSuiteIds = [...new Set(dto.testSuiteIds ?? [])];
+    const testCaseIds = [...new Set(dto.testCaseIds ?? [])];
+
+    if (testSuiteIds.length === 0 && testCaseIds.length === 0) {
+      throw new BadRequestException('Select at least one test suite or test case');
+    }
+
+    const selection = await this.testRunsRepository.findSelectableTests(
+      testSuiteIds,
+      testCaseIds,
+      testRun.projectId,
+    );
+    const foundSuiteIds = new Set(selection.suiteIds);
+    const foundCaseIds = new Set(selection.testCases.map((testCase) => testCase.id));
+    const missingSuiteIds = testSuiteIds.filter((suiteId) => !foundSuiteIds.has(suiteId));
+    const missingCaseIds = testCaseIds.filter((testCaseId) => !foundCaseIds.has(testCaseId));
+
+    if (missingSuiteIds.length > 0) {
+      throw new NotFoundException(
+        `Test suites not found or unavailable: ${missingSuiteIds.join(', ')}`,
+      );
+    }
+
+    if (missingCaseIds.length > 0) {
+      throw new NotFoundException(
+        `Test cases not found or unavailable: ${missingCaseIds.join(', ')}`,
+      );
+    }
+
+    const result = await this.testRunsRepository.addTests(
+      id,
+      selection.testCases,
+      testSuiteIds,
+      user.id,
+    );
+
+    if (result.status === 'RUN_NOT_FOUND') {
+      throw new NotFoundException('Test run not found');
+    }
+
+    if (result.status === 'RUN_NOT_EDITABLE') {
+      throw new ConflictException('Tests cannot be added to a completed test run');
+    }
+
+    return {
+      previousTotal: result.previousTotal,
+      addedCount: result.addedCount,
+      ignoredDuplicateCount: result.ignoredDuplicateCount,
+      newTotal: result.newTotal,
+      addedTestCaseIds: result.addedTestCaseIds,
+      ignoredTestCaseIds: result.ignoredTestCaseIds,
+    };
   }
 
   async start(id: string, user: AuthenticatedUser) {

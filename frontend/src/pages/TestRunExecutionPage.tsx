@@ -7,6 +7,7 @@ import {
   ClipboardCheck,
   FileText,
   PlayCircle,
+  Plus,
   RefreshCw,
   SkipForward,
   UserRound,
@@ -19,6 +20,7 @@ import { canManageTests } from "../auth/permissions";
 import { useAuth } from "../auth/useAuth";
 import { DeleteConfirmationModal } from "../components/DeleteConfirmationModal";
 import { MarkdownContent } from "../components/MarkdownContent";
+import { AddTestsToRunModal } from "../components/test-run/AddTestsToRunModal";
 import { TestCaseRunner } from "../components/test-run/TestCaseRunner";
 import { ApiError, testResultsApi, testRunsApi } from "../lib/api";
 import { testResultStatusLabel } from "../lib/labels";
@@ -34,6 +36,7 @@ import {
   type TestRunSuiteGroup,
 } from "../lib/testRunNavigation";
 import type {
+  AddTestRunTestsResponse,
   ExecuteTestResultPayload,
   TestResult,
   TestResultAttachment,
@@ -363,6 +366,7 @@ export function TestRunExecutionPage({
   const [savingRunCaseEdit, setSavingRunCaseEdit] = useState(false);
   const [removeTarget, setRemoveTarget] = useState<TestResult | null>(null);
   const [removingResult, setRemovingResult] = useState(false);
+  const [addTestsOpen, setAddTestsOpen] = useState(false);
 
   const results = useMemo(() => run.results ?? [], [run.results]);
   const summary = useMemo(() => summarizeTestResults(results), [results]);
@@ -852,6 +856,25 @@ export function TestRunExecutionPage({
     }
   };
 
+  const handleTestsAdded = useCallback(
+    (addSummary: AddTestRunTestsResponse, freshRun: TestRun) => {
+      const freshNavigationResults = sortExecutionResults(freshRun);
+
+      setRun(freshRun);
+      onRunUpdated(freshRun);
+      setActiveResultId((current) =>
+        resolveActiveResultId(freshNavigationResults, current),
+      );
+      setError("");
+      setSuccess(
+        addSummary.addedCount === 0
+          ? "Nenhum teste foi adicionado, pois todos os casos selecionados já pertencem a este Test Run."
+          : `${addSummary.addedCount} caso(s) de teste adicionado(s). O Test Run agora possui ${addSummary.newTotal} caso(s).`,
+      );
+    },
+    [onRunUpdated],
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -880,16 +903,28 @@ export function TestRunExecutionPage({
           </div>
         </div>
 
-        {onOpenReport ? (
-          <button
-            className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-blue-700 px-4 text-sm font-medium text-white hover:bg-blue-800"
-            onClick={() => onOpenReport(run.id)}
-            type="button"
-          >
-            <FileText className="h-4 w-4" aria-hidden="true" />
-            Ver relatório atualizado
-          </button>
-        ) : null}
+        <div className="flex flex-wrap items-center gap-2">
+          {canExecute && run.status !== "COMPLETED" ? (
+            <button
+              className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-blue-700 bg-white px-4 text-sm font-medium text-blue-700 hover:bg-blue-50"
+              onClick={() => setAddTestsOpen(true)}
+              type="button"
+            >
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              Adicionar testes
+            </button>
+          ) : null}
+          {onOpenReport ? (
+            <button
+              className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-blue-700 px-4 text-sm font-medium text-white hover:bg-blue-800"
+              onClick={() => onOpenReport(run.id)}
+              type="button"
+            >
+              <FileText className="h-4 w-4" aria-hidden="true" />
+              Ver relatório atualizado
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <div className="grid gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm md:grid-cols-[1fr_auto] md:items-center">
@@ -1026,6 +1061,14 @@ export function TestRunExecutionPage({
           onSelect={handleSelectFromList}
           groups={suiteGroups}
           results={navigationResults}
+        />
+      ) : null}
+
+      {addTestsOpen ? (
+        <AddTestsToRunModal
+          onAdded={handleTestsAdded}
+          onClose={() => setAddTestsOpen(false)}
+          testRun={run}
         />
       ) : null}
 

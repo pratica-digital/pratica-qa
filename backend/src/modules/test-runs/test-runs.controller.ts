@@ -14,6 +14,7 @@ import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { AuthenticatedUser } from '../../auth/types/authenticated-user';
 import { AssignTestRunDto } from './dto/assign-test-run.dto';
+import { AddTestRunTestsDto } from './dto/add-test-run-tests.dto';
 import { CreateTestRunDto } from './dto/create-test-run.dto';
 import { ExecuteTestRunDto } from './dto/execute-test-run.dto';
 import { QueryTestRunsDto } from './dto/query-test-runs.dto';
@@ -63,6 +64,16 @@ export class TestRunsController {
   @Post(':id/start')
   start(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.testRunsService.start(id, user);
+  }
+
+  @Roles(UserRole.ADMIN, UserRole.QA)
+  @Post(':id/tests')
+  addTests(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: AddTestRunTestsDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.testRunsService.addTests(id, dto, user);
   }
 
   @Roles(UserRole.ADMIN, UserRole.QA)
