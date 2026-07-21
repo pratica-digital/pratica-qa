@@ -147,6 +147,29 @@ describe('MailService', () => {
     });
   });
 
+  it('starts with email disabled when Graph credentials are incomplete', async () => {
+    globalThis.fetch = jest.fn() as unknown as typeof fetch;
+    const service = new MailService(
+      createConfigService({
+        MAIL_GRAPH_CLIENT_ID: '',
+      }),
+    );
+
+    expect(service.isConfigured()).toBe(false);
+    await expect(
+      service.sendMail({ subject: 'Test', text: 'hello', to: 'one@example.com' }),
+    ).rejects.toThrow(
+      'MAIL_GRAPH_CLIENT_ID or CLIENT_ID is required for Microsoft Graph email sending.',
+    );
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it('reports when Graph email delivery is configured', () => {
+    const service = new MailService(createConfigService());
+
+    expect(service.isConfigured()).toBe(true);
+  });
+
   function createConfigService(overrides: Record<string, string> = {}) {
     const values = {
       MAIL_GRAPH_CLIENT_ID: 'client-id',
