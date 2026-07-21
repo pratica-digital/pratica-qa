@@ -29,7 +29,7 @@ export class ShortcutFailureStoryService {
       }
 
       const story = await this.shortcutService.createStory({
-        name: `[FAIL] ${result.testCase.title}`,
+        name: `[BUG] ${result.testCase.title}`,
         description: this.buildDescription(result),
         storyType: 'bug',
       });
@@ -67,70 +67,71 @@ export class ShortcutFailureStoryService {
   }
 
   buildDescription(result: FailedTestStoryInput) {
-    const projectName = result.testRun.project?.name ?? 'Nao informado';
-    const executedBy = result.executedBy?.name ?? result.executedBy?.email ?? 'Nao informado';
-    const executedAt = result.executedAt
-      ? new Date(result.executedAt).toISOString()
-      : new Date().toISOString();
-    const comment = result.comment?.trim() || 'Nao informado';
-    const steps = this.formatSteps(result.testCase.steps ?? []);
-    const evidences = this.formatEvidences(result.attachments);
+    const asText = (value: unknown) => (typeof value === 'string' ? value : '');
+    const testCase = result.testCase as FailedTestStoryInput['testCase'] & {
+      description?: unknown;
+      number?: unknown;
+      position?: unknown;
+    };
+    const testRun = result.testRun as FailedTestStoryInput['testRun'] & {
+      url?: unknown;
+    };
+    const objective = asText(testCase.description);
+    const actualResult = asText(result.comment);
+    const reportedBy = asText(result.executedBy?.name);
+    const testCaseNumber = asText(testCase.number) ||
+      (typeof testCase.position === 'number' && Number.isFinite(testCase.position)
+        ? String(testCase.position)
+        : '');
+    const steps = (testCase.steps ?? [])
+      .map((step, index) => {
+        const description = asText(step.description).replace(/\r?\n/g, '\n   ');
+        return `${index + 1}. ${description}`;
+      })
+      .join('\n');
+    const expectedResult = asText(testCase.expectedResult)
+      .split(/\r?\n/)
+      .filter((line) => line.trim().length > 0)
+      .map((line) => `- ${line.replace(/^\s*[-*+]\s+/, '')}`)
+      .join('\n');
+    const testRunUrl = asText(testRun.url);
+    let testRunLink = '';
 
-    return [
-      'Projeto:',
-      projectName,
-      '',
-      'Test Run:',
-      result.testRun.name,
-      '',
-      'Caso de Teste:',
-      result.testCase.title,
-      '',
-      'Resultado:',
-      'FAILED',
-      '',
-      'Passos:',
-      steps,
-      '',
-      'Resultado Esperado:',
-      result.testCase.expectedResult?.trim() || 'Nao informado',
-      '',
-      'Resultado Obtido:',
-      comment,
-      '',
-      'Observacoes:',
-      comment,
-      '',
-      'Executor:',
-      executedBy,
-      '',
-      'Data:',
-      executedAt,
-      evidences ? ['', 'Evidencias:', evidences] : [],
-    ].flat().join('\n');
-  }
+    try {
+      const parsedTestRunUrl = new URL(testRunUrl);
 
-  private formatSteps(steps: NonNullable<FailedTestStoryInput['testCase']['steps']>) {
-    if (steps.length === 0) {
-      return 'Nao informado';
+      if (parsedTestRunUrl.protocol === 'http:' || parsedTestRunUrl.protocol === 'https:') {
+        testRunLink = `[${testRunUrl}](${testRunUrl})`;
+      }
+    } catch {
+      // Mantém o campo vazio quando não há uma URL válida disponível.
     }
 
-    return steps
-      .map((step) => {
-        const expected = step.expectedResult?.trim()
-          ? `\n   Resultado esperado: ${step.expectedResult.trim()}`
-          : '';
-        return `${step.order}. ${step.description}${expected}`;
-      })
-      .join('\n');
+    return [
+      '# Descrição',
+      '',
+      '## Objetivo:',
+      objective,
+      '',
+      '# Passos',
+      '',
+      steps,
+      '',
+      '# Resultado esperado',
+      '',
+      expectedResult,
+      '',
+      '# Resultado obtido',
+      actualResult,
+      '',
+      '# Outras informações',
+      '',
+      `- Reportado por: ${reportedBy}`,
+      '',
+      `- Número do caso de teste: ${testCaseNumber}`,
+      '',
+      `- Execução de teste: ${testRunLink}`,
+    ].join('\n');
   }
 
-  private formatEvidences(attachments: FailedTestStoryInput['attachments']) {
-    return attachments
-      .map((attachment) => {
-        const label = attachment.originalName?.trim() || attachment.url;
-        return `- ${label}: ${attachment.url}`;
-      })
-      .join('\n');
-  }
 }
