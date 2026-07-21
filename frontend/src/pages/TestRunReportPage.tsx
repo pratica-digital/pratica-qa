@@ -42,6 +42,10 @@ import {
   type PdfPosition,
 } from "../lib/pdfInternalLinks";
 import {
+  getPdfShortcutStoryUrl,
+  PDF_SHORTCUT_LINK_LABEL,
+} from "../lib/pdfShortcutLink";
+import {
   calculatePdfImagePlacement,
   canEmbedMorePdfEvidence,
   formatAttachmentSize,
@@ -731,9 +735,9 @@ async function generatePDF(
 
   // Título
   sf("bold", 24, C.white);
-  doc.text("Relatório de", margin, 28);
+  doc.text("Test", margin, 28);
   sf("bold", 24, C.lime);
-  doc.text("Execução", margin, 40);
+  doc.text("Reports", margin, 40);
 
   // Linha divisória branca
   doc.setDrawColor(255, 255, 255);
@@ -946,6 +950,7 @@ async function generatePDF(
         const hasDesc = Boolean(tc.description);
         const hasExpected = Boolean(tc.expectedResult);
         const hasComment = Boolean(result.comment);
+        const shortcutStoryUrl = getPdfShortcutStoryUrl(result);
         const attachments = orderPdfEvidenceAttachments(
           result.attachments ?? [],
         );
@@ -972,6 +977,7 @@ async function generatePDF(
           (hasDesc ? measureField(tc.description ?? "") : 0) +
           (hasExpected ? measureField(tc.expectedResult ?? "") : 0) +
           (hasComment ? measureField(result.comment ?? "") : 0) +
+          (shortcutStoryUrl ? 8 : 0) +
           (stepsH > 0 ? 4 + stepsH + 2 : 0) +
           6;
 
@@ -1048,6 +1054,19 @@ async function generatePDF(
         if (hasExpected)
           drawField("Resultado Esperado", tc.expectedResult ?? "");
         if (hasComment) drawField("Observações", result.comment ?? "");
+
+        if (shortcutStoryUrl) {
+          sf("normal", 8, C.navy800);
+          doc.text(PDF_SHORTCUT_LINK_LABEL, cx + 2, cy);
+          const linkWidth = Math.min(
+            doc.getTextWidth(PDF_SHORTCUT_LINK_LABEL),
+            contentW - 22,
+          );
+          doc.link(cx + 2, cy - 3.5, linkWidth, 5, {
+            url: shortcutStoryUrl,
+          });
+          cy += 8;
+        }
 
         if ((tc.steps?.length ?? 0) > 0) {
           sf("bold", 6.5, C.navy);
@@ -1209,9 +1228,9 @@ async function generatePDF(
       .replace(/[\u0300-\u036f]/g, "")
       .replace(/[^a-z0-9]+/gi, "_")
       .replace(/^_+|_+$/g, "")
-      .toLowerCase() || "test_run";
+      .toLowerCase() || "test_report";
 
-  doc.save(`relatorio_${safeName}.pdf`);
+  doc.save(`test_reports_${safeName}.pdf`);
   return doc;
 }
 
