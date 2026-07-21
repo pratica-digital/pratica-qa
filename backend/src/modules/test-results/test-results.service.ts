@@ -2,13 +2,18 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { TestResultStatus, UserRole } from '@prisma/client';
 import { AuthenticatedUser } from '../../auth/types/authenticated-user';
 import { getPagination } from '../../common/dto/pagination-query.dto';
-import { removeRuntimeUpload, removeRuntimeUploads } from '../../common/files/runtime-upload-storage';
-import { resolveRuntimeUploadPath } from '../../common/files/runtime-upload-storage';
+import {
+  removeRuntimeUpload,
+  removeRuntimeUploads,
+  resolveExistingRuntimeUploadPath,
+} from '../../common/files/runtime-upload-storage';
 import { stat } from 'node:fs/promises';
 import { ShortcutFailureStoryService } from '../../shortcut/shortcut-failure-story.service';
 import { TestCasesRepository } from '../test-cases/repositories/test-cases.repository';
@@ -17,6 +22,7 @@ import { AddTestResultAttachmentsDto } from './dto/add-test-result-attachments.d
 import { CreateTestResultDto } from './dto/create-test-result.dto';
 import { QueryTestResultsDto } from './dto/query-test-results.dto';
 import { PersistedTestResultAttachmentInput } from './test-result-attachment-upload';
+import { PdfEvidenceImageService } from './pdf-evidence-image.service';
 import { UpdateTestResultDto } from './dto/update-test-result.dto';
 import { TestResultsRepository } from './repositories/test-results.repository';
 
@@ -26,11 +32,14 @@ type AddPersistedTestResultAttachmentsDto = AddTestResultAttachmentsDto & {
 
 @Injectable()
 export class TestResultsService {
+  private readonly logger = new Logger(TestResultsService.name);
+
   constructor(
     private readonly testResultsRepository: TestResultsRepository,
     private readonly testRunsRepository: TestRunsRepository,
     private readonly testCasesRepository: TestCasesRepository,
     private readonly shortcutFailureStoryService: ShortcutFailureStoryService,
+    private readonly pdfEvidenceImageService: PdfEvidenceImageService,
   ) {}
 
   async create(dto: CreateTestResultDto) {
@@ -170,7 +179,7 @@ export class TestResultsService {
 
   async getAttachmentContent(attachmentId: string) {
     const attachment = await this.testResultsRepository.findAttachmentById(attachmentId);
-    const filePath = attachment ? resolveRuntimeUploadPath(attachment.url) : null;
+    const filePath = attachment ? await resolveExistingRuntimeUploadPath(attachment.url) : null;
 
     if (!attachment || !filePath) {
       throw new NotFoundException('Attachment not found');
@@ -183,6 +192,38 @@ export class TestResultsService {
     }
 
     return { attachment, filePath };
+  }
+
+  async getAttachmentPdfImage(attachmentId: string) {
+    const attachment = await this.testResultsRepository.findAttachmentById(attachmentId);
+    const filePath = attachment ? await resolveExistingRuntimeUploadPath(attachment.url) : null;
+
+    if (!attachment) {
+      throw new NotFoundException('Attachment not found');
+    }
+
+    if (!filePath) {
+      this.logger.warn(
+        `PDF evidence failed testCaseId=${attachment.testCaseId} attachmentId=${attachment.id} fileName=${JSON.stringify(attachment.originalName || attachment.fileName)} source=blocked-or-missing-local-upload reason="Evidence file not found or outside the authorized directory"`,
+      );
+      throw new NotFoundException('Attachment file not found');
+    }
+
+    try {
+      const image = await this.pdfEvidenceImageService.prepare(filePath, attachment.mimeType);
+      return { attachment, image };
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : 'Unknown processing error';
+      this.logger.warn(
+        `PDF evidence failed testCaseId=${attachment.testCaseId} attachmentId=${attachment.id} fileName=${JSON.stringify(attachment.originalName || attachment.fileName)} source=local-upload reason=${JSON.stringify(reason)}`,
+      );
+
+      if (error instanceof NotFoundException || error instanceof UnprocessableEntityException) {
+        throw error;
+      }
+
+      throw error;
+    }
   }
 
   async remove(id: string, user: AuthenticatedUser) {

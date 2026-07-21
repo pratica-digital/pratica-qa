@@ -56,16 +56,27 @@ export class TestResultsController {
   }
 
   @Get('attachments/:attachmentId/content')
-  async getAttachmentContent(
-    @Param('attachmentId', ParseUUIDPipe) attachmentId: string,
-  ) {
-    const { attachment, filePath } = await this.testResultsService.getAttachmentContent(attachmentId);
+  async getAttachmentContent(@Param('attachmentId', ParseUUIDPipe) attachmentId: string) {
+    const { attachment, filePath } =
+      await this.testResultsService.getAttachmentContent(attachmentId);
     const encodedName = encodeURIComponent(attachment.originalName || attachment.fileName);
 
     return new StreamableFile(createReadStream(filePath), {
       type: attachment.mimeType,
       disposition: `inline; filename*=UTF-8''${encodedName}`,
       length: attachment.size,
+    });
+  }
+
+  @Get('attachments/:attachmentId/pdf-image')
+  async getAttachmentPdfImage(@Param('attachmentId', ParseUUIDPipe) attachmentId: string) {
+    const { attachment, image } = await this.testResultsService.getAttachmentPdfImage(attachmentId);
+    const encodedName = encodeURIComponent(attachment.originalName || attachment.fileName);
+
+    return new StreamableFile(image.buffer, {
+      type: image.mimeType,
+      disposition: `inline; filename*=UTF-8''${encodedName}.jpg`,
+      length: image.buffer.length,
     });
   }
 
@@ -110,10 +121,7 @@ export class TestResultsController {
 
   @Roles(UserRole.ADMIN, UserRole.QA)
   @Delete(':id')
-  remove(
-    @Param('id', ParseUUIDPipe) id: string,
-    @CurrentUser() user: AuthenticatedUser,
-  ) {
+  remove(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.testResultsService.remove(id, user);
   }
 }

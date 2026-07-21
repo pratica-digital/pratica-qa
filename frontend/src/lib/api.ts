@@ -691,11 +691,35 @@ export const testResultsApi = {
         token,
       },
     ),
-  getAttachmentBlob: async (token: string, attachmentId: string) => {
+  getAttachmentBlob: async (
+    token: string,
+    attachmentId: string,
+    signal?: AbortSignal,
+  ) => {
     const response = await fetch(
       buildUrl(`/test-results/attachments/${attachmentId}/content`),
       {
         headers: { Authorization: `Bearer ${token}` },
+        signal,
+      },
+    );
+
+    if (!response.ok) {
+      throw new ApiError(await readErrorMessage(response), response.status);
+    }
+
+    return response.blob();
+  },
+  getAttachmentPdfImageBlob: async (
+    token: string,
+    attachmentId: string,
+    signal?: AbortSignal,
+  ) => {
+    const response = await fetch(
+      buildUrl(`/test-results/attachments/${attachmentId}/pdf-image`),
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        signal,
       },
     );
 
