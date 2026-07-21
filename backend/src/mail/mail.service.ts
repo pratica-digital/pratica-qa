@@ -81,22 +81,31 @@ type GraphSendMailMessage = {
   toRecipients: GraphEmailAddress[];
 };
 
-export const MAIL_SENDER_ADDRESS = process.env.MAIL_SENDER_ADDRESS ?? process.env.MAIL_GRAPH_USER ?? '';
+export const MAIL_SENDER_ADDRESS =
+  process.env.MAIL_SENDER_ADDRESS ?? process.env.MAIL_GRAPH_USER ?? '';
 
 @Injectable()
 export class MailService {
-  private readonly graphConfig: GraphMailConfig;
+  private graphConfig?: GraphMailConfig;
   private readonly logger = new Logger(MailService.name);
   private readonly sensitiveValues: string[];
   private token?: GraphToken;
 
   constructor(private readonly configService: ConfigService) {
-    this.graphConfig = this.getGraphConfig();
     this.sensitiveValues = this.getSensitiveValues();
   }
 
   get senderAddress() {
-    return this.graphConfig.senderAddress;
+    return this.getString('MAIL_GRAPH_USER') ?? this.getString('MAIL_SENDER_ADDRESS') ?? '';
+  }
+
+  isConfigured() {
+    return Boolean(
+      (this.getString('MAIL_GRAPH_CLIENT_ID') ?? this.getString('CLIENT_ID')) &&
+      (this.getString('MAIL_GRAPH_CLIENT_SECRET') ?? this.getString('CLIENT_SECRET')) &&
+      (this.getString('MAIL_GRAPH_TENANT_ID') ?? this.getString('TENANT_ID')) &&
+      this.senderAddress,
+    );
   }
 
   async sendMail(mailOptions: MailOptions): Promise<MailDeliveryInfo> {
@@ -106,6 +115,7 @@ export class MailService {
     };
 
     try {
+      const graphConfig = this.getConfiguredGraph();
       const token = await this.getAccessToken();
       const message = this.buildGraphMessage(options);
       const response = await fetch(this.getSendMailUrl(), {
@@ -116,7 +126,7 @@ export class MailService {
         },
         body: JSON.stringify({
           message,
-          saveToSentItems: this.graphConfig.saveToSentItems,
+          saveToSentItems: graphConfig.saveToSentItems,
         }),
       });
 
@@ -144,13 +154,14 @@ export class MailService {
       return this.token.accessToken;
     }
 
+    const graphConfig = this.getConfiguredGraph();
     const body = new URLSearchParams({
-      client_id: this.graphConfig.clientId,
-      client_secret: this.graphConfig.clientSecret,
+      client_id: graphConfig.clientId,
+      client_secret: graphConfig.clientSecret,
       grant_type: 'client_credentials',
-      scope: this.graphConfig.scope,
+      scope: graphConfig.scope,
     });
-    const response = await fetch(this.graphConfig.tokenEndpoint, {
+    const response = await fetch(graphConfig.tokenEndpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -160,7 +171,8 @@ export class MailService {
     const data = (await response.json()) as GraphTokenResponse;
 
     if (!response.ok || typeof data.access_token !== 'string') {
-      const description = typeof data.error_description === 'string' ? data.error_description : undefined;
+      const description =
+        typeof data.error_description === 'string' ? data.error_description : undefined;
       const error = typeof data.error === 'string' ? data.error : `HTTP ${response.status}`;
       const tokenError = new Error(`Microsoft Graph token request failed: ${description ?? error}`);
       Object.assign(tokenError, { code: 'EGRAPH_TOKEN', responseCode: response.status });
@@ -176,7 +188,9 @@ export class MailService {
       accessToken: data.access_token,
       expiresAt,
     };
-    this.logger.log(`Microsoft Graph access token renovado para envio de email. expires=${new Date(expiresAt).toISOString()}`);
+    this.logger.log(
+      `Microsoft Graph access token renovado para envio de email. expires=${new Date(expiresAt).toISOString()}`,
+    );
 
     return this.token.accessToken;
   }
@@ -237,7 +251,10 @@ export class MailService {
         contentId: attachment.contentId,
         contentType: attachment.contentType,
         isInline: attachment.isInline,
-        name: typeof attachment.filename === 'string' && attachment.filename ? attachment.filename : 'attachment',
+        name:
+          typeof attachment.filename === 'string' && attachment.filename
+            ? attachment.filename
+            : 'attachment',
       };
     });
   }
@@ -303,7 +320,9 @@ export class MailService {
 
   private async toGraphError(response: Response) {
     const contentType = response.headers.get('content-type') ?? '';
-    const body = contentType.includes('application/json') ? await response.json() : await response.text();
+    const body = contentType.includes('application/json')
+      ? await response.json()
+      : await response.text();
     const record = this.toRecord(body);
     const nestedError = this.toRecord(record.error);
     const message =
@@ -322,18 +341,21 @@ export class MailService {
   }
 
   private getSendMailUrl() {
-    const endpoint = this.graphConfig.endpoint.replace(/\/$/, '');
-    const user = encodeURIComponent(this.graphConfig.senderAddress);
+    const graphConfig = this.getConfiguredGraph();
+    const endpoint = graphConfig.endpoint.replace(/\/$/, '');
+    const user = encodeURIComponent(graphConfig.senderAddress);
     return `${endpoint}/v1.0/users/${user}/sendMail`;
+  }
+
+  private getConfiguredGraph() {
+    this.graphConfig ??= this.getGraphConfig();
+    return this.graphConfig;
   }
 
   private getGraphConfig(): GraphMailConfig {
     const tenantId = this.getRequiredString('MAIL_GRAPH_TENANT_ID', 'TENANT_ID');
     const endpoint = this.getString('MAIL_GRAPH_ENDPOINT') ?? 'https://graph.microsoft.com';
-    const senderAddress = this.getRequiredString(
-      'MAIL_GRAPH_USER',
-      'MAIL_SENDER_ADDRESS',
-    );
+    const senderAddress = this.getRequiredString('MAIL_GRAPH_USER', 'MAIL_SENDER_ADDRESS');
 
     return {
       clientId: this.getRequiredString('MAIL_GRAPH_CLIENT_ID', 'CLIENT_ID'),
@@ -400,10 +422,9 @@ export class MailService {
   }
 
   private getSensitiveValues() {
-    return [
-      this.getString('MAIL_GRAPH_CLIENT_SECRET'),
-      this.getString('CLIENT_SECRET'),
-    ].filter((value): value is string => Boolean(value && value.length >= 4));
+    return [this.getString('MAIL_GRAPH_CLIENT_SECRET'), this.getString('CLIENT_SECRET')].filter(
+      (value): value is string => Boolean(value && value.length >= 4),
+    );
   }
 
   private formatRecipients(value: MailAddressInput | undefined) {
@@ -417,7 +438,10 @@ export class MailService {
   private sanitize(value: string) {
     return this.sensitiveValues.reduce(
       (sanitized, secret) => sanitized.split(secret).join('[redacted]'),
-      value.replace(/(access_token|refresh_token|client_secret|token)=[^\s"'&]+/gi, '$1=[redacted]'),
+      value.replace(
+        /(access_token|refresh_token|client_secret|token)=[^\s"'&]+/gi,
+        '$1=[redacted]',
+      ),
     );
   }
 

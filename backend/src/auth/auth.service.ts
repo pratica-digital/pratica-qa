@@ -1,4 +1,9 @@
-import { BadGatewayException, BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  BadGatewayException,
+  BadRequestException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { User, UserStatus } from '@prisma/client';
@@ -108,6 +113,22 @@ export class AuthService {
     const user = await this.usersRepository.findByEmail(dto.email);
 
     if (user && user.status === UserStatus.ACTIVE && !user.deletedAt) {
+      if (!this.mailService.isConfigured()) {
+        await this.auditService.logAdminAction({
+          targetUserId: user.id,
+          action: 'PASSWORD_RECOVERY_EMAIL_SKIPPED',
+          details: {
+            email: user.email,
+            reason: 'email_delivery_disabled',
+          },
+          metadata,
+        });
+
+        return {
+          message: 'If the email exists, password reset instructions will be sent.',
+        };
+      }
+
       const resetToken = this.generateToken();
       const expiresAt = this.getPasswordResetExpirationDate();
 
@@ -164,7 +185,9 @@ export class AuthService {
           metadata,
         });
 
-        throw new BadGatewayException(`Unable to send password recovery email: ${this.getErrorMessage(emailError)}`);
+        throw new BadGatewayException(
+          `Unable to send password recovery email: ${this.getErrorMessage(emailError)}`,
+        );
       }
     }
 
@@ -216,13 +239,18 @@ export class AuthService {
   }
 
   private getPasswordResetExpirationDate() {
-    const minutes = this.configService.getOrThrow<number>('PASSWORD_RESET_TOKEN_EXPIRES_IN_MINUTES');
+    const minutes = this.configService.getOrThrow<number>(
+      'PASSWORD_RESET_TOKEN_EXPIRES_IN_MINUTES',
+    );
     return new Date(Date.now() + minutes * 60 * 1000);
   }
 
   private buildPasswordResetLink(token: string) {
     const frontendUrl = this.configService.getOrThrow<string>('APP_FRONTEND_URL');
-    const url = new URL('/reset-password', frontendUrl.endsWith('/') ? frontendUrl : `${frontendUrl}/`);
+    const url = new URL(
+      '/reset-password',
+      frontendUrl.endsWith('/') ? frontendUrl : `${frontendUrl}/`,
+    );
     url.searchParams.set('token', token);
     return url.toString();
   }
