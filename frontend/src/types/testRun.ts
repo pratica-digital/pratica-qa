@@ -287,6 +287,20 @@ export type CreateTestRunPayload = {
   }>;
 };
 
+export type AddTestRunTestsPayload = {
+  testSuiteIds?: string[];
+  testCaseIds?: string[];
+};
+
+export type AddTestRunTestsResponse = {
+  previousTotal: number;
+  addedCount: number;
+  ignoredDuplicateCount: number;
+  newTotal: number;
+  addedTestCaseIds: string[];
+  ignoredTestCaseIds: string[];
+};
+
 export type TestPlanSection = {
   type?: string;
   title: string;

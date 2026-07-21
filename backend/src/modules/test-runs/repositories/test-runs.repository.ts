@@ -154,6 +154,23 @@ type SuiteAssignment = {
   testType: TestRunTestType;
 };
 
+export type SelectableTestCase = {
+  id: string;
+  position: number;
+  suiteId: string;
+  suitePosition: number;
+};
+
+export type AddTestRunTestsResult = {
+  addedCount: number;
+  addedTestCaseIds: string[];
+  ignoredDuplicateCount: number;
+  ignoredTestCaseIds: string[];
+  newTotal: number;
+  previousTotal: number;
+  status: 'ADDED' | 'RUN_NOT_EDITABLE' | 'RUN_NOT_FOUND';
+};
+
 @Injectable()
 export class TestRunsRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -251,6 +268,222 @@ export class TestRunsRepository {
       where: { id },
       include: TEST_RUN_INCLUDE,
     });
+  }
+
+  async findSelectableTests(
+    testSuiteIds: string[],
+    testCaseIds: string[],
+    projectId?: string | null,
+  ) {
+    const suiteProjectFilter = projectId
+      ? {
+          OR: [
+            { projects: { some: { id: projectId, deletedAt: null } } },
+            { projects: { none: {} } },
+          ],
+        }
+      : {};
+    const [suites, testCases] = await Promise.all([
+      this.prisma.testSuite.findMany({
+        where: {
+          id: { in: testSuiteIds },
+          deletedAt: null,
+          ...suiteProjectFilter,
+        },
+        select: { id: true },
+      }),
+      this.prisma.testCase.findMany({
+        where: {
+          deletedAt: null,
+          status: TestCaseStatus.ACTIVE,
+          suite: {
+            deletedAt: null,
+            ...suiteProjectFilter,
+          },
+          OR: [
+            ...(testSuiteIds.length > 0 ? [{ suiteId: { in: testSuiteIds } }] : []),
+            ...(testCaseIds.length > 0 ? [{ id: { in: testCaseIds } }] : []),
+          ],
+        },
+        select: {
+          id: true,
+          position: true,
+          suiteId: true,
+          suite: { select: { position: true } },
+        },
+      }),
+    ]);
+
+    return {
+      suiteIds: suites.map((suite) => suite.id),
+      testCases: testCases
+        .map((testCase) => ({
+          id: testCase.id,
+          position: testCase.position,
+          suiteId: testCase.suiteId,
+          suitePosition: testCase.suite.position,
+        }))
+        .sort(
+          (left, right) =>
+            left.suitePosition - right.suitePosition ||
+            left.position - right.position ||
+            left.id.localeCompare(right.id),
+        ),
+    };
+  }
+
+  async addTests(
+    testRunId: string,
+    requestedCases: SelectableTestCase[],
+    requestedSuiteIds: string[],
+    actorUserId: string,
+  ): Promise<AddTestRunTestsResult> {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        return await this.prisma.$transaction(
+          async (tx) => {
+            const testRun = await tx.testRun.findUnique({
+              where: { id: testRunId },
+              select: { deletedAt: true, status: true },
+            });
+
+            if (!testRun || testRun.deletedAt) {
+              return {
+                status: 'RUN_NOT_FOUND',
+                previousTotal: 0,
+                newTotal: 0,
+                addedCount: 0,
+                ignoredDuplicateCount: 0,
+                addedTestCaseIds: [],
+                ignoredTestCaseIds: [],
+              };
+            }
+
+            const previousTotal = await tx.testResult.count({
+              where: { testRunId, removedAt: null },
+            });
+
+            if (testRun.status === TestRunStatus.COMPLETED) {
+              return {
+                status: 'RUN_NOT_EDITABLE',
+                previousTotal,
+                newTotal: previousTotal,
+                addedCount: 0,
+                ignoredDuplicateCount: 0,
+                addedTestCaseIds: [],
+                ignoredTestCaseIds: [],
+              };
+            }
+
+            const requestedCaseIds = requestedCases.map((testCase) => testCase.id);
+            const existingResults = await tx.testResult.findMany({
+              where: { testRunId, testCaseId: { in: requestedCaseIds } },
+              select: { testCaseId: true },
+            });
+            const existingCaseIds = new Set(existingResults.map((result) => result.testCaseId));
+            const newCases = requestedCases.filter((testCase) => !existingCaseIds.has(testCase.id));
+            const relatedSuiteIds = [...new Set(newCases.map((testCase) => testCase.suiteId))];
+            const existingRunSuites = await tx.testRunSuite.findMany({
+              where: { testRunId },
+              orderBy: [{ position: 'asc' }, { id: 'asc' }],
+              select: { position: true, testSuiteId: true },
+            });
+            const existingRunSuiteIds = new Set(
+              existingRunSuites.map((suite) => suite.testSuiteId),
+            );
+            const newSuiteIds = relatedSuiteIds.filter(
+              (suiteId) => !existingRunSuiteIds.has(suiteId),
+            );
+            const lastSuitePosition = existingRunSuites.at(-1)?.position ?? 0;
+
+            if (newSuiteIds.length > 0) {
+              await tx.testRunSuite.createMany({
+                data: newSuiteIds.map((suiteId, index) => ({
+                  position: lastSuitePosition + index + 1,
+                  testRunId,
+                  testSuiteId: suiteId,
+                  testType: TestRunTestType.FUNCIONAL,
+                })),
+                skipDuplicates: true,
+              });
+            }
+
+            const lastResult = await tx.testResult.aggregate({
+              where: { testRunId },
+              _max: { position: true },
+            });
+            const firstPosition = (lastResult._max.position ?? 0) + 1;
+            const createdResults =
+              newCases.length === 0
+                ? []
+                : await tx.testResult.createManyAndReturn({
+                    data: newCases.map((testCase, index) => ({
+                      position: firstPosition + index,
+                      status: TestResultStatus.PENDING,
+                      testCaseId: testCase.id,
+                      testRunId,
+                    })),
+                    select: { testCaseId: true },
+                    skipDuplicates: true,
+                  });
+            const addedTestCaseIds = createdResults.map((result) => result.testCaseId);
+            const addedTestCaseIdSet = new Set(addedTestCaseIds);
+            const addedTestSuiteIds = [
+              ...new Set(
+                requestedCases
+                  .filter((testCase) => addedTestCaseIdSet.has(testCase.id))
+                  .map((testCase) => testCase.suiteId),
+              ),
+            ];
+            const ignoredTestCaseIds = requestedCaseIds.filter(
+              (testCaseId) => !addedTestCaseIdSet.has(testCaseId),
+            );
+            const newTotal = await tx.testResult.count({
+              where: { testRunId, removedAt: null },
+            });
+
+            if (addedTestCaseIds.length > 0) {
+              await tx.testRun.update({
+                where: { id: testRunId },
+                data: { updatedAt: new Date() },
+              });
+              await tx.auditLog.create({
+                data: {
+                  action: 'TEST_RUN_TESTS_ADDED',
+                  actorUserId,
+                  details: {
+                    addedTestCaseIds,
+                    addedTestSuiteIds,
+                    newTotal,
+                    previousTotal,
+                    requestedTestSuiteIds: requestedSuiteIds,
+                    testRunId,
+                  },
+                },
+              });
+            }
+
+            return {
+              status: 'ADDED',
+              previousTotal,
+              addedCount: addedTestCaseIds.length,
+              ignoredDuplicateCount: ignoredTestCaseIds.length,
+              newTotal,
+              addedTestCaseIds,
+              ignoredTestCaseIds,
+            };
+          },
+          { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        );
+      } catch (error) {
+        if ((error as { code?: string }).code === 'P2034' && attempt < 2) {
+          continue;
+        }
+        throw error;
+      }
+    }
+
+    throw new Error('Unable to add tests after retrying the transaction');
   }
 
   update(id: string, dto: UpdateTestRunDto) {

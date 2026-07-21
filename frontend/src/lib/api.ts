@@ -1,5 +1,7 @@
 import type {
   AuthUser,
+  AddTestRunTestsPayload,
+  AddTestRunTestsResponse,
   CreateUserPayload,
   DashboardAnalytics,
   DashboardPeriod,
@@ -614,6 +616,16 @@ export const testRunsApi = {
     collectAllPages((page) => testRunsApi.listPage(token, { ...params, page })),
   get: (token: string, testRunId: string) =>
     apiRequest<TestRun>(`/test-runs/${testRunId}`, { token }),
+  addTests: (
+    token: string,
+    testRunId: string,
+    payload: AddTestRunTestsPayload,
+  ) =>
+    apiRequest<AddTestRunTestsResponse>(`/test-runs/${testRunId}/tests`, {
+      method: "POST",
+      token,
+      body: payload,
+    }),
   assign: (token: string, testRunId: string, assignedToId: string) =>
     apiRequest<TestRun>(`/test-runs/${testRunId}/assign`, {
       method: "POST",
