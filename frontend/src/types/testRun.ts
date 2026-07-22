@@ -619,6 +619,10 @@ export type AiHistoryItem = Omit<
   "releaseText" | "analysis" | "testCases" | "regressionSuite" | "coverage"
 > & {
   testCaseCount: number;
+  createdBy?: {
+    name: string;
+    email: string;
+  } | null;
 };
 
 export type UpdateTestSuitePayload = Partial<{

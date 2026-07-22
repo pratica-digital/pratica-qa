@@ -76,6 +76,36 @@ describe('TestRunsRepository', () => {
     );
   });
 
+  it('updates only name and description when suite classifications are omitted', async () => {
+    const updatedRun = {
+      id: 'run-id',
+      name: 'Nome atualizado',
+      status: TestRunStatus.IN_PROGRESS,
+    };
+    const prisma = {
+      testRun: {
+        update: jest.fn().mockResolvedValue(updatedRun),
+      },
+    };
+    const repository = new TestRunsRepository(prisma as never);
+
+    await expect(
+      repository.update('run-id', { name: 'Nome atualizado' }),
+    ).resolves.toEqual(updatedRun);
+    expect(prisma.testRun.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'run-id' },
+        data: {
+          name: 'Nome atualizado',
+          description: undefined,
+        },
+      }),
+    );
+    expect(prisma.testRun.update.mock.calls[0][0].data).not.toHaveProperty('status');
+    expect(prisma.testRun.update.mock.calls[0][0].data).not.toHaveProperty('suites');
+    expect(prisma.testRun.update.mock.calls[0][0].data).not.toHaveProperty('results');
+  });
+
   it('reopens a completed run when a result returns to pending', async () => {
     const prisma = {
       testRun: {

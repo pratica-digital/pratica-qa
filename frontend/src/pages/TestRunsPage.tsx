@@ -6,6 +6,7 @@ import { ActionMenu } from '../components/ActionMenu';
 import { TestRunTypeBadge, UserRoleBadge } from '../components/badges';
 import { DeleteConfirmationModal } from '../components/DeleteConfirmationModal';
 import { EditTestRunTypesModal } from '../components/test-run/EditTestRunTypesModal';
+import { EditTestRunNameModal } from '../components/test-run/EditTestRunNameModal';
 import { ApiError, testRunsApi } from '../lib/api';
 import type { AuthUser, TestRun } from '../types/testRun';
 import { NewTestRunModal } from './Newtestrunmodal';
@@ -60,6 +61,7 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
   const [modalOpen, setModalOpen] = useState(false);
   const [runPendingDelete, setRunPendingDelete] = useState<TestRun | null>(null);
   const [runTypesPendingEdit, setRunTypesPendingEdit] = useState<TestRun | null>(null);
+  const [runNamePendingEdit, setRunNamePendingEdit] = useState<TestRun | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchData = useCallback(async () => {
@@ -182,6 +184,17 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
       setAssignedTestRuns(nextRuns.filter((item) => item.assignedToId === user.id));
     }
     setSuccess(testRunTypesSuccessMessage('updated', updatedRun));
+  };
+
+  const handleNameUpdated = (updatedRun: TestRun) => {
+    const nextRuns = testRuns.map((testRun) =>
+      testRun.id === updatedRun.id ? updatedRun : testRun,
+    );
+    setTestRuns(nextRuns);
+    if (user) {
+      setAssignedTestRuns(nextRuns.filter((item) => item.assignedToId === user.id));
+    }
+    setSuccess('Nome do Test Run atualizado com sucesso.');
   };
 
   const handleOpenRun = async (testRun: TestRun) => {
@@ -444,6 +457,11 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
                         ariaLabel="Ações da execução"
                         items={[
                           {
+                            label: 'Editar nome',
+                            onSelect: () => setRunNamePendingEdit(testRun),
+                            title: 'Editar nome do Test Run',
+                          },
+                          {
                             label: 'Editar tipos',
                             onSelect: () => setRunTypesPendingEdit(testRun),
                             title: 'Editar tipos de teste',
@@ -485,6 +503,15 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
           onClose={() => setRunTypesPendingEdit(null)}
           onUpdated={handleTypesUpdated}
           testRun={runTypesPendingEdit}
+        />
+      ) : null}
+
+      {runNamePendingEdit ? (
+        <EditTestRunNameModal
+          key={runNamePendingEdit.id}
+          onClose={() => setRunNamePendingEdit(null)}
+          onUpdated={handleNameUpdated}
+          testRun={runNamePendingEdit}
         />
       ) : null}
 

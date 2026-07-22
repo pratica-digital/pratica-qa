@@ -142,6 +142,14 @@ export class AiGenerationRepository {
       skip: params.skip,
       take: params.take,
       orderBy: { createdAt: 'desc' },
+      include: {
+        createdBy: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
+      },
     });
 
     return rows.map((row) => {
@@ -162,12 +170,17 @@ export class AiGenerationRepository {
         createdAt: record.createdAt,
         updatedAt: record.updatedAt,
         testCaseCount: record.testCases.length,
+        createdBy: row.createdBy,
       };
     });
   }
 
   count() {
     return this.prisma.aiGeneration.count();
+  }
+
+  async remove(id: string) {
+    await this.prisma.aiGeneration.delete({ where: { id } });
   }
 
   async incrementCasesCreated(id: string, count: number) {

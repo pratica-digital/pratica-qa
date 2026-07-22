@@ -842,6 +842,11 @@ export const aiTestGeneratorApi = {
         token,
       },
     ),
+  removeHistory: (token: string, id: string) =>
+    apiRequest<void>(`/ai-test-generator/history/${id}`, {
+      method: "DELETE",
+      token,
+    }),
   getSettings: (token: string) =>
     apiRequest<AiSettings>("/ai-test-generator/settings", { token }),
   updateSettings: (token: string, payload: AiSettings) =>

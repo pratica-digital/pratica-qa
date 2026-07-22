@@ -116,6 +116,10 @@ export type AiGenerationRecord = {
 
 export type AiHistoryItem = Omit<AiGenerationRecord, 'releaseText' | 'analysis' | 'testCases' | 'regressionSuite' | 'coverage'> & {
   testCaseCount: number;
+  createdBy: {
+    name: string;
+    email: string;
+  } | null;
 };
 
 export type AiCaseAction =

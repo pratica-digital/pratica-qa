@@ -1527,21 +1527,27 @@ export function TestRunReportPage({
         {typeSummaries.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
+              <colgroup>
+                <col style={{ width: "50%" }} />
+                <col style={{ width: "16%" }} />
+                <col style={{ width: "17%" }} />
+                <col style={{ width: "17%" }} />
+              </colgroup>
               <thead className="border-b border-slate-200 text-xs uppercase text-slate-500">
                 <tr>
-                  <th className="px-5 py-3 font-medium">Tipo</th>
-                  <th className="px-3 py-3 text-right font-medium">Total</th>
-                  <th className="px-3 py-3 text-right font-medium">Aprovados</th>
-                  <th className="px-5 py-3 text-right font-medium">Falhos</th>
+                  <th className="px-5 py-3 font-medium text-left">Tipo</th>
+                  <th className="px-3 py-3 text-center font-medium">Total</th>
+                  <th className="px-3 py-3 text-center font-medium">Aprovados</th>
+                  <th className="px-5 py-3 text-center font-medium">Falhos</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {typeSummaries.map((item) => (
                   <tr key={item.type ?? "undefined"}>
                     <td className="px-5 py-3 font-medium text-slate-900">{item.label}</td>
-                    <td className="px-3 py-3 text-right text-slate-700">{item.total}</td>
-                    <td className="px-3 py-3 text-right font-semibold text-emerald-700">{item.passed}</td>
-                    <td className="px-5 py-3 text-right font-semibold text-red-700">{item.failed}</td>
+                    <td className="px-3 py-3 text-center text-slate-700">{item.total}</td>
+                    <td className="px-3 py-3 text-center font-semibold text-emerald-700">{item.passed}</td>
+                    <td className="px-5 py-3 text-center font-semibold text-red-700">{item.failed}</td>
                   </tr>
                 ))}
               </tbody>

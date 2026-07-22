@@ -182,6 +182,16 @@ export class AiTestGeneratorService {
     return generation;
   }
 
+  async removeHistory(id: string) {
+    const generation = await this.generationRepository.findById(id);
+
+    if (!generation) {
+      throw new NotFoundException('AI generation not found.');
+    }
+
+    await this.generationRepository.remove(id);
+  }
+
   async regenerate(id: string, user?: AuthenticatedUser) {
     const generation = await this.findHistory(id);
 

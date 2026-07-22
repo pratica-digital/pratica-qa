@@ -6,6 +6,7 @@ type DeleteConfirmationModalProps = {
   title: string;
   description?: string;
   loading: boolean;
+  confirmLabel?: string;
   onCancel: () => void;
   onConfirm: () => void;
 };
@@ -14,6 +15,7 @@ export function DeleteConfirmationModal({
   title,
   description,
   loading,
+  confirmLabel = 'Excluir',
   onCancel,
   onConfirm,
 }: DeleteConfirmationModalProps) {
@@ -71,7 +73,7 @@ export function DeleteConfirmationModal({
             type="button"
           >
             <Trash2 className="h-4 w-4" aria-hidden="true" />
-            {loading ? 'Excluindo' : 'Excluir'}
+            {loading ? 'Excluindo' : confirmLabel}
           </button>
         </div>
       </div>
