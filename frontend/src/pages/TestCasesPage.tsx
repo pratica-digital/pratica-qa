@@ -1,12 +1,11 @@
-import { Filter, Plus, RefreshCw, Search, Tag } from 'lucide-react';
+import { ChevronRight, Filter, Plus, RefreshCw, Search } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../auth/useAuth';
 import { ActionMenu } from '../components/ActionMenu';
-import { CaseStatusBadge } from '../components/badges';
 import { DeleteConfirmationModal } from '../components/DeleteConfirmationModal';
 import { TestCaseEditPanel } from '../components/test-cases/TestCaseEditPanel';
 import { ApiError, testCasesApi, testSuitesApi } from '../lib/api';
-import { suiteProjectLabel } from '../lib/labels';
+import { getCaseHierarchy, getCaseProjectName } from '../lib/testCaseHierarchy';
 import type {
   CreateTestCasePayload,
   ManagedTestCase,
@@ -20,26 +19,8 @@ type TestCasesPageProps = {
   createActionEventId?: number;
 };
 
-function getStepCount(testCase: ManagedTestCase) {
-  return testCase.steps?.length ?? 0;
-}
-
-function getSuite(testCase: ManagedTestCase, suites: ManagedTestSuite[]) {
-  return suites.find((suite) => suite.id === testCase.suiteId);
-}
-
-function getSuiteName(testCase: ManagedTestCase, suites: ManagedTestSuite[]) {
-  return (
-    getSuite(testCase, suites)?.name ??
-    testCase.suite?.name ??
-    'Suíte não atribuída'
-  );
-}
-
 function getProjectName(testCase: ManagedTestCase, suites: ManagedTestSuite[]) {
-  const suite = getSuite(testCase, suites);
-
-  return suiteProjectLabel(suite ?? testCase.suite ?? {});
+  return getCaseProjectName(testCase, suites);
 }
 
 export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
@@ -118,7 +99,7 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
         testCase.expectedResult,
         testCase.section,
         getProjectName(testCase, suites),
-        getSuiteName(testCase, suites),
+        ...getCaseHierarchy(testCase, suites),
         ...(testCase.tags ?? []),
       ]
         .filter(Boolean)
@@ -271,85 +252,91 @@ export function TestCasesPage({ createActionEventId = 0 }: TestCasesPageProps) {
         </div>
       ) : visibleCases.length > 0 ? (
         <>
-          
-
           <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
             <div className="border-b border-slate-200 px-4 py-3">
               <h2 className="text-sm font-semibold text-slate-950">Tabela de casos</h2>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[980px] text-left text-sm">
+              <table className="w-full min-w-[640px] table-fixed text-left text-sm">
                 <thead className="bg-slate-100 text-xs font-medium uppercase text-slate-700">
                   <tr>
-                    <th className="px-4 py-3">Caso</th>
-                    <th className="px-4 py-3">Projeto / Suíte</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">Passos</th>
-                    <th className="px-4 py-3"></th>
-                    <th className="px-4 py-3 text-right"></th>
+                    <th className="w-[46%] px-4 py-3">Caso</th>
+                    <th className="w-[46%] px-4 py-3">Projeto / Suíte</th>
+                    <th className="w-16 px-4 py-3 text-right">
+                      <span className="sr-only">Menu</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
-                  {visibleCases.map((testCase) => (
-                    <tr
-                      className="cursor-pointer hover:bg-slate-50"
-                      key={testCase.id}
-                      onClick={() => void handleOpenCase(testCase)}
-                    >
-                      <td className="px-4 py-3">
-                        <p className="font-medium text-slate-950">{testCase.title}</p>
+                  {visibleCases.map((testCase) => {
+                    const hierarchy = getCaseHierarchy(testCase, suites);
+                    const projectName = getProjectName(testCase, suites);
 
-                      </td>
-                      <td className="px-4 py-3 text-slate-600">
-                        <p className="font-medium text-slate-700">
-                          {getProjectName(testCase, suites)}
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          {getSuiteName(testCase, suites)}
-                          {testCase.section ? ` / ${testCase.section}` : ''}
-                        </p>
-                      </td>
-                      <td className="px-4 py-3">
-                        <CaseStatusBadge status={testCase.status} />
-                      </td>
-                      <td className="px-4 py-3 text-slate-600">
-                        {getStepCount(testCase)}
-                      </td>
-
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-1.5">
-                          {(testCase.tags ?? []).map((tag) => (
-                            <span
-                              className="inline-flex h-6 items-center gap-1 rounded-md border border-slate-200 px-2 text-xs text-slate-600"
-                              key={tag}
+                    return (
+                      <tr
+                        className="cursor-pointer hover:bg-slate-50"
+                        key={testCase.id}
+                        onClick={() => void handleOpenCase(testCase)}
+                      >
+                        <td className="px-4 py-3 align-top">
+                          <p
+                            className="line-clamp-2 break-words font-medium text-slate-950"
+                            title={testCase.title}
+                          >
+                            {testCase.title}
+                          </p>
+                          {projectName ? (
+                            <p
+                              className="mt-1 truncate text-xs text-slate-500"
+                              title={projectName}
                             >
-                              <Tag className="h-3 w-3" aria-hidden="true" />
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <ActionMenu
-                          ariaLabel="Test case actions"
-                          disabled={!canEdit}
-                          items={[
-                            {
-                              label: 'Editar',
-                              onSelect: () => void handleOpenCase(testCase),
-                              title: 'Editar caso de teste',
-                            },
-                            {
-                              label: 'Excluir',
-                              onSelect: () => requestCaseDelete(testCase),
-                              title: 'Excluir caso de teste',
-                              tone: 'danger',
-                            },
-                          ]}
-                        />
-                      </td>
-                    </tr>
-                  ))}
+                              {projectName}
+                            </p>
+                          ) : null}
+                        </td>
+                        <td className="px-4 py-3 align-top text-slate-600">
+                          <div
+                            className="flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5"
+                            title={hierarchy.join(' > ') || 'Sem suíte definida'}
+                          >
+                            {hierarchy.length > 0 ? (
+                              hierarchy.map((label, index) => (
+                                <span className="inline-flex min-w-0 items-center gap-1" key={`${label}-${index}`}>
+                                  {index > 0 ? (
+                                    <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden="true" />
+                                  ) : null}
+                                  <span className={index === 0 ? 'break-words font-medium text-slate-700' : 'break-words text-xs text-slate-500'}>
+                                    {label}
+                                  </span>
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-xs text-slate-500">Sem suíte definida</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-right align-top">
+                          <ActionMenu
+                            ariaLabel="Test case actions"
+                            disabled={!canEdit}
+                            items={[
+                              {
+                                label: 'Editar',
+                                onSelect: () => void handleOpenCase(testCase),
+                                title: 'Editar caso de teste',
+                              },
+                              {
+                                label: 'Excluir',
+                                onSelect: () => requestCaseDelete(testCase),
+                                title: 'Excluir caso de teste',
+                                tone: 'danger',
+                              },
+                            ]}
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
