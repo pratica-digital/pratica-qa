@@ -157,6 +157,57 @@ describe('TestRunsService', () => {
     expect(runs.update).not.toHaveBeenCalled();
   });
 
+  it('updates only the name of an existing run without changing execution data', async () => {
+    const existingRun = {
+      deletedAt: null,
+      id: 'run-id',
+      name: 'Nome anterior',
+      status: TestRunStatus.IN_PROGRESS,
+      suites: [{ testSuiteId: 'suite-a', testType: TestRunTestType.SMOKE }],
+      results: [{ id: 'result-id', status: 'PENDING' }],
+    };
+    const updatedRun = { ...existingRun, name: 'Nome atualizado' };
+    const runs = {
+      findById: jest.fn().mockResolvedValue(existingRun),
+      update: jest.fn().mockResolvedValue(updatedRun),
+    };
+    const service = new TestRunsService(
+      runs as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+
+    await expect(
+      service.update('run-id', { name: 'Nome atualizado' }),
+    ).resolves.toEqual(updatedRun);
+    expect(runs.update).toHaveBeenCalledWith(
+      'run-id',
+      { name: 'Nome atualizado' },
+      undefined,
+    );
+  });
+
+  it('rejects a name update for an unknown run', async () => {
+    const runs = {
+      findById: jest.fn().mockResolvedValue(null),
+      update: jest.fn(),
+    };
+    const service = new TestRunsService(
+      runs as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+
+    await expect(
+      service.update('missing-run', { name: 'Novo nome' }),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(runs.update).not.toHaveBeenCalled();
+  });
+
   describe('addTests', () => {
     const selectedCases = [
       {
