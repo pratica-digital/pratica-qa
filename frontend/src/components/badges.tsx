@@ -5,7 +5,9 @@ import type {
   TestResultStatus,
   UserRole,
   UserStatus,
+  TestRunTestType,
 } from '../types/testRun';
+import { testRunTypeLabel } from '../lib/testRunTypes';
 import {
   projectStatusLabels,
   testCaseStatusLabels,
@@ -71,4 +73,8 @@ export function UserRoleBadge({ role }: { role: UserRole }) {
 export function UserStatusBadge({ status }: { status?: UserStatus }) {
   const tone = status === 'INACTIVE' ? 'slate' : 'green';
   return <Badge tone={tone}>{userStatusLabel(status)}</Badge>;
+}
+
+export function TestRunTypeBadge({ type }: { type: TestRunTestType }) {
+  return <Badge tone="blue">{testRunTypeLabel(type)}</Badge>;
 }

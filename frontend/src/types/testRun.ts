@@ -287,6 +287,12 @@ export type CreateTestRunPayload = {
   }>;
 };
 
+export type UpdateTestRunPayload = Partial<{
+  name: string;
+  description: string;
+  testTypes: CreateTestRunPayload["testTypes"];
+}>;
+
 export type AddTestRunTestsPayload = {
   testSuiteIds?: string[];
   testCaseIds?: string[];

@@ -1,5 +1,16 @@
 import { TestRunStatus } from '@prisma/client';
-import { IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
+  IsEnum,
+  IsOptional,
+  IsString,
+  MaxLength,
+  ValidateNested,
+} from 'class-validator';
+import { CreateTestRunTypeDto } from './create-test-run.dto';
 
 export class UpdateTestRunDto {
   @IsOptional()
@@ -15,4 +26,12 @@ export class UpdateTestRunDto {
   @IsOptional()
   @IsEnum(TestRunStatus)
   status?: TestRunStatus;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(4)
+  @ValidateNested({ each: true })
+  @Type(() => CreateTestRunTypeDto)
+  testTypes?: CreateTestRunTypeDto[];
 }

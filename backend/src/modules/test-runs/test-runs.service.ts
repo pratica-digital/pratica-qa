@@ -140,8 +140,29 @@ export class TestRunsService {
   }
 
   async update(id: string, dto: UpdateTestRunDto) {
-    await this.findOne(id);
-    return this.testRunsRepository.update(id, dto);
+    const testRun = await this.findOne(id);
+    let suiteAssignments: SuiteAssignment[] | undefined;
+
+    if (dto.testTypes) {
+      suiteAssignments = this.buildSuiteAssignments(dto);
+      const currentSuiteIds = new Set(
+        testRun.suites.map((suite) => suite.testSuiteId),
+      );
+      const updatedSuiteIds = new Set(
+        suiteAssignments.map((assignment) => assignment.suiteId),
+      );
+
+      if (
+        currentSuiteIds.size !== updatedSuiteIds.size ||
+        [...currentSuiteIds].some((suiteId) => !updatedSuiteIds.has(suiteId))
+      ) {
+        throw new BadRequestException(
+          'Editing test types must preserve the test suites already associated with the run',
+        );
+      }
+    }
+
+    return this.testRunsRepository.update(id, dto, suiteAssignments);
   }
 
   async assign(id: string, dto: AssignTestRunDto) {
@@ -271,7 +292,9 @@ export class TestRunsService {
     }
   }
 
-  private buildSuiteAssignments(dto: CreateTestRunDto): SuiteAssignment[] {
+  private buildSuiteAssignments(
+    dto: Pick<CreateTestRunDto, 'suiteIds' | 'testTypes'>,
+  ): SuiteAssignment[] {
     if (dto.testTypes?.length) {
       const seenTypes = new Set<TestRunTestType>();
       const seenSuites = new Set<string>();

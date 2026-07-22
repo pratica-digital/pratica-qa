@@ -44,6 +44,119 @@ describe('TestRunsService', () => {
     ]);
   });
 
+  it('creates a run with multiple distinct test types', async () => {
+    const runs = { create: jest.fn().mockResolvedValue({ id: 'run-id' }) };
+    const suites = {
+      countByIds: jest.fn().mockResolvedValue(2),
+      findPositionsByIds: jest.fn().mockResolvedValue([
+        { id: 'suite-a', position: 1 },
+        { id: 'suite-b', position: 2 },
+      ]),
+    };
+    const users = {
+      findById: jest.fn().mockResolvedValue({ deletedAt: null, status: UserStatus.ACTIVE }),
+    };
+    const service = new TestRunsService(
+      runs as never,
+      {} as never,
+      suites as never,
+      users as never,
+      {} as never,
+    );
+
+    await service.create({
+      assignedToId: 'user-id',
+      name: 'Run',
+      testTypes: [
+        { type: TestRunTestType.SMOKE, suites: ['suite-a'] },
+        { type: TestRunTestType.REGRESSAO, suites: ['suite-b'] },
+      ],
+    });
+
+    expect(runs.create).toHaveBeenCalledWith(expect.anything(), [
+      { suiteId: 'suite-a', testType: TestRunTestType.SMOKE },
+      { suiteId: 'suite-b', testType: TestRunTestType.REGRESSAO },
+    ]);
+  });
+
+  it('rejects duplicated test types during creation', async () => {
+    const service = new TestRunsService(
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+
+    await expect(
+      service.create({
+        assignedToId: 'user-id',
+        name: 'Run',
+        testTypes: [
+          { type: TestRunTestType.SMOKE, suites: ['suite-a'] },
+          { type: TestRunTestType.SMOKE, suites: ['suite-b'] },
+        ],
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('updates multiple test types while preserving the suites in the run', async () => {
+    const runs = {
+      findById: jest.fn().mockResolvedValue({
+        deletedAt: null,
+        id: 'run-id',
+        suites: [
+          { testSuiteId: 'suite-a' },
+          { testSuiteId: 'suite-b' },
+        ],
+      }),
+      update: jest.fn().mockResolvedValue({ id: 'run-id' }),
+    };
+    const service = new TestRunsService(
+      runs as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+    const testTypes = [
+      { type: TestRunTestType.SMOKE, suites: ['suite-a'] },
+      { type: TestRunTestType.REGRESSAO, suites: ['suite-b'] },
+    ];
+
+    await service.update('run-id', { testTypes });
+
+    expect(runs.update).toHaveBeenCalledWith('run-id', { testTypes }, [
+      { suiteId: 'suite-a', testType: TestRunTestType.SMOKE },
+      { suiteId: 'suite-b', testType: TestRunTestType.REGRESSAO },
+    ]);
+  });
+
+  it('rejects type edits that add or remove suites from the execution', async () => {
+    const runs = {
+      findById: jest.fn().mockResolvedValue({
+        deletedAt: null,
+        id: 'run-id',
+        suites: [{ testSuiteId: 'suite-a' }],
+      }),
+      update: jest.fn(),
+    };
+    const service = new TestRunsService(
+      runs as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+
+    await expect(
+      service.update('run-id', {
+        testTypes: [{ type: TestRunTestType.SMOKE, suites: ['suite-b'] }],
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(runs.update).not.toHaveBeenCalled();
+  });
+
   describe('addTests', () => {
     const selectedCases = [
       {

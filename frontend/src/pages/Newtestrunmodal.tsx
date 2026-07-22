@@ -29,6 +29,7 @@ import {
   suiteProjectIds,
   suiteProjectLabel,
 } from '../lib/labels';
+import { TEST_RUN_TYPE_OPTIONS } from '../lib/testRunTypes';
 
 type SuiteOption = ManagedTestSuite;
 type TabId = 'info' | 'suites';
@@ -70,33 +71,6 @@ const initialForm: TestRunForm = {
   scheduledAt: '',
 };
 
-const TEST_TYPE_OPTIONS: Array<{
-  type: TestRunTestType;
-  label: string;
-  description: string;
-}> = [
-  {
-    type: 'SMOKE',
-    label: 'Smoke',
-    description: 'Checagens críticas antes da execução detalhada',
-  },
-  {
-    type: 'FUNCIONAL',
-    label: 'Funcional',
-    description: 'Comportamento das funcionalidades e cobertura de aceite',
-  },
-  {
-    type: 'REGRESSAO',
-    label: 'Regressão',
-    description: 'Fluxos existentes que precisam continuar funcionando',
-  },
-  {
-    type: 'ROBUSTEZ',
-    label: 'Robustez',
-    description: 'Cenários de limite, resiliência e estresse',
-  },
-];
-
 function Field({ label, required = false, children, hint }: FieldProps) {
   return (
     <div className="flex flex-col gap-1.5">
@@ -120,7 +94,7 @@ function Input(props: InputHTMLAttributes<HTMLInputElement>) {
 }
 
 function getTestTypeOption(type: TestRunTestType) {
-  return TEST_TYPE_OPTIONS.find((option) => option.type === type) || TEST_TYPE_OPTIONS[0];
+  return TEST_RUN_TYPE_OPTIONS.find((option) => option.type === type) || TEST_RUN_TYPE_OPTIONS[0];
 }
 
 function getProjectLabel(project?: ProjectReference | null, fallbackId?: string | null) {
@@ -310,6 +284,14 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
 
     if (selectedTestTypes.length === 0) {
       nextErrors.testTypes = 'Selecione pelo menos um tipo de teste';
+    }
+
+    if (
+      selectedTestTypes.some(
+        (type) => !Object.values(suiteAssignments).includes(type),
+      )
+    ) {
+      nextErrors.suites = 'Associe pelo menos uma suíte a cada tipo de teste selecionado';
     }
 
     const hasSuiteOutsideSelectedTypes = Object.values(suiteAssignments).some(
@@ -591,7 +573,7 @@ export function NewTestRunModal({ open, onClose, onCreate, qaUsers = [], project
                 </div>
 
                 <div className="grid gap-2 sm:grid-cols-2">
-                  {TEST_TYPE_OPTIONS.map((option) => {
+                  {TEST_RUN_TYPE_OPTIONS.map((option) => {
                     const isSelected = selectedTestTypes.includes(option.type);
 
                     return (

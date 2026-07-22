@@ -486,14 +486,45 @@ export class TestRunsRepository {
     throw new Error('Unable to add tests after retrying the transaction');
   }
 
-  update(id: string, dto: UpdateTestRunDto) {
-    return this.prisma.testRun.update({
-      where: { id },
-      data: {
-        name: dto.name,
-        description: dto.description,
-      },
-      include: TEST_RUN_INCLUDE,
+  update(id: string, dto: UpdateTestRunDto, suiteAssignments?: SuiteAssignment[]) {
+    if (!suiteAssignments) {
+      return this.prisma.testRun.update({
+        where: { id },
+        data: {
+          name: dto.name,
+          description: dto.description,
+        },
+        include: TEST_RUN_INCLUDE,
+      });
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      await tx.testRun.update({
+        where: { id },
+        data: {
+          name: dto.name,
+          description: dto.description,
+        },
+      });
+
+      await Promise.all(
+        suiteAssignments.map((assignment) =>
+          tx.testRunSuite.update({
+            where: {
+              testRunId_testSuiteId: {
+                testRunId: id,
+                testSuiteId: assignment.suiteId,
+              },
+            },
+            data: { testType: assignment.testType },
+          }),
+        ),
+      );
+
+      return tx.testRun.findUnique({
+        where: { id },
+        include: TEST_RUN_INCLUDE,
+      });
     });
   }
 
