@@ -18,6 +18,7 @@ export class CreateTestRunTypeDto {
   type: TestRunTestType;
 
   @IsArray()
+  @ArrayMinSize(1)
   @ArrayMaxSize(50)
   @IsUUID(undefined, { each: true })
   suites: string[];

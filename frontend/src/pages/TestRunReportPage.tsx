@@ -57,6 +57,10 @@ import {
 } from "../lib/pdfEvidence";
 import { getResultTestCase } from "../lib/testResultOverrides";
 import { summarizeTestResults } from "../lib/testRunSummary";
+import {
+  formatTestRunTypesFromRun,
+  summarizeResultsByTestType,
+} from "../lib/testRunTypes";
 import praticaLogoUrl from "../assets/pratica-logo.png";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -84,16 +88,6 @@ function fmtDate(dateStr?: string | null) {
   return new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium" }).format(
     new Date(dateStr),
   );
-}
-
-function testTypeLabel(type?: string) {
-  const map: Record<string, string> = {
-    SMOKE: "Smoke",
-    FUNCIONAL: "Funcional",
-    REGRESSAO: "Regressão",
-    ROBUSTEZ: "Robustez",
-  };
-  return type ? (map[type] ?? type) : "—";
 }
 
 // ─── Status config ────────────────────────────────────────────────────────────
@@ -761,13 +755,7 @@ async function generatePDF(
 
   y += 8;
 
-  const suiteTypes = [
-    ...new Set((testRun.suites ?? []).map((s) => s.testType).filter(Boolean)),
-  ];
-  const typeLabel =
-    suiteTypes.length > 0
-      ? suiteTypes.map((t) => testTypeLabel(t)).join(", ")
-      : "—";
+  const typeLabel = formatTestRunTypesFromRun(testRun);
 
   const infoRows: [string, string][] = [
     ["Projeto", testRun.project?.name ?? "—"],
@@ -867,7 +855,7 @@ async function generatePDF(
     if (item.value > 0) {
       // Indicador visual discreto de que o card leva à seção correspondente.
       sf("normal", 6, sc.fg);
-      doc.text("↓", cx + cardW - 5, y + cardH - 3);
+      
       const labelWidth = doc.getTextWidth(item.label.toUpperCase());
       doc.setDrawColor(...sc.fg);
       doc.setLineWidth(0.15);
@@ -904,6 +892,37 @@ async function generatePDF(
 
   // sem borda externa — apenas segmentos coloridos
   y += barH + 5;
+
+  const typeSummaries = summarizeResultsByTestType(testRun, results);
+  checkPage(18 + typeSummaries.length * 9);
+  sf("bold", 9, C.navy);
+  y += 7;
+
+  fr(margin, y - 4, contentW, 8, C.navySubtle);
+  sf("bold", 6.5, C.textSub);
+  doc.text("TIPO DE TESTE", margin + 3, y);
+  doc.text("TOTAL", margin + contentW - 45,y, { align: "right" });
+  doc.text("APROVADOS", margin + contentW -23 ,y, { align: "right" });
+  doc.text("FALHOS", margin + contentW -  5,y, { align: "right" });
+  y += 7;
+  
+  for (const item of typeSummaries) {
+    checkPage(10);
+    sf("normal", 8, C.text);
+    doc.text(item.label, margin + 3, y);
+    doc.text(String(item.total), margin + contentW - 49, y, { align: "center" });
+    sf("bold", 8, C.passed);
+    doc.text(String(item.passed), margin + contentW - 30, y, { align: "center" });
+    sf("bold", 8, C.failed);
+    doc.text(String(item.failed), margin + contentW - 9, y, { align: "center" });
+    y += 8;
+  }
+
+  if (typeSummaries.length === 0) {
+    sf("normal", 8, C.textSub);
+    doc.text("Tipo de teste não definido — nenhum resultado disponível", margin + 3, y);
+    y += 8;
+  }
 
   // ── PÁGINAS DE TEST CASES ─────────────────────────────────────────────────
   let embeddedEvidenceCount = 0;
@@ -1291,9 +1310,7 @@ export function TestRunReportPage({
   }
 
   const { testRun, results, summary } = report;
-  const suiteTypes = [
-    ...new Set((testRun.suites ?? []).map((s) => s.testType).filter(Boolean)),
-  ];
+  const typeSummaries = summarizeResultsByTestType(testRun, results);
 
   const grouped: Record<StatusGroup, TestResult[]> = {
     FAILED: results.filter((r) => r.status === "FAILED"),
@@ -1387,9 +1404,7 @@ export function TestRunReportPage({
               icon: Tag,
               label: "Tipo de Teste",
               value:
-                suiteTypes.length > 0
-                  ? suiteTypes.map((t) => testTypeLabel(t)).join(", ")
-                  : "—",
+                formatTestRunTypesFromRun(testRun),
             },
             {
               icon: User,
@@ -1504,6 +1519,40 @@ export function TestRunReportPage({
           </div>
         </div>
       )}
+
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-100 bg-slate-50 px-5 py-3">
+          <h2 className="text-sm font-semibold text-slate-700">Resultados por tipo de teste</h2>
+        </div>
+        {typeSummaries.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-slate-200 text-xs uppercase text-slate-500">
+                <tr>
+                  <th className="px-5 py-3 font-medium">Tipo</th>
+                  <th className="px-3 py-3 text-right font-medium">Total</th>
+                  <th className="px-3 py-3 text-right font-medium">Aprovados</th>
+                  <th className="px-5 py-3 text-right font-medium">Falhos</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {typeSummaries.map((item) => (
+                  <tr key={item.type ?? "undefined"}>
+                    <td className="px-5 py-3 font-medium text-slate-900">{item.label}</td>
+                    <td className="px-3 py-3 text-right text-slate-700">{item.total}</td>
+                    <td className="px-3 py-3 text-right font-semibold text-emerald-700">{item.passed}</td>
+                    <td className="px-5 py-3 text-right font-semibold text-red-700">{item.failed}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="px-5 py-4 text-sm text-slate-500">
+            Tipo de teste não definido. Nenhum resultado disponível.
+          </p>
+        )}
+      </div>
 
       {/* Test case sections */}
       {summary.total === 0 ? (

@@ -3,11 +3,18 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { canManageTests } from '../auth/permissions';
 import { useAuth } from '../auth/useAuth';
 import { ActionMenu } from '../components/ActionMenu';
-import { UserRoleBadge } from '../components/badges';
+import { TestRunTypeBadge, UserRoleBadge } from '../components/badges';
 import { DeleteConfirmationModal } from '../components/DeleteConfirmationModal';
+import { EditTestRunTypesModal } from '../components/test-run/EditTestRunTypesModal';
 import { ApiError, testRunsApi } from '../lib/api';
 import type { AuthUser, TestRun } from '../types/testRun';
 import { NewTestRunModal } from './Newtestrunmodal';
+import {
+  formatTestRunTypesFromRun,
+  getTestRunTypes,
+  TEST_RUN_TYPE_NOT_DEFINED,
+  testRunTypesSuccessMessage,
+} from '../lib/testRunTypes';
 
 type TestRunsPageProps = {
   onOpenRun: (testRun: TestRun) => void;
@@ -52,6 +59,7 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
   const [openingRunId, setOpeningRunId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [runPendingDelete, setRunPendingDelete] = useState<TestRun | null>(null);
+  const [runTypesPendingEdit, setRunTypesPendingEdit] = useState<TestRun | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchData = useCallback(async () => {
@@ -118,6 +126,7 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
         testRun.project?.name,
         testRun.assignedTo?.name,
         testRun.testPlan?.name,
+        formatTestRunTypesFromRun(testRun),
       ]
         .filter(Boolean)
         .join(' ')
@@ -157,11 +166,22 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
 
     setTestRuns(nextRuns);
     setScope('all');
-    setSuccess('Execução criada.');
+    setSuccess(testRunTypesSuccessMessage('created', testRun));
 
     if (user) {
       setAssignedTestRuns(nextRuns.filter((item) => item.assignedToId === user.id));
     }
+  };
+
+  const handleTypesUpdated = (updatedRun: TestRun) => {
+    const nextRuns = testRuns.map((testRun) =>
+      testRun.id === updatedRun.id ? updatedRun : testRun,
+    );
+    setTestRuns(nextRuns);
+    if (user) {
+      setAssignedTestRuns(nextRuns.filter((item) => item.assignedToId === user.id));
+    }
+    setSuccess(testRunTypesSuccessMessage('updated', updatedRun));
   };
 
   const handleOpenRun = async (testRun: TestRun) => {
@@ -314,6 +334,7 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
           {visibleRuns.map((testRun) => {
             const progress = getResultProgress(testRun);
             const canExecute = canManageTests(user);
+            const testTypes = getTestRunTypes(testRun);
 
             return (
               <article
@@ -326,6 +347,11 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
                 <div className="grid gap-40 xl:grid-cols-[1fr_16rem_13rem] xl:items-center">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
+                      {testTypes.length > 0 ? (
+                        testTypes.map((type) => <TestRunTypeBadge key={type} type={type} />)
+                      ) : (
+                        <span className="text-xs text-slate-500">{TEST_RUN_TYPE_NOT_DEFINED}</span>
+                      )}
                       
                       {testRun.project?.key ? (
                         <span className="rounded-md border border-slate-200 px-2 py-1 text-xs font-medium text-slate-500">
@@ -418,6 +444,11 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
                         ariaLabel="Ações da execução"
                         items={[
                           {
+                            label: 'Editar tipos',
+                            onSelect: () => setRunTypesPendingEdit(testRun),
+                            title: 'Editar tipos de teste',
+                          },
+                          {
                             label: 'Excluir',
                             onSelect: () => requestRunDelete(testRun),
                             title: 'Excluir execução',
@@ -447,6 +478,15 @@ export function TestRunsPage({ onOpenRun, createActionEventId = 0 }: TestRunsPag
         open={modalOpen}
         qaUsers={users}
       />
+
+      {runTypesPendingEdit ? (
+        <EditTestRunTypesModal
+          key={runTypesPendingEdit.id}
+          onClose={() => setRunTypesPendingEdit(null)}
+          onUpdated={handleTypesUpdated}
+          testRun={runTypesPendingEdit}
+        />
+      ) : null}
 
       {runPendingDelete ? (
         <DeleteConfirmationModal

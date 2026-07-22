@@ -42,6 +42,40 @@ describe('TestRunsRepository', () => {
     });
   });
 
+  it('updates suite classifications atomically and returns the complete run', async () => {
+    const tx = {
+      testRun: {
+        update: jest.fn().mockResolvedValue({ id: 'run-id' }),
+        findUnique: jest.fn().mockResolvedValue({ id: 'run-id', suites: [] }),
+      },
+      testRunSuite: { update: jest.fn().mockResolvedValue({}) },
+    };
+    const prisma = {
+      $transaction: jest.fn((callback: (client: typeof tx) => unknown) => callback(tx)),
+    };
+    const repository = new TestRunsRepository(prisma as never);
+
+    await repository.update(
+      'run-id',
+      {},
+      [
+        { suiteId: 'suite-a', testType: TestRunTestType.SMOKE },
+        { suiteId: 'suite-b', testType: TestRunTestType.REGRESSAO },
+      ],
+    );
+
+    expect(tx.testRunSuite.update).toHaveBeenCalledTimes(2);
+    expect(tx.testRunSuite.update).toHaveBeenCalledWith({
+      where: {
+        testRunId_testSuiteId: { testRunId: 'run-id', testSuiteId: 'suite-a' },
+      },
+      data: { testType: TestRunTestType.SMOKE },
+    });
+    expect(tx.testRun.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'run-id' } }),
+    );
+  });
+
   it('reopens a completed run when a result returns to pending', async () => {
     const prisma = {
       testRun: {

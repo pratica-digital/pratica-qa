@@ -9,6 +9,7 @@ import type {
   CreateTestCasePayload,
   CreateTestPlanPayload,
   CreateTestRunPayload,
+  UpdateTestRunPayload,
   CreateTestSuitePayload,
   ImportTestCasesPayload,
   ImportTestCasesReport,
@@ -616,6 +617,12 @@ export const testRunsApi = {
     collectAllPages((page) => testRunsApi.listPage(token, { ...params, page })),
   get: (token: string, testRunId: string) =>
     apiRequest<TestRun>(`/test-runs/${testRunId}`, { token }),
+  update: (token: string, testRunId: string, payload: UpdateTestRunPayload) =>
+    apiRequest<TestRun>(`/test-runs/${testRunId}`, {
+      method: "PATCH",
+      token,
+      body: payload,
+    }),
   addTests: (
     token: string,
     testRunId: string,
