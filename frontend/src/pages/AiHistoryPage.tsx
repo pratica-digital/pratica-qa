@@ -1,8 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Bot, RefreshCw, RotateCcw } from 'lucide-react';
+import { Bot, RefreshCw, RotateCcw, Trash2 } from 'lucide-react';
 import { canManageTests } from '../auth/permissions';
 import { useAuth } from '../auth/useAuth';
+import { DeleteConfirmationModal } from '../components/DeleteConfirmationModal';
 import { aiTestGeneratorApi } from '../lib/api';
+import {
+  formatAiGenerationDuration,
+  getGenerationLabel,
+  getHistoryUserLabel,
+} from '../lib/aiHistory';
 import type { AiGenerationRecord, AiHistoryItem } from '../types/testRun';
 
 function formatDate(value?: string) {
@@ -16,14 +22,6 @@ function formatDate(value?: string) {
   }).format(new Date(value));
 }
 
-function formatDuration(value?: number | null) {
-  if (!value) {
-    return '-';
-  }
-
-  return `${Math.round(value / 1000)}s`;
-}
-
 type AiHistoryPageProps = {
   embedded?: boolean;
 };
@@ -31,11 +29,15 @@ type AiHistoryPageProps = {
 export function AiHistoryPage({ embedded = false }: AiHistoryPageProps = {}) {
   const { token, user } = useAuth();
   const canEdit = canManageTests(user);
+  const canDelete = user?.role === 'ADMIN';
   const [items, setItems] = useState<AiHistoryItem[]>([]);
   const [selected, setSelected] = useState<AiGenerationRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [regeneratingId, setRegeneratingId] = useState('');
+  const [deletingId, setDeletingId] = useState('');
+  const [pendingDelete, setPendingDelete] = useState<AiHistoryItem | null>(null);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   const fetchHistory = useCallback(async () => {
     if (!token) {
@@ -82,6 +84,7 @@ export function AiHistoryPage({ embedded = false }: AiHistoryPageProps = {}) {
 
     setRegeneratingId(id);
     setError('');
+    setSuccess('');
 
     try {
       const regenerated = await aiTestGeneratorApi.regenerate(token, id);
@@ -91,6 +94,30 @@ export function AiHistoryPage({ embedded = false }: AiHistoryPageProps = {}) {
       setError(regenerateError instanceof Error ? regenerateError.message : 'Não foi possível regenerar.');
     } finally {
       setRegeneratingId('');
+    }
+  }
+
+  async function removeGeneration() {
+    if (!token || !pendingDelete || deletingId) {
+      return;
+    }
+
+    const target = pendingDelete;
+    setDeletingId(target.id);
+    setError('');
+    setSuccess('');
+
+    try {
+      await aiTestGeneratorApi.removeHistory(token, target.id);
+      setItems((current) => current.filter((item) => item.id !== target.id));
+      setSelected((current) => (current?.id === target.id ? null : current));
+      setPendingDelete(null);
+      setSuccess(`Geração "${getGenerationLabel(target)}" excluída com sucesso.`);
+    } catch (deleteError) {
+      setPendingDelete(null);
+      setError(deleteError instanceof Error ? deleteError.message : 'Não foi possível excluir a geração.');
+    } finally {
+      setDeletingId('');
     }
   }
 
@@ -126,6 +153,12 @@ export function AiHistoryPage({ embedded = false }: AiHistoryPageProps = {}) {
         </p>
       ) : null}
 
+      {success ? (
+        <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800" role="status">
+          {success}
+        </p>
+      ) : null}
+
       <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-200 px-4 py-3">
           <h2 className="text-sm font-semibold text-slate-950">Geracoes</h2>
@@ -141,7 +174,7 @@ export function AiHistoryPage({ embedded = false }: AiHistoryPageProps = {}) {
                 <th className="px-4 py-3">Casos</th>
                 <th className="px-4 py-3">Data</th>
                 <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3 text-right"></th>
+                <th className="px-4 py-3 text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
@@ -160,32 +193,43 @@ export function AiHistoryPage({ embedded = false }: AiHistoryPageProps = {}) {
               ) : (
                 items.map((item) => (
                   <tr className="hover:bg-slate-50" key={item.id}>
-                    <td className="px-4 py-3">
+                    <td className="max-w-64 px-4 py-3">
                       <button
-                        className="text-left font-medium text-slate-950 hover:text-blue-700"
+                        className="block max-w-full truncate text-left font-medium text-slate-950 hover:text-blue-700"
                         onClick={() => void openItem(item.id)}
+                        title={getGenerationLabel(item)}
                         type="button"
                       >
-                        {item.releaseTitle || item.fileName || item.releaseHash.slice(0, 10)}
+                        {getGenerationLabel(item)}
                       </button>
-                      <p className="text-xs text-slate-500">{item.releaseHash.slice(0, 16)}</p>
                     </td>
                     <td className="px-4 py-3 text-slate-600">
                       <p>{item.provider}</p>
                       <p className="text-xs text-slate-500">{item.model}</p>
                     </td>
-                    <td className="px-4 py-3 text-slate-600">{formatDuration(item.durationMs)}</td>
-                    <td className="px-4 py-3 text-slate-600">{item.createdById ?? '-'}</td>
-                    <td className="px-4 py-3 text-slate-600">
-                      {item.testCaseCount} / {item.casesCreated} salvos
+                    <td className="px-4 py-3 text-slate-600">{formatAiGenerationDuration(item.durationMs)}</td>
+                    <td className="max-w-52 px-4 py-3 text-slate-600">
+                      <span className="block truncate" title={getHistoryUserLabel(item)}>
+                        {getHistoryUserLabel(item)}
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-slate-600">
+                      {item.testCaseCount} gerados · {item.casesCreated} salvos
                     </td>
                     <td className="px-4 py-3 text-slate-600">{formatDate(item.createdAt)}</td>
                     <td className="px-4 py-3">
-                      <span className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-medium text-slate-700">
+                      <span className={`rounded-lg border px-2 py-1 text-xs font-medium ${
+                        item.status === 'COMPLETED'
+                          ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                          : item.status === 'FAILED'
+                            ? 'border-red-200 bg-red-50 text-red-700'
+                            : 'border-amber-200 bg-amber-50 text-amber-700'
+                      }`}>
                         {item.status}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
+                      <div className="flex justify-end gap-2">
                       <button
                         className="inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-blue-700 px-3 text-sm font-medium text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
                         disabled={!canEdit || regeneratingId === item.id}
@@ -195,6 +239,19 @@ export function AiHistoryPage({ embedded = false }: AiHistoryPageProps = {}) {
                       >
                         <RotateCcw className="h-4 w-4" aria-hidden="true" />
                       </button>
+                      {canDelete ? (
+                        <button
+                          aria-label={`Excluir geração ${getGenerationLabel(item)}`}
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-200 bg-white text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                          disabled={Boolean(deletingId)}
+                          onClick={() => setPendingDelete(item)}
+                          title="Excluir geração"
+                          type="button"
+                        >
+                          <Trash2 className="h-4 w-4" aria-hidden="true" />
+                        </button>
+                      ) : null}
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -215,7 +272,7 @@ export function AiHistoryPage({ embedded = false }: AiHistoryPageProps = {}) {
                 {selected.releaseTitle || selected.fileName || selected.id}
               </h2>
               <p className="text-xs text-slate-500">
-                {selected.provider} / {selected.model} / {formatDuration(selected.durationMs)}
+                {selected.provider} / {selected.model} / {formatAiGenerationDuration(selected.durationMs)}
               </p>
             </div>
           </div>
@@ -250,6 +307,17 @@ export function AiHistoryPage({ embedded = false }: AiHistoryPageProps = {}) {
             </table>
           </div>
         </section>
+      ) : null}
+
+      {pendingDelete ? (
+        <DeleteConfirmationModal
+          confirmLabel="Excluir geração"
+          description={`Tem certeza de que deseja excluir a geração "${getGenerationLabel(pendingDelete)}" do histórico? Esta ação não poderá ser desfeita.`}
+          loading={deletingId === pendingDelete.id}
+          onCancel={() => setPendingDelete(null)}
+          onConfirm={() => void removeGeneration()}
+          title="Excluir geração do histórico?"
+        />
       ) : null}
     </div>
   );

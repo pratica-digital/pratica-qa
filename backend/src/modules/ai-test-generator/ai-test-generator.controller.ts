@@ -1,7 +1,9 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
   Param,
   ParseUUIDPipe,
   Post,
@@ -78,6 +80,13 @@ export class AiTestGeneratorController {
   @Get('history/:id')
   findHistory(@Param('id', ParseUUIDPipe) id: string) {
     return this.aiTestGeneratorService.findHistory(id);
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Delete('history/:id')
+  @HttpCode(204)
+  removeHistory(@Param('id', ParseUUIDPipe) id: string) {
+    return this.aiTestGeneratorService.removeHistory(id);
   }
 
   @Roles(UserRole.ADMIN, UserRole.QA)
